@@ -83,7 +83,7 @@
     if (requested && requested === activeId) storage.set('discipline', activeId);
     if (requested && requested !== activeId) {
       // Op slot of onbekend: het adres laat zien waar je wél bent
-      window.history.replaceState(null, '', href(activeId, window.location.hash));
+      window.history.replaceState(window.history.state, '', href(activeId, window.location.hash));
       if (find(requested)) window.setTimeout(() => ns.ui.toast(`${find(requested).name} staat nog op slot. Je bent in de cockpit van ${active().name}.`, { duration: 6000 }), 800);
     }
     options.config.namespace = namespace(activeId);

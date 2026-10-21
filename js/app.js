@@ -31,6 +31,9 @@
   let firstRoute = true;
   let rendered = false;
   let leaveApproved = false; // 'Verlaten zonder opslaan' is bevestigd
+  let scrollPositions = {};
+  let currentScrollKey = '';
+  let pendingScroll = null; // plek die nog niet te halen was (de pagina was nog niet compleet)
 
   function routes() {
     const v = ns.views;
@@ -124,6 +127,43 @@
     if (heading) heading.insertAdjacentElement('afterend', note);
   }
 
+  /* ---- Scrollpositie ------------------------------------------------------------------
+     Terug (of vooruit) in de browser brengt je naar de plek waar je op die pagina was.
+     Elke stap in de geschiedenis krijgt een sleutel (history.state.scroll); bij vertrek
+     onthouden we hoe ver die pagina gescrold was, in sessionStorage (ook na verversen). */
+  const SCROLL_LIMIT = 60;
+  const scrollStore = () => (baseConfig.storageNamespace || 'ai-snackbar-audit') + ':scroll';
+
+  function loadScrollPositions() {
+    try {
+      scrollPositions = JSON.parse(window.sessionStorage.getItem(scrollStore()) || '{}') || {};
+    } catch (error) {
+      scrollPositions = {};
+    }
+  }
+
+  function rememberScroll() {
+    if (!currentScrollKey) return;
+    delete scrollPositions[currentScrollKey]; // nieuwste achteraan: de oudste vallen eraf
+    scrollPositions[currentScrollKey] = Math.round(window.scrollY);
+    const keys = Object.keys(scrollPositions);
+    keys.slice(0, Math.max(0, keys.length - SCROLL_LIMIT)).forEach((key) => delete scrollPositions[key]);
+    try {
+      window.sessionStorage.setItem(scrollStore(), JSON.stringify(scrollPositions));
+    } catch (error) {
+      // Geen opslag (privévenster): dan alleen zolang de pagina open is
+    }
+  }
+
+  /** De sleutel van deze stap in de geschiedenis; een nieuwe stap krijgt er nu een. */
+  function historyKey() {
+    const state = window.history.state;
+    if (state && state.scroll) return { key: state.scroll, known: true };
+    const key = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    window.history.replaceState(Object.assign({}, state, { scroll: key }), '');
+    return { key, known: false };
+  }
+
   /* ---- Routeren ----------------------------------------------------------------------- */
   function route(options) {
     const opts = options || {};
@@ -133,7 +173,7 @@
     // Niet-opgeslagen wijzigingen in Beheer: eerst terug naar het formulier en vragen
     if (!opts.keepScroll && !leaveApproved && current && current.canLeave && window.location.hash !== currentHash && !current.canLeave()) {
       const target = window.location.hash;
-      window.history.replaceState(null, '', currentHash);
+      window.history.replaceState(currentScrollKey ? { scroll: currentScrollKey } : null, '', currentHash);
       ns.ui.confirmDialog('Je hebt wijzigingen die nog niet zijn opgeslagen.', { title: 'Pagina verlaten?', confirmLabel: 'Verlaten zonder opslaan', cancelLabel: 'Blijven', danger: true }).then((ok) => {
         if (!ok) return;
         leaveApproved = true;
@@ -142,6 +182,8 @@
       return;
     }
     leaveApproved = false;
+    // Hoe ver de pagina die je verlaat gescrold was (voor als je straks terugkomt)
+    if (!opts.keepScroll) rememberScroll();
 
     const handler = routes()[parsed.name];
     let result = null;
@@ -176,15 +218,26 @@
     });
 
     if (opts.keepScroll) {
-      window.scrollTo(0, scrollY);
+      // Was de vorige plek nog niet te halen (eerst alleen 'Inhoud laden…')? Dan nu alsnog
+      window.scrollTo(0, pendingScroll !== null ? pendingScroll : scrollY);
+      pendingScroll = null;
       return;
     }
-    // Naar boven en focus op de kop (schermlezers horen de nieuwe pagina)
-    if (!firstRoute) window.scrollTo(0, 0);
-    if (result.focus) result.focus();
-    else if (!firstRoute) {
-      const heading = viewNode.querySelector('h1');
+    const entry = historyKey();
+    currentScrollKey = entry.key;
+    const saved = entry.known ? scrollPositions[entry.key] : undefined;
+    const heading = viewNode.querySelector('h1');
+    if (typeof saved === 'number') {
+      // Terug (of vooruit, of ververst): naar de plek waar je was, de focus blijft op die pagina
+      window.scrollTo(0, saved);
+      pendingScroll = window.scrollY < saved - 1 ? saved : null;
       if (heading) heading.focus({ preventScroll: true });
+    } else {
+      // Nieuwe pagina: naar boven en focus op de kop (schermlezers horen de nieuwe pagina)
+      pendingScroll = null;
+      if (!firstRoute) window.scrollTo(0, 0);
+      if (result.focus) result.focus();
+      else if (!firstRoute && heading) heading.focus({ preventScroll: true });
     }
     firstRoute = false;
   }
@@ -344,6 +397,10 @@
       storage.remove('inhoud'); // bewaarplek van vóór de disciplines
       initTheme();
       fillChrome();
+      // Scrollen bij terug en vooruit doen we zelf (zie Scrollpositie)
+      if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+      loadScrollPositions();
+      window.addEventListener('pagehide', rememberScroll);
       window.addEventListener('hashchange', () => route());
       window.addEventListener('beforeunload', (event) => {
         if (current && current.canLeave && !current.canLeave()) {

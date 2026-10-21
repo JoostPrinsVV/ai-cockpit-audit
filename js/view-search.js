@@ -31,7 +31,7 @@
       const query = input.value.trim();
       // Adres bijwerken zonder de pagina opnieuw op te bouwen (deelbare zoeklink)
       const hash = '#/zoeken' + (query ? '/' + encodeURIComponent(query) : '');
-      if (window.location.hash !== hash) window.history.replaceState(null, '', hash);
+      if (window.location.hash !== hash) window.history.replaceState(window.history.state, '', hash);
       if (!query) {
         results.replaceChildren(el('p', { className: 'section__lead', text: 'Typ een of meer woorden. Je zoekt tegelijk in usecases, prompts, tips, trainingen en agents & tools.' }));
         return;

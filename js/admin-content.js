@@ -624,7 +624,7 @@
         if (renamed) await ns.central.deleteContent(type, existing.id, scope.namespace);
         initial = snapshot();
         const target = schema.single ? `${scope.base}/setting` : `${scope.base}/${type}/${newId}`;
-        if (window.location.hash !== target) window.history.replaceState(null, '', target);
+        if (window.location.hash !== target) window.history.replaceState(window.history.state, '', target);
         await afterChange(isNew ? 'Toegevoegd' : 'Opgeslagen');
       } catch (error) {
         formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Opslaan mislukt: ' + error.message })]));
@@ -1028,7 +1028,7 @@
           label.textContent = `Bezig met verhuizen (${index + 1} van ${moved.length})…`;
           await ns.central.deleteContent(moved[index].type, moved[index].id, source);
         }
-        window.history.replaceState(null, '', '#/beheer/basis');
+        window.history.replaceState(window.history.state, '', '#/beheer/basis');
         await afterChange('De gedeelde basis staat klaar');
       } catch (error) {
         button.disabled = false;
