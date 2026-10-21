@@ -24,7 +24,7 @@ data/*.js             Startinhoud van Audit en terugval als de database niet ber
 data/voorbeelden/     Voorbeeldinhoud om een nieuwe discipline mee te beginnen (alleen via Beheer)
 demos/                Nagespeelde Copilot-demo's (player.html + scripts.js)
 assets/fonts/         IBM Plex (SIL Open Font License, zie OFL.txt)
-assets/branding/      Favicon
+assets/branding/      Logo (logo.svg: kopbalk en nieuwsbrief) en favicon.svg (tabblad), hetzelfde ontwerp
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …)

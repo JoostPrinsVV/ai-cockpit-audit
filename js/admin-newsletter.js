@@ -307,7 +307,7 @@
     return el('article', { className: 'nl-doc', attrs: { 'aria-label': 'Voorbeeld van de nieuwsbrief' } }, [
       el('header', { className: 'nl-doc__head' }, [
         el('div', { className: 'nl-doc__brand' }, [
-          el('span', { className: 'nl-doc__mark', attrs: { 'aria-hidden': 'true' } }, [icon('plane')]),
+          el('img', { className: 'nl-doc__mark', attrs: { src: 'assets/branding/logo.svg', alt: '', width: '36', height: '36' } }),
           el('span', { className: 'nl-doc__name' }, [doc.app + ' ', el('span', { className: 'nl-doc__discipline', text: doc.discipline })])
         ]),
         el('p', { className: 'nl-doc__edition' }, [el('span', { text: doc.kind }), el('span', { text: doc.range })])
