@@ -1277,6 +1277,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .card-grid > li > .p-card { display: flex; min-width: 0; }
 
 .p-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -1287,6 +1288,20 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-sm);
+  transition: transform var(--duration) var(--ease-out), box-shadow var(--duration) var(--ease-out);
+}
+
+/* De hele kaart is klikbaar via de titel; de knoppen en de uitgeklapte prompt liggen erboven */
+.p-card__title a::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.p-card__head,
+.p-card__actions { pointer-events: none; }
+.p-card__head > *,
+.p-card__actions > *,
+.p-card__preview { position: relative; z-index: 2; pointer-events: auto; }
+.p-card__phase { pointer-events: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  .p-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-card-hover); }
 }
 
 .p-card__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }

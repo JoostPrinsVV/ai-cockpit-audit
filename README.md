@@ -31,8 +31,8 @@ assets/trainingen/    Slides van trainingen, per training een map (assets/traini
 setup/                Het SQL-bestand voor Supabase
 ```
 
-Alle paden zijn relatief binnen deze repository (geen `../`). De enige link naar buiten in de pagina is
-'Naar de AI Snackbar' onderaan, naar `https://joostprinsvv.github.io/AI-snackbar-platform/`.
+Alle paden zijn relatief binnen deze repository (geen `../`). De pagina zelf linkt niet naar andere sites; links naar
+buiten staan alleen in de inhoud (bijv. de opname van een training of een agent).
 
 ## Onderdelen
 
