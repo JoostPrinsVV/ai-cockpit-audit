@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copilot demo (fictief)</title>
+<!--
+  AI Snackbar: HTML-demo voor snack 1 ("Van inbox naar weekplanning").
+  Alle namen en organisaties zijn verzonnen.
+
+  Los geopend werkt de demo zelfstandig (startknop, pauze, opnieuw).
+  In de snackbar draait hij afgeschermd in een iframe en praat hij via
+  postMessage met de speler (zie docs/CONTENT-GUIDE.md, "HTML-demo's"):
+    demo  -> app : { source: 'ai-snackbar-demo', event: 'ready' | 'playing' | 'paused' | 'ended' | 'activity' }
+    app -> demo  : { source: 'ai-snackbar', command: 'play' | 'pause' | 'restart' }
+-->
+<style>
+:root{--bg:#eef0f3;--app:#fff;--ink:#242424;--muted:#6b6b6b;--line:#e3e3e3;--soft:#f3f3f3;--accent:#5b5fc7;--dark:#333;--ctl:#1f2330;--ctlink:#f4f4f6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171c;--app:#1f1f1f;--ink:#ececec;--muted:#a0a0a0;--line:#383838;--soft:#2a2a2a;--accent:#8b8ff0;--dark:#e6e6e6;--ctl:#0c0d11}}
+:root[data-theme="dark"]{--bg:#15171c;--app:#1f1f1f;--ink:#ececec;--muted:#a0a0a0;--line:#383838;--soft:#2a2a2a;--accent:#8b8ff0;--dark:#e6e6e6;--ctl:#0c0d11}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px 16px}
+.frame{width:100%;max-width:820px;background:var(--app);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.chrome{height:34px;background:var(--soft);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:6px;padding:0 12px;font-size:12px;color:var(--muted)}
+.chrome i{width:10px;height:10px;border-radius:50%;background:var(--line);display:inline-block}
+.chrome span{margin-left:10px;background:var(--app);border:1px solid var(--line);border-radius:6px;padding:3px 10px;flex:1;max-width:340px}
+.app{display:flex;height:620px;position:relative;overflow:hidden}
+.rail{width:56px;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:18px;padding:16px 0}
+.rail svg{width:20px;height:20px;stroke:var(--ink);fill:none;stroke-width:1.6}
+.rail .avatar{margin-top:auto;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;display:grid;place-items:center;font-weight:600}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative}
+.top{display:flex;align-items:center;gap:14px;padding:12px 18px;font-size:14px}
+.pill{background:var(--soft);border-radius:8px;padding:6px 12px}
+.convo{flex:1;overflow-y:auto;padding:4px 28px 16px;scrollbar-width:thin;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.hero{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+.hero h2{font-weight:400;font-size:26px;margin:0;max-width:540px;line-height:1.3}
+.chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.chip{border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--muted)}
+.inputbox{border:1px solid var(--line);border-radius:26px;padding:14px 18px;display:flex;align-items:flex-end;gap:12px;background:var(--app);width:100%;max-width:620px;font-size:15px;min-height:56px;transition:border-color .2s,box-shadow .2s}
+.inputbox.focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)}
+.inputbox .ph{color:var(--muted);flex:1;line-height:1.5}
+.inputbox .txt{flex:1;white-space:pre-wrap;line-height:1.5;max-height:190px;overflow:hidden}
+.inputbox .plus{font-size:22px;line-height:1;color:var(--muted)}
+.caret{display:inline-block;width:1px;height:1em;background:var(--ink);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.send{width:34px;height:34px;border-radius:50%;background:var(--dark);display:grid;place-items:center;flex:none;transition:transform .12s}
+.send.press{transform:scale(.88)}
+.send svg{width:16px;height:16px;fill:var(--app)}
+.dock{padding:10px 28px 6px;display:flex;flex-direction:column;align-items:center}
+.disc{font-size:11px;color:var(--muted);text-align:center;padding-bottom:8px}
+.user{margin:22px 0 18px auto;max-width:85%;background:var(--soft);border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.5;width:fit-content}
+.bot{font-size:14px;line-height:1.6}
+.step{margin:4px 0 14px}
+.step .nm{display:flex;align-items:center;gap:8px;font-size:14px}
+.step .nm svg{width:18px;height:18px}
+.step .ds{color:var(--muted);font-size:12.5px;margin:4px 0 0 26px;line-height:1.45}
+.step .nm svg{animation:sp 1.6s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.reason{color:var(--muted);font-size:13px;margin:4px 0 12px}
+.bot h2{font-size:19px;margin:18px 0 8px}
+.bot h3{font-size:15px;margin:16px 0 6px}
+.bot p{margin:8px 0}
+.per{text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.cite{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:5px;padding:0 5px;font-size:11px;color:var(--muted);vertical-align:1px;margin-left:3px}
+table{border-collapse:collapse;width:100%;font-size:12.5px;margin:10px 0 16px}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{font-weight:600}
+td.t{white-space:nowrap;font-variant-numeric:tabular-nums}
+.bot ul,.bot ol{margin:4px 0 10px;padding-left:22px}
+.bot li{margin:4px 0}
+.acts{display:flex;gap:18px;margin:14px 0 6px;color:var(--muted)}
+.acts svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.6}
+.acts .down{transform:scaleY(-1)}
+.sugg{display:flex;flex-direction:column;align-items:flex-end;gap:8px;margin:10px 0 6px}
+.sugg div{border:1px solid var(--line);border-radius:10px;padding:6px 11px;font-size:12.5px;color:var(--muted)}
+.card b{font-weight:600}
+.card .q{font-weight:600;color:var(--muted);margin:6px 0 10px}
+.card p{color:var(--muted);margin:6px 0}
+.card p b{color:var(--ink)}
+.btns{display:flex;gap:10px;margin:12px 0 4px}
+.btn{border-radius:7px;padding:6px 14px;font-size:13.5px;font-weight:600;border:1px solid var(--line);transition:transform .12s}
+.btn.pri{background:var(--dark);color:var(--app);border-color:var(--dark)}
+.btn.press{transform:scale(.93)}
+.hid{display:none!important}
+.show{animation:fi .35s ease both}
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.cursor{position:absolute;left:0;top:0;width:22px;height:22px;z-index:20;pointer-events:none;transition:transform .9s cubic-bezier(.45,.05,.25,1);transform:translate(760px,660px)}
+.cursor svg{width:22px;height:22px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
+.ripple{position:absolute;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:color-mix(in srgb,var(--accent) 35%,transparent);z-index:19;pointer-events:none;animation:rp .5s ease-out forwards}
+@keyframes rp{from{transform:scale(.3);opacity:1}to{transform:scale(1.6);opacity:0}}
+.overlay{position:absolute;inset:0;background:rgba(15,17,24,.55);display:grid;place-items:center;z-index:30;cursor:pointer}
+.overlay div{background:var(--app);border-radius:14px;padding:26px 32px;text-align:center;max-width:420px}
+.overlay h4{margin:0 0 6px;font-size:18px}
+.overlay p{margin:0 0 16px;color:var(--muted);font-size:14px}
+.overlay button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 20px;font:inherit;cursor:pointer}
+.controls{margin-top:14px;display:flex;gap:8px;opacity:.35;transition:opacity .2s}
+.controls:hover,.controls:focus-within{opacity:1}
+.controls button{background:var(--ctl);color:var(--ctlink);border:0;border-radius:8px;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}
+@media (max-width:600px){.rail{display:none}.convo{padding:4px 14px}.dock{padding:10px 14px 6px}.hero h2{font-size:20px}.app{height:560px}
+  table{font-size:12px} th,td{padding:6px 7px} td.t{white-space:normal} .user{max-width:92%}}
+
+/* ---- In de snackbar: de demo vult het hele vak, zonder eigen knoppen ---- */
+html.embed,html.embed body{height:100%}
+html.embed body{display:block;min-height:0;padding:0;background:var(--app)}
+html.embed .frame{display:flex;flex-direction:column;max-width:none;height:100%;border:0;border-radius:0;box-shadow:none}
+html.embed .app{flex:1;height:auto;min-height:0}
+html.embed .controls{display:none}
+@media (max-width:420px){html.embed .chrome span{max-width:none}}
+</style>
+</head>
+<body>
+<div class="frame">
+  <div class="chrome"><i></i><i></i><i></i><span>m365.cloud.microsoft/chat</span></div>
+  <div class="app" id="app">
+    <nav class="rail" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 1 3.5 6.6L4 20l1.3-3.4A8 8 0 0 1 4 12z"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M5 4v16M9 4v16M13 4l5 16"/></svg>
+      <svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3z"/></svg>
+      <div class="avatar">JP</div>
+    </nav>
+    <div class="main">
+      <div class="top"><span class="pill">Work IQ</span><span>Automatisch ▾</span></div>
+      <div class="convo" id="convo"></div>
+      <div class="dock" id="dock"></div>
+      <div class="disc">Door AI gegenereerde inhoud is mogelijk onjuist</div>
+    </div>
+    <div class="cursor" id="cursor"><svg viewBox="0 0 24 24"><path d="M4 2l16 11-7 1.2 4 7.3-2.8 1.5-4-7.4L4 20z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/></svg></div>
+  </div>
+</div>
+<div class="controls">
+  <button id="pause">❚❚ Pauze</button>
+  <button id="restart">↺ Opnieuw</button>
+  <button id="fs">⛶ Volledig scherm</button>
+</div>
+
+<script>
+/* ======== FICTIEVE DATA — alle namen en organisaties zijn verzonnen ======== */
+const P1="Bekijk alle e-mails in mijn Postvak IN van de afgelopen 7 dagen. Haal daaruit alle acties, verzoeken en deadlines die op mij (Joost) betrekking hebben. Maak een to-do lijst in een tabel met de kolommen: Taak, Afzender, Datum e-mail, Deadline (indien genoemd), Prioriteit (Hoog/Middel/Laag). Sorteer op prioriteit en deadline. Sla nieuwsbrieven en automatische meldingen over. Zet onderaan een korte lijst van e-mails die nog op mijn antwoord wachten.";
+const P2="Zet deze actielijst om in een planning voor de rest van deze week. Houd rekening met mijn bestaande afspraken in mijn agenda en geef per taak een tijdsinschatting.";
+const P3="Plan een focusblok in op vrijdag 2 oktober van 09:00 tot 11:00 met de titel: Planningsmemo Nordhaven afronden";
+const TODO=[
+["Materialiteitsberekening en planningsmemo Nordhaven B.V. afronden en naar manager sturen.","Sanne de Wit","29-09-2026","Vrijdag 2 okt","Hoog",2],
+["Reviewpunten voorraadwaardering Lindqvist Retail beantwoorden.","Thomas Bakker","28-09-2026","Donderdag","Hoog",1],
+["Saldibevestigingen banken Nordhaven B.V. versturen.","Eva Jansen","28-09-2026","Zo spoedig mogelijk","Hoog",0],
+["Steekproef journal entry testing Brouwer Logistics selecteren.","Lisa Smit","29-09-2026","Volgende week","Middel",0],
+["Input leveren voor AI-lunchsessie: demo's kiezen en promptkaartjes uitwerken.","Mark Verbeek","24-09-2026","14 oktober","Middel",1],
+["Nieuwe huurovereenkomst verwerken in dossier Vermeer Holding.","Thomas Bakker","25-09-2026","Niet genoemd","Middel",0],
+["Beoordelingsformulier stagiair invullen.","HR Servicedesk","29-09-2026","2 oktober","Laag",0],
+["Inschrijven voor training IFRS 16.","L&D Academie","23-09-2026","Niet genoemd","Laag",0]];
+const WAIT=[
+["Planningsmemo Nordhaven","Sanne de Wit","vraagt of de planningsmemo vrijdag bij haar kan liggen."],
+["Saldibevestigingen","Eva Jansen","vraagt of de bankbevestigingen al verstuurd zijn."],
+["Reviewpunten voorraad","Thomas Bakker","wacht op jouw reactie op zijn reviewpunten."],
+["AI-lunchsessie","Mark Verbeek","vraagt om input voor de demo's en promptkaartjes."]];
+/* ========================================================================== */
+
+/* In de snackbar (iframe) of los geopend? */
+const EMBED=window.parent!==window;
+if(EMBED)document.documentElement.classList.add("embed");
+function notify(event){if(EMBED)window.parent.postMessage({source:"ai-snackbar-demo",event},"*")}
+
+const esc=s=>s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const $=id=>document.getElementById(id);
+const app=$("app"),convo=$("convo"),dock=$("dock"),cursor=$("cursor");
+const MAIL='<span class="cite">✉</span>',MAIL2='<span class="cite">✉ +2</span>',CAL='<span class="cite">▦</span>',CAL3='<span class="cite">▦ +3</span>';
+const SPARK='<svg viewBox="0 0 24 24"><path d="M12 2l2.2 6.3L20 10l-5.8 2.2L12 19l-2.2-6.8L4 10l5.8-1.7z" fill="var(--accent)"/></svg>';
+const ACTS=`<div class="acts s"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><svg viewBox="0 0 24 24"><path d="M7 11v9H4v-9zM7 11l4-8c1.5 0 2.5 1 2.2 2.6L12.5 9H19a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.8 20H7"/></svg><svg class="down" viewBox="0 0 24 24"><path d="M7 11v9H4v-9zM7 11l4-8c1.5 0 2.5 1 2.2 2.6L12.5 9H19a2 2 0 0 1 2 2.3l-1.2 7A2 2 0 0 1 17.8 20H7"/></svg><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg><svg viewBox="0 0 24 24"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></svg></div>`;
+
+let runId=0,paused=false,started=false;const ABORT=Symbol();
+async function sleep(ms){const id=runId;let t=0;while(t<ms){await new Promise(r=>setTimeout(r,40));if(id!==runId)throw ABORT;if(!paused)t+=40}}
+function pos(el,dx=0,dy=0){const a=app.getBoundingClientRect(),r=el.getBoundingClientRect(),k=(a.width/app.offsetWidth)||1;return[(r.left-a.left+r.width/2)/k+dx,(r.top-a.top+r.height/2)/k+dy]}
+async function moveTo(el,ms=900,dx=0,dy=0){const[x,y]=pos(el,dx,dy);cursor.style.transitionDuration=ms+"ms";cursor.style.transform=`translate(${x-4}px,${y-2}px)`;await sleep(ms+80)}
+/* Rustpositie rechtsonder, passend bij elke schermgrootte */
+function park(){cursor.style.transitionDuration="600ms";cursor.style.transform=`translate(${app.clientWidth-60}px,${app.clientHeight-40}px)`}
+async function click(el){const[x,y]=pos(el);const r=document.createElement("div");r.className="ripple";r.style.left=x+"px";r.style.top=y+"px";app.append(r);setTimeout(()=>r.remove(),600);await sleep(220)}
+
+/* Meescrollen, behalve als iemand zelf terugscrollt (pas weer meescrollen onderaan) */
+let follow=true,userIntent=0,lastActivity=0;
+function activity(){userIntent=Date.now();if(userIntent-lastActivity>2000){lastActivity=userIntent;notify("activity")}}
+["wheel","touchstart","pointerdown","keydown"].forEach(t=>convo.addEventListener(t,activity,{passive:true}));
+convo.addEventListener("scroll",()=>{if(Date.now()-userIntent>1500)return;follow=convo.scrollHeight-convo.scrollTop-convo.clientHeight<60});
+const scrollDown=()=>{if(follow)convo.scrollTo({top:convo.scrollHeight,behavior:"smooth"})};
+
+function inputBox(inner){return `<div class="inputbox" id="ib"><span class="plus">+</span>${inner}<div class="send" id="send"><svg viewBox="0 0 24 24"><path d="M12 4l7 7-1.4 1.4L13 7.8V20h-2V7.8l-4.6 4.6L5 11z"/></svg></div></div>`}
+const emptyInput=()=>inputBox('<span class="ph">Copilot een bericht sturen</span>');
+const reveal=el=>{el.classList.remove("hid");el.classList.add("show")};
+const stream=t=>`<p class="s" data-stream data-html="${t.replace(/"/g,"&quot;")}"></p>`;
+
+async function typeInto(text){
+  const ib=$("ib");await moveTo(ib,900,-120,0);await click(ib);ib.classList.add("focus");
+  const box=ib.querySelector(".ph,.txt");box.className="txt";box.innerHTML='<span class="caret"></span>';
+  const[x,y]=pos(ib);cursor.style.transitionDuration="500ms";cursor.style.transform=`translate(${x+60}px,${y+80}px)`;await sleep(450);
+  let i=0;while(i<text.length){i+=1+(Math.random()<.5?1:0);box.innerHTML=esc(text.slice(0,i))+'<span class="caret"></span>';box.scrollTop=box.scrollHeight;const c=text[i-1];await sleep(c==="."||c===","||c===":"?140:22+Math.random()*20)}
+  await sleep(600);await moveTo($("send"),700);await click($("send"));$("send").classList.add("press");await sleep(120);
+}
+/* één Copilot-beurt: denkstappen (naam + uitleg), daarna antwoord streamen */
+async function turn(prompt,html,steps,opts={}){
+  const wrap=document.createElement("div");
+  wrap.innerHTML=`<div class="user show">${esc(prompt)}</div><div class="bot"><div class="step" id="stp"><div class="nm">${SPARK}<span class="sn"></span> ›</div><div class="ds"></div></div>${html}</div>`;
+  if(convo.querySelector(".hero"))convo.innerHTML="";
+  convo.append(wrap);dock.innerHTML=emptyInput();
+  wrap.querySelectorAll(".s").forEach(e=>e.classList.add("hid"));
+  park();follow=true;scrollDown();
+  const st=wrap.querySelector("#stp");st.removeAttribute("id");
+  for(const [n,d] of steps){st.querySelector(".sn").textContent=n;st.querySelector(".ds").textContent=d||"";st.querySelector(".ds").classList.toggle("hid",!d);await sleep(d?2600:1800)}
+  if(opts.noReason)st.remove();
+  else st.outerHTML=`<div class="reason">Redeneren voltooid in ${opts.n||steps.length+1} stappen ›</div>`;
+  for(const el of wrap.querySelectorAll(".s")){
+    if(el.dataset.stop!==undefined)return wrap;
+    reveal(el);
+    if(el.dataset.stream!==undefined){const full=el.dataset.html;const w=full.split(" ");for(let k=1;k<=w.length;k++){el.innerHTML=w.slice(0,k).join(" ");await sleep(38)}el.innerHTML=full}
+    scrollDown();
+    await sleep(el.tagName==="TR"?380:/^H/.test(el.tagName)?420:el.tagName==="TABLE"?220:330);
+  }
+  return wrap;
+}
+const tbl=(head,rows)=>`<table class="s"><thead><tr>${head.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr class="s">${r.map((c,i)=>`<td${i===0&&/\d:\d/.test(c)?' class="t"':""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+
+function html1(){return stream("Ik heb 17 relevante e-mails uit je Postvak IN bekeken (nieuwsbrieven, marketingmails en automatische meldingen buiten beschouwing gelaten waar mogelijk). Dit levert de volgende actielijst op.")+
+`<h2 class="s">To-do lijst</h2>`+tbl(["Taak","Afzender","Datum e-mail","Deadline","Prioriteit"],TODO.map(r=>[esc(r[0])+(r[5]===2?MAIL2:r[5]?MAIL:""),`<span class="per">${esc(r[1])}</span>`,r[2],esc(r[3]),r[4]]))+
+`<h3 class="s">E-mails die waarschijnlijk nog op jouw antwoord wachten</h3>`+
+WAIT.map((w,i)=>`<p class="s"><b>${i+1}. ${w[0]}</b><br>${w[1]} ${w[2]}</p>`).join("")+
+stream("Kort samengevat: de hoogste prioriteit ligt bij de planningsmemo voor Nordhaven, de reviewpunten van Lindqvist en de saldibevestigingen. Deze drie hebben een directe opvolgactie vanuit jou nodig.")+ACTS}
+function html2(){return stream(`Op basis van je agenda zie ik dat je woensdag en donderdag al deels focusblokken hebt gereserveerd voor dossierwerk. Daarbinnen kun je de e-mailacties goed inpassen. Je huidige planning bevat: <span class="per">Overleg Sanne de Wit</span>, <span class="per">Afblokken dossierwerk</span>, <span class="per">Afblokken Nordhaven</span> en <span class="per">Teamoverleg audit</span>. ${CAL3}`)+
+`<h2 class="s">Woensdag 30 september</h2><h3 class="s">12:30 - 13:00</h3><p class="s"><span class="per">Overleg Sanne de Wit – planning Nordhaven</span> (reeds gepland) ${CAL}</p><h3 class="s">13:00 - 17:00</h3><p class="s"><span class="per">Afblokken dossierwerk</span> ${CAL}</p><p class="s">Ik zou dit blok als volgt verdelen:</p>`+
+tbl(["Tijd","Taak","Schatting"],[["13:00 - 13:30","Saldibevestigingen banken Nordhaven versturen","30 min"],["13:30 - 15:00",`Reviewpunten voorraadwaardering beantwoorden voor <span class="per">Thomas Bakker</span>`,"1,5 uur"],["15:00 - 16:00","Huurovereenkomst Vermeer Holding verwerken","1 uur"],["16:00 - 16:30",`Reactie naar <span class="per">Mark Verbeek</span> over AI-lunchsessie`,"30 min"],["16:30 - 17:00","Beoordelingsformulier stagiair","30 min"]])+
+`<h2 class="s">Donderdag 1 oktober</h2><h3 class="s">09:00 - 12:30</h3><p class="s"><span class="per">Afblokken Nordhaven</span> ${CAL}</p>`+
+tbl(["Tijd","Taak","Schatting"],[["09:00 - 11:30","Materialiteitsberekening Nordhaven uitwerken","2,5 uur"],["11:30 - 12:30","Eerste opzet planningsmemo Nordhaven","1 uur"]])+
+`<h3 class="s">14:00 - 15:00</h3><p class="s"><span class="per">Teamoverleg audit</span> (reeds gepland) ${CAL}</p>`+
+`<h2 class="s">Vrijdag 2 oktober</h2>`+stream("Ik zie op vrijdag nog geen blokken in je agenda. Dat maakt vrijdagochtend ideaal om de planningsmemo af te ronden vóór de deadline.")+
+`<h3 class="s">Ochtend (09:00 - 12:00)</h3>`+tbl(["Taak","Schatting"],[["Planningsmemo Nordhaven afronden en naar Sanne sturen","2 uur"],["Steekproef JE-testing Brouwer Logistics voorbereiden","1 uur"]])+
+`<h3 class="s">Prioriteitenlijst voor deze week</h3><p class="s"><b>Moet deze week afgerond zijn</b></p><ul><li class="s">Saldibevestigingen versturen.</li><li class="s">Reviewpunten Lindqvist beantwoorden.</li><li class="s">Planningsmemo Nordhaven naar Sanne.</li></ul><p class="s"><b>Mag doorschuiven naar volgende week</b></p><ul><li class="s">JE-testing Brouwer Logistics.</li><li class="s">Inschrijving training IFRS 16.</li></ul>`+
+ACTS+`<div class="sugg s"><div>Maak hiervan een overzichtelijke weekkalender</div><div>Controleer de planning op conflicten en ontbrekende afspraken</div><div>Maak per taak een concrete eerstvolgende stap</div></div>`}
+function html3(){return `<div class="card s" id="card"><div class="q">Wil je dat ik deze afspraak met deze gegevens maak?</div><p><b>Titel:</b> Planningsmemo Nordhaven afronden</p><p><b>Wanneer:</b> Fri, Oct 2, 9:00 AM - 11:00 AM</p><div class="btns"><div class="btn pri" id="mk">Maken</div><div class="btn">Annuleren</div></div></div>`+ACTS}
+
+function hero(withChips){convo.innerHTML=`<div class="hero"><h2>Hallo, ik kan je helpen bij het samenvatten van en voorbereiden voor vergaderingen</h2>${emptyInput()}${withChips?'<div class="chips"><div class="chip">Bestands-inzichten</div><div class="chip">Postvak IN voor triage</div><div class="chip">Personen zoeken</div><div class="chip">···</div></div>':""}</div>`}
+
+async function play(){
+  hero(true);
+  dock.innerHTML="";cursor.style.transitionDuration="0ms";cursor.style.transform=`translate(${app.clientWidth-120}px,${app.clientHeight-60}px)`;
+  await sleep(1200);
+  // 1. mail -> to-do lijst
+  await typeInto(P1);
+  const w1=await turn(P1,html1(),[["E-mail zoeken","Ik zoek naar e-mails in je Postvak IN van de afgelopen 7 dagen."],["Opstellen takenlijst","Ik ben bezig met het samenstellen van een tabel met taken, inclusief prioritering en e-mails die nog wachten op antwoord."]],{n:3});
+  await sleep(1000);
+  if(follow)convo.scrollTo({top:w1.querySelector("table").offsetTop-60,behavior:"smooth"});await sleep(3200);
+  follow=true;scrollDown();await sleep(1500);
+  // 2. weekplanning
+  await typeInto(P2);
+  await turn(P2,html2(),[["Zoeken naar vergaderingen","Ik ben nu bezig met het uitvoeren van een zoekopdracht naar vergaderingen voor de rest van de week, met filter op het start- en eindtijdstip."]],{n:2});
+  await sleep(2200);
+  // 3. afspraak inplannen
+  await typeInto(P3);
+  await turn(P3,html3(),[["Meetings om 09:00 zoeken",""]],{noReason:true});
+  await sleep(1600);
+  const mk=$("mk");await moveTo(mk,900);await click(mk);mk.classList.add("press");await sleep(500);
+  $("card").outerHTML=`<div class="show"><p>Je agenda-item is aangemaakt:</p><ul><li>Titel: <b>Planningsmemo Nordhaven afronden</b></li><li>Start: <b>2 oktober 2026 om 09:00</b></li><li>Type: persoonlijke afspraak (zonder deelnemers)</li></ul></div>`;
+  park();scrollDown();
+  await sleep(EMBED?3500:4000);
+  if(EMBED){started=false;notify("ended");return}
+  const o=document.createElement("div");o.className="overlay show";
+  o.innerHTML=`<div><h4>Van inbox naar ingeplande week</h4><p>Drie prompts in Microsoft 365 Copilot: to-do lijst, weekplanning en een afspraak in je agenda.</p><button>↺ Opnieuw afspelen</button></div>`;
+  o.onclick=start;app.append(o);
+}
+function start(){runId++;paused=false;started=true;follow=true;$("pause").textContent="❚❚ Pauze";app.querySelectorAll(".overlay").forEach(e=>e.remove());notify("playing");play().catch(e=>{if(e!==ABORT)console.error(e)})}
+function setPaused(value){paused=value;$("pause").textContent=paused?"▶ Verder":"❚❚ Pauze";notify(paused?"paused":"playing")}
+function intro(){hero(false);
+  if(EMBED){park();notify("ready");return}
+  const o=document.createElement("div");o.className="overlay";
+  o.innerHTML=`<div><h4>Live demo: van inbox naar ingeplande week</h4><p>Klik of druk op spatie om te starten.</p><button>▶ Start demo</button></div>`;
+  o.onclick=start;app.append(o)}
+
+/* Bediening vanuit de snackbar */
+window.addEventListener("message",e=>{
+  if(!EMBED||e.source!==window.parent)return;
+  const d=e.data;if(!d||d.source!=="ai-snackbar")return;
+  if(d.command==="play"){if(!started)start();else if(paused)setPaused(false);else notify("playing")}
+  if(d.command==="pause"&&started&&!paused)setPaused(true);
+  if(d.command==="restart")start();
+});
+
+/* Los geopend: eigen knoppen en sneltoetsen */
+$("pause").onclick=()=>{if(started)setPaused(!paused)};
+$("restart").onclick=start;
+$("fs").onclick=()=>{document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen?.()};
+if(!EMBED)document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="BUTTON"&&(e.key===" "||e.key==="Enter"))return;
+  if(e.key===" "){e.preventDefault();app.querySelector(".overlay")?start():$("pause").click()}
+  if(e.key.toLowerCase()==="r")start();
+  if(e.key.toLowerCase()==="f")$("fs").click();
+});
+intro();
+</script>
+</body>
+</html>

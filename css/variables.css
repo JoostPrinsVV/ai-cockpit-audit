@@ -1,0 +1,259 @@
+/* ==========================================================================
+   AI COCKPIT AUDIT — DESIGN TOKENS
+   --------------------------------------------------------------------------
+   Overgenomen van de AI Snackbar; dit is een eigen kopie, los van de
+   snackbar. Alle kleuren, lettergroottes, afstanden, rondingen, schaduwen
+   en animatietijden staan hier. Pas je hier iets aan, dan verandert het
+   overal op het platform. Platformspecifieke aanvullingen: css/audit.css.
+   ========================================================================== */
+
+:root {
+  /* ---- Merkkleuren (Visser & Visser-palet) ------------------------------ */
+  --vv-navy-950: #070d26;
+  --vv-navy-900: #0a1232;
+  --vv-navy: #101d4f;
+  --vv-navy-800: #16255e;
+  --vv-navy-700: #28335f;
+  --vv-navy-600: #444f78;
+  --vv-crimson: #ef174d;
+  --vv-crimson-600: #d2123f;
+  --vv-crimson-700: #b50e35;
+  --vv-teal: #00b49c;
+  --vv-teal-700: #007a69;
+  --vv-teal-deep: #008f8e;
+  --vv-steel: #28899f;
+  --vv-steel-700: #1f6c80;
+  --vv-rose: #ae3255;
+  --vv-link: #156f7e;
+
+  --vv-white: #ffffff;
+  --vv-gray-50: #f4f5f8;
+  --vv-gray-100: #eceef2;
+  --vv-gray-200: #dde0e8;
+  --vv-gray-300: #c3c8d4;
+  --vv-gray-400: #9aa1b3;
+  --vv-gray-600: #4c5269;
+  --vv-gray-700: #343b52;
+
+  /* ---- Betekenis (gebruik deze in componenten) -------------------------- */
+  --color-page: var(--vv-gray-50);
+  --color-surface: var(--vv-white);
+  --color-surface-muted: #f1f3f7;
+  --color-surface-sunken: #e9ecf2;
+  --color-text: var(--vv-navy);            /* koppen en sterke tekst: 15,5:1 op wit */
+  --color-text-body: var(--vv-gray-700);   /* lopende tekst: 11:1 op wit */
+  --color-text-muted: var(--vv-gray-600);  /* bijzaak: 7,7:1 op wit */
+  --color-border: var(--vv-gray-200);
+  --color-border-strong: var(--vv-gray-300);
+  --color-link: var(--vv-link);
+
+  --color-on-dark: var(--vv-white);
+  --color-on-dark-muted: #c9cede;          /* 10:1 op navy */
+  --color-highlight-on-dark: var(--vv-teal); /* 6,1:1 op navy */
+
+  --color-primary: var(--vv-crimson-600);  /* witte tekst: 5,4:1 */
+  --color-primary-hover: var(--vv-crimson-700);
+  --color-primary-text: var(--vv-white);
+  --color-secondary: var(--vv-navy);
+  --color-secondary-hover: var(--vv-navy-800);
+  --color-selected: var(--vv-navy);        /* gekozen schakelaar/filter; witte tekst 15,5:1 */
+  --color-on-selected: var(--vv-white);
+  --color-success: var(--vv-teal-700);
+  --color-success-fill: var(--vv-teal);
+  --color-warning: #8a5a00;
+  --color-warning-fill: #fdf1dc;
+  --color-danger: var(--vv-crimson-700);
+  --color-danger-fill: #fde4ea;
+
+  --color-focus: var(--vv-crimson-600);
+  --color-focus-on-dark: var(--vv-teal);
+
+  /* Luifel (gestreepte kop, zoals bij een marktkraam) */
+  --awning-a: var(--vv-navy);
+  --awning-b: #14245c;
+  --awning-stripe: 56px;
+
+  /* ---- Accentkleuren per snack ------------------------------------------
+     accent  = decoratieve kleur
+     ink     = tekstveilige variant (min. 4,5:1 op wit)
+     tint    = zachte achtergrond (iconentegel)
+     on      = kleur van iconen bovenop het accent
+     wash    = optioneel: zacht vlak in het donkere thema (valt anders terug op tint) */
+  --accent-teal: var(--vv-teal);
+  --accent-teal-ink: var(--vv-teal-700);
+  --accent-teal-tint: #dcf4f0;
+  --accent-teal-on: var(--vv-navy);
+
+  --accent-crimson: var(--vv-crimson);
+  --accent-crimson-ink: var(--vv-crimson-700);
+  --accent-crimson-tint: #fde4ea;
+  --accent-crimson-on: var(--vv-white);
+
+  --accent-steel: var(--vv-steel);
+  --accent-steel-ink: var(--vv-steel-700);
+  --accent-steel-tint: #dfeef2;
+  --accent-steel-on: var(--vv-white);
+
+  --accent-rose: var(--vv-rose);
+  --accent-rose-ink: var(--vv-rose);
+  --accent-rose-tint: #f6e3e9;
+  --accent-rose-on: var(--vv-white);
+
+  --accent-deepteal: var(--vv-teal-deep);
+  --accent-deepteal-ink: #00706f;
+  --accent-deepteal-tint: #dbefef;
+  --accent-deepteal-on: var(--vv-white);
+
+  --accent-navy: var(--vv-navy);
+  --accent-navy-ink: var(--vv-navy);
+  --accent-navy-tint: #e3e6f0;
+  --accent-navy-on: var(--vv-white);
+
+  /* ---- Grafieken (dashboard) ----------------------------------------------
+     Beoordeling = diverging: positief / neutraal (grijs) / negatief.
+     Gevalideerd op kleurenblindheid (protan/deutan ΔE ≥ 16,8) en onderling
+     onderscheid (ΔE ≥ 21,5) op wit. Het grijs zit onder 3:1; de aantallen
+     staan daarom altijd als getal in de tabel. Eén reeks = één kleur (series). */
+  --chart-positive: #007a69;
+  --chart-neutral: #9aa1b3;
+  --chart-negative: #d2123f;
+  --chart-series: #28899f;
+  --chart-grid: #e3e6ed;
+  --chart-surface: var(--vv-white);
+
+  /* ---- Typografie -------------------------------------------------------- */
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', Consolas, 'SF Mono', ui-monospace, monospace;
+
+  /* Basisgrootte schaalt mee met het scherm: ca. 16px (portrait) tot 20px (groot scherm) */
+  --font-size-root: clamp(1rem, 0.45vw + 0.75rem, 1.25rem);
+
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.9rem;
+  --fs-base: 1rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.3rem;
+  --fs-xl: 1.6rem;
+  --fs-2xl: 2rem;
+  --fs-display: clamp(2.4rem, 1.4rem + 3.4vw, 4.4rem);
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  --lh-tight: 1.08;
+  --lh-snug: 1.25;
+  --lh-normal: 1.5;
+
+  --ls-tight: -0.022em;
+  --ls-eyebrow: 0.14em;
+
+  /* ---- Afstanden ----------------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 2rem;
+  --space-8: 2.5rem;
+  --space-9: 3rem;
+  --space-10: 4rem;
+
+  --gutter: clamp(1rem, 3vw, 3rem);
+  --container-max: 1640px;
+  --grid-gap: clamp(0.9rem, 1.6vw, 1.5rem);
+  --card-min-width: 300px;                 /* gebruikt voor het automatisch kiezen van het aantal kolommen */
+  --card-min-height: 12rem;                /* kaarten worden nooit lager dan dit... */
+  --card-max-height: 19rem;                /* ...en rekken nooit verder op dan dit */
+  --card-padding: clamp(1.1rem, 1.6vw, 1.5rem);
+
+  /* ---- Aanraakdoelen -------------------------------------------------------- */
+  --touch-min: 3rem;                       /* 48px bij 16px basis */
+  --touch-lg: 4rem;
+
+  /* ---- Rondingen ------------------------------------------------------------ */
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+
+  /* ---- Schaduwen ------------------------------------------------------------ */
+  --shadow-sm: 0 1px 2px rgba(16, 29, 79, 0.06), 0 1px 3px rgba(16, 29, 79, 0.08);
+  --shadow-card: 0 1px 2px rgba(16, 29, 79, 0.05), 0 6px 18px rgba(16, 29, 79, 0.07);
+  --shadow-card-hover: 0 2px 4px rgba(16, 29, 79, 0.06), 0 16px 36px rgba(16, 29, 79, 0.13);
+  --shadow-lg: 0 10px 30px rgba(16, 29, 79, 0.14), 0 4px 10px rgba(16, 29, 79, 0.06);
+  --shadow-xl: 0 24px 64px rgba(7, 13, 38, 0.32);
+  --shadow-button: 0 6px 16px rgba(210, 18, 63, 0.28);
+
+  /* ---- Focus ---------------------------------------------------------------- */
+  --focus-width: 3px;
+  --focus-offset: 3px;
+
+  /* ---- Beweging ------------------------------------------------------------- */
+  --duration-fast: 140ms;
+  --duration: 240ms;
+  --duration-slow: 420ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* ---- Lagen ---------------------------------------------------------------- */
+  --z-topbar: 20;
+  --z-theater: 800;   /* schermvullende video: boven de pagina, onder meldingen */
+  --z-toast: 1000;
+}
+
+/* ==========================================================================
+   THEMA 'donker' — voor een groot scherm of een schemerige ruimte.
+   Activeer via js/config.js: theme: 'donker'
+   ========================================================================== */
+:root[data-theme='donker'] {
+  --color-page: var(--vv-navy-950);
+  --color-surface: #121f52;
+  --color-surface-muted: #1a2a66;
+  --color-surface-sunken: #0c1640;
+  --color-text: var(--vv-white);
+  --color-text-body: #dde1ec;
+  --color-text-muted: #b9c0d4;
+  --color-border: #28366f;
+  --color-border-strong: #3b4a85;
+  --color-link: #6fd6c8;
+  --color-focus: var(--vv-teal);
+  --color-selected: var(--vv-teal);
+  --color-on-selected: var(--vv-navy);
+
+  --awning-a: #0d1845;
+  --awning-b: #112057;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 22px rgba(0, 0, 0, 0.28);
+  --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.3), 0 18px 40px rgba(0, 0, 0, 0.42);
+  --shadow-lg: 0 12px 34px rgba(0, 0, 0, 0.4);
+
+  /* Tekstveilige accentvarianten op een donkere ondergrond */
+  --accent-teal-ink: #3fd6bf;
+  --accent-crimson-ink: #ff6f8f;
+  --accent-steel-ink: #6cc3d8;
+  --accent-rose-ink: #f08aa6;
+  --accent-deepteal-ink: #4fd0cf;
+  --accent-navy-ink: #aab7ea;
+  --accent-navy: #5a6db8;
+
+  /* Grafieken op donker (gevalideerd op #121f52: CVD ΔE ≥ 8,4, contrast ≥ 3,35:1) */
+  --chart-positive: #00b49c;
+  --chart-neutral: #6c7489;
+  --chart-negative: #ff6f8f;
+  --chart-series: #28899f;
+  --chart-grid: #28366f;
+  --chart-surface: #121f52;
+
+  /* Zachte accentvlakken (chips, promptvlak). Iconentegels houden de lichte tint. */
+  --accent-teal-wash: rgba(0, 180, 156, 0.18);
+  --accent-crimson-wash: rgba(239, 23, 77, 0.2);
+  --accent-steel-wash: rgba(40, 137, 159, 0.24);
+  --accent-rose-wash: rgba(174, 50, 85, 0.28);
+  --accent-deepteal-wash: rgba(0, 143, 142, 0.24);
+  --accent-navy-wash: rgba(90, 109, 184, 0.28);
+}

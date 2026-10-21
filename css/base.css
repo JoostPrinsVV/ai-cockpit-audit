@@ -1,0 +1,227 @@
+/* ==========================================================================
+   AI COCKPIT AUDIT — BASIS
+   Lokale fonts, reset, typografie, focus en hulpklassen. Overgenomen van
+   de AI Snackbar; dit is een eigen kopie, los van de snackbar.
+   ========================================================================== */
+
+/* IBM Plex (SIL Open Font License, zie assets/fonts/OFL.txt). Lokaal, dus offline. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  src: url('../assets/fonts/ibm-plex-sans-latin-variable.woff2') format('woff2');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../assets/fonts/ibm-plex-mono-latin-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../assets/fonts/ibm-plex-mono-latin-500.woff2') format('woff2');
+  font-weight: 500 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: var(--font-size-root);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--color-page);
+  /* Geen 'trek om te verversen' en geen veeg-terug-gebaar op touchscreens */
+  overscroll-behavior: none;
+  color-scheme: light;
+}
+
+:root[data-theme='donker'] {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-normal);
+  color: var(--color-text-body);
+  background: var(--color-page);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  color: var(--color-text);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--ls-tight);
+  text-wrap: balance;
+}
+
+p,
+ul,
+ol,
+figure,
+pre {
+  margin: 0;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+  padding: 0;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+a {
+  color: var(--color-link);
+  touch-action: manipulation;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---- Focus -------------------------------------------------------------- */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: var(--focus-offset);
+}
+
+.on-dark {
+  --color-focus: var(--color-focus-on-dark);
+}
+
+/* Koppen die programmatisch focus krijgen na navigatie: geen ring nodig */
+[tabindex='-1']:focus-visible {
+  outline: none;
+}
+
+/* ---- Iconen (inline SVG-sprite in index.html) --------------------------- */
+.icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+}
+
+/* ---- Hulpklassen ---------------------------------------------------------- */
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: max(var(--gutter), env(safe-area-inset-left)) max(var(--gutter), env(safe-area-inset-right));
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: 100;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--vv-white);
+  color: var(--vv-navy);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform var(--duration) var(--ease-out);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+::selection {
+  background: var(--vv-teal);
+  color: var(--vv-navy);
+}
+
+/* Kiosk (touch): geen scrollbalk die de indeling laat verspringen; scrollen blijft werken.
+   Buiten kioskmodus een smalle scrollbalk. */
+html {
+  scrollbar-width: thin;
+}
+
+html.is-kiosk {
+  scrollbar-width: none;
+}
+
+html.is-kiosk::-webkit-scrollbar {
+  display: none;
+}
+
+/* Kiosk: geen per ongeluk geselecteerde interfacetekst (prompt blijft selecteerbaar) */
+.is-kiosk .app,
+.is-kiosk dialog {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.is-kiosk .is-selectable {
+  -webkit-user-select: text;
+  user-select: text;
+}
