@@ -12,7 +12,7 @@
      je bureau: een rustigere schaal van 16px (telefoon, laptop) tot maximaal 17px (groot scherm). */
   --font-size-root: clamp(1rem, 0.2vw + 0.85rem, 1.0625rem);
   --topbar-height: 4rem;
-  --page-max: 1320px;
+  --page-max: 1400px; /* ruim genoeg voor de kopbalk met iconen, volledige labels en de discipline */
   --badge-license-bg: #fdf1dc;
   --badge-license-ink: #7a4f00;
   --badge-free-bg: #dcf4f0;
@@ -227,24 +227,171 @@ body[data-view='home'] main::before { display: none; }
 
 .topbar .btn--icon { width: 2.75rem; min-height: 2.75rem; }
 
+/* Wat er past, meet js/disciplines.js (data-fit op de kopbalk, zie hieronder): de naam van
+   de discipline verschilt in lengte. De vaste breekpunten hier gelden alleen zonder JavaScript. */
+
 /* Zolang het menu op één regel past, blijft de kopbalk staan tijdens het scrollen */
-@media (min-width: 980px) {
-  .topbar { position: sticky; top: 0; }
+@media (min-width: 1020px) {
+  .topbar:not([data-fit]) { position: sticky; top: 0; }
 }
 
-/* Zes menu-items op één regel. Gemeten (incl. 17px schuifbalk) is nodig: met iconen
-   ~1270px, zonder iconen ~1090px, en ook met korte labels en krappere knoppen ~935px.
-   Daaronder (≤979px) staat het menu onder de naam. */
-@media (max-width: 1309px) {
-  .nav__link .icon { display: none; }
-  .nav__link { padding-inline: 0.85rem; }
+@media (max-width: 1379px) {
+  .topbar:not([data-fit]) .nav__link .icon { display: none; }
+  .topbar:not([data-fit]) .nav__link { padding-inline: 0.85rem; }
 }
 
-@media (max-width: 1129px) {
-  .nav__list { gap: 0.35rem; }
-  .nav__link { padding-inline: 0.7rem; }
-  .nav__more { display: none; }
+@media (max-width: 1189px) {
+  .topbar:not([data-fit]) .nav__list { gap: 0.35rem; }
+  .topbar:not([data-fit]) .nav__link { padding-inline: 0.7rem; }
+  .topbar:not([data-fit]) .nav__more { display: none; }
 }
+
+/* Gemeten door js/disciplines.js: 0 alles ruim · 1 zonder iconen · 2 ook korte labels · 3 menu onder de naam */
+@media (min-width: 601px) {
+  .topbar[data-fit='0'], .topbar[data-fit='1'], .topbar[data-fit='2'] { position: sticky; top: 0; }
+  .topbar[data-fit='1'] .nav__link .icon, .topbar[data-fit='2'] .nav__link .icon, .topbar[data-fit='3'] .nav__link .icon { display: none; }
+  .topbar[data-fit='1'] .nav__link { padding-inline: 0.85rem; }
+  .topbar[data-fit='2'] .nav__list, .topbar[data-fit='3'] .nav__list { gap: 0.35rem; }
+  .topbar[data-fit='2'] .nav__link, .topbar[data-fit='3'] .nav__link { padding-inline: 0.7rem; }
+  .topbar[data-fit='2'] .nav__more, .topbar[data-fit='3'] .nav__more { display: none; }
+  .topbar[data-fit='3'] .topbar__inner { flex-wrap: wrap; row-gap: 0; }
+  .topbar[data-fit='3'] .nav { order: 3; flex: 1 0 100%; margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter) var(--space-2); overflow-x: auto; scrollbar-width: none; }
+  .topbar[data-fit='3'] .nav::-webkit-scrollbar { display: none; }
+  .topbar[data-fit='3'] .topbar__actions { margin-left: auto; }
+}
+
+/* ---- Discipline en wisselaar achter de naam ---- */
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+
+.switcher { position: relative; }
+
+/* Een klein, omlijnd knopje: 'Audit ⌄' */
+.switcher__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  min-height: 2.35rem;
+  padding: 0.15rem 0.5rem 0.15rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-on-dark);
+  font: inherit;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--duration) var(--ease-out), border-color var(--duration) var(--ease-out);
+}
+
+.switcher__button:hover { border-color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.14); }
+.switcher__button[aria-expanded='true'] { border-color: var(--vv-teal); background: rgba(255, 255, 255, 0.14); }
+@media (pointer: coarse) { .switcher__button { min-height: var(--touch-min); } }
+
+.switcher__chevron { width: 1.05em; height: 1.05em; color: var(--vv-teal); transition: transform var(--duration) var(--ease-out); }
+.switcher__button[aria-expanded='true'] .switcher__chevron { transform: rotate(180deg); }
+
+/* Het uitklapmenu staat in de (donkere) kopbalk, maar is zelf licht */
+.switcher__panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  z-index: 5;
+  width: min(25rem, calc(100vw - 2 * var(--gutter)));
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text-body);
+  box-shadow: var(--shadow-xl);
+  font-size: var(--fs-base);
+  font-weight: var(--fw-regular);
+  letter-spacing: normal;
+  white-space: normal;
+}
+
+[data-theme='licht'] .switcher__panel { --color-focus: var(--color-primary); }
+
+.switcher__title {
+  padding: 0 var(--space-2) var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--ls-eyebrow);
+  text-transform: uppercase;
+}
+
+.switcher__list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+
+.switcher__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.55rem var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+a.switcher__item:hover { background: var(--color-surface-muted); }
+.switcher__item.is-current { background: var(--color-surface-muted); }
+span.switcher__item.is-locked { color: var(--color-text-muted); cursor: default; }
+.switcher__item.is-locked .switcher__icon { opacity: 0.55; }
+
+.switcher__icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.7rem;
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+
+.switcher__icon .icon { width: 1.2rem; height: 1.2rem; }
+.switcher__body { min-width: 0; }
+.switcher__name { display: block; font-weight: var(--fw-bold); }
+.switcher__desc { display: block; color: var(--color-text-muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+span.is-locked .switcher__name { color: var(--color-text-muted); }
+
+.switcher__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.switcher__state .icon { width: 0.95rem; height: 0.95rem; }
+.switcher__state--current { padding: 0; background: none; color: var(--accent-teal-ink); }
+.switcher__state--current .icon { width: 1.3rem; height: 1.3rem; }
+
+.switcher__foot {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-1);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.switcher__foot .icon { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.15em; color: var(--accent-steel-ink); }
+.switcher__foot a { color: var(--color-link); font-weight: var(--fw-semibold); }
 
 /* ==========================================================================
    Hero (startpagina)
@@ -1832,6 +1979,69 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .edit-bar + .page { padding-top: var(--space-6); }
 .badge--draft { background: var(--color-warning-fill); color: var(--color-warning); border: 1px dashed currentColor; }
 
+/* ---- Disciplines: op slot en gedeelde basis ---- */
+.edit-bar--lock { background: var(--accent-steel-wash, var(--accent-steel-tint)); border-bottom-color: var(--color-border); }
+.edit-bar--lock .edit-bar__label { color: var(--accent-steel-ink); }
+.edit-bar__text { color: var(--color-text); font-size: var(--fs-sm); }
+.edit-bar + .edit-bar .edit-bar__inner { padding-top: var(--space-2); }
+.badge--shared { background: var(--accent-steel-wash, var(--accent-steel-tint)); color: var(--accent-steel-ink); }
+
+.shared-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: fit-content;
+  max-width: 46rem;
+  margin-top: var(--space-3);
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent-steel-wash, var(--accent-steel-tint));
+  color: var(--accent-steel-ink);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+}
+
+.shared-note .icon { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.15em; }
+
+/* Beheer: van discipline wisselen, en waarin je werkt */
+.admin__scope { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.admin__scope-label { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; }
+.admin__scope .toggle { text-decoration: none; }
+.admin__scope .toggle[aria-current='page'] { background: var(--color-selected); border-color: var(--color-selected); color: var(--color-on-selected); }
+.cms__scope { display: flex; align-items: flex-start; gap: var(--space-2); margin-bottom: var(--space-4); color: var(--color-text-muted); font-size: var(--fs-sm); }
+.cms__scope .icon { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.15em; color: var(--accent-steel-ink); }
+.seed__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.basis-setup > div { display: grid; gap: var(--space-3); }
+.basis-setup__groups { display: grid; gap: var(--space-3); }
+
+/* Beheer → Disciplines */
+.disc-list { display: grid; gap: var(--space-3); margin: var(--space-4) 0; padding: 0; list-style: none; }
+.disc { border: 1px solid var(--color-border); border-left: 4px solid var(--accent-teal); border-radius: var(--radius); background: var(--color-surface); }
+.disc--locked { border-left-color: var(--color-border-strong); }
+.disc__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); }
+
+.disc__icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+
+.disc__icon .icon { width: 1.3rem; height: 1.3rem; }
+.disc__main { flex: 1 1 12rem; min-width: 0; }
+.disc__name { color: var(--color-text); font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.disc .status { display: inline-flex; align-items: center; gap: 0.3em; }
+.disc .status .icon { width: 1em; height: 1em; }
+.disc__details { border-top: 1px solid var(--color-border); }
+.disc__summary { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); color: var(--color-link); font-size: var(--fs-sm); font-weight: var(--fw-semibold); cursor: pointer; }
+.disc__summary .icon { width: 1rem; height: 1rem; }
+.disc__details > .form-grid,
+.disc__details > .cms-form__actions { padding: 0 var(--space-4) var(--space-4); }
+
 /* ---- Beheer → Inhoud ---- */
 .cms { display: grid; gap: var(--space-5); }
 .cms__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
@@ -2070,16 +2280,35 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 }
 
 /* Menu onder de naam, horizontaal te scrollen */
-@media (max-width: 979px) {
-  .topbar__inner { flex-wrap: wrap; row-gap: 0; }
-  .nav { order: 3; flex: 1 0 100%; margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter) var(--space-2); overflow-x: auto; scrollbar-width: none; }
-  .nav::-webkit-scrollbar { display: none; }
-  .topbar__actions { margin-left: auto; }
+/* Menu onder de naam: altijd op een telefoon, en zonder JavaScript ook op een smal scherm */
+@media (max-width: 1019px) {
+  .topbar:not([data-fit]) .topbar__inner { flex-wrap: wrap; row-gap: 0; }
+  .topbar:not([data-fit]) .nav { order: 3; flex: 1 0 100%; margin: 0 calc(var(--gutter) * -1); padding: 0 var(--gutter) var(--space-2); overflow-x: auto; scrollbar-width: none; }
+  .topbar:not([data-fit]) .nav::-webkit-scrollbar { display: none; }
+  .topbar:not([data-fit]) .topbar__actions { margin-left: auto; }
 }
 
-/* Heel smal toestel: zonder logo-icoon, zodat naam en knoppen op één regel blijven */
+/* Heel smal toestel: zonder logo-icoon, zodat naam en knoppen op één regel blijven
+   (met JavaScript meet js/disciplines.js dat: data-squeeze 1 zonder icoon, 2 ook iets kleiner) */
 @media (max-width: 360px) {
-  .brand__mark { display: none; }
+  .topbar:not([data-squeeze]) .brand__mark { display: none; }
+}
+
+.topbar[data-squeeze='1'] .brand__mark,
+.topbar[data-squeeze='2'] .brand__mark { display: none; }
+.topbar[data-squeeze='2'] .topbar__inner { column-gap: var(--space-2); }
+.topbar[data-squeeze='2'] .brand__text,
+.topbar[data-squeeze='2'] .switcher__button { font-size: var(--fs-base); }
+.topbar[data-squeeze='2'] .switcher__button { padding-inline: 0.55rem 0.4rem; }
+
+/* Telefoon: het menu van de wisselaar over de volle breedte, onder de kopbalk */
+@media (max-width: 600px) {
+  .switcher { position: static; }
+  .switcher__panel { left: var(--gutter); right: var(--gutter); top: calc(100% - 0.25rem); width: auto; }
+}
+
+@media (max-width: 480px) {
+  .switcher__state:not(.switcher__state--current) { grid-column: 2; justify-self: start; margin-top: -0.35rem; }
 }
 
 /* Telefoon: zes tabbladen naast elkaar, icoon boven een kort label

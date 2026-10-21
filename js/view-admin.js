@@ -1,10 +1,14 @@
 /* ==========================================================================
-   Beheer (#/beheer, #/beheer/inhoud, #/beheer/inzendingen, #/beheer/gebruik)
+   Beheer (#/beheer/inhoud, /basis, /disciplines, /inzendingen, /gebruik)
    --------------------------------------------------------------------------
    Voor het AI-team: inloggen met een Supabase-gebruiker van wie het
    e-mailadres in audit_admins staat (zie setup/supabase-audit.sql).
+   Bovenaan wissel je van discipline: Inhoud, Inzendingen en Gebruik gaan
+   over de discipline waarin je zit.
    - Inhoud: usecases, prompts, tips, trainingen, agents & tools, fasen en
-     teksten aanpassen, toevoegen en verwijderen (js/admin-content.js).
+     teksten van deze discipline (js/admin-content.js).
+   - Gedeelde basis: wat in iedere cockpit staat (zelfde formulieren).
+   - Disciplines: welke er zijn en welke open of op slot (js/admin-disciplines.js).
    - Inzendingen: lezen (met naam en e-mail), status zetten, beantwoorden,
      publiceren in de hub, verwijderen en exporteren (CSV).
    - Gebruik: anonieme tellers per usecase, demo, prompt, tip, training en agent.
@@ -16,10 +20,39 @@
   const { el, icon, toast, formatDate, pageHeader } = ns.ui;
   const view = { status: 'open', kind: 'all', days: 90 };
   const TABS = [
-    { id: 'inhoud', label: 'Inhoud', icon: 'pencil-line' },
-    { id: 'inzendingen', label: 'Inzendingen', icon: 'message-plus' },
-    { id: 'gebruik', label: 'Gebruik', icon: 'chart' }
+    { id: 'inhoud', label: 'Inhoud', icon: 'pencil-line', perDiscipline: true },
+    { id: 'basis', label: 'Gedeelde basis', icon: 'globe' },
+    { id: 'disciplines', label: 'Disciplines', icon: 'layers' },
+    { id: 'inzendingen', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true },
+    { id: 'gebruik', label: 'Gebruik', icon: 'chart', perDiscipline: true }
   ];
+
+  /** Wisselen van discipline in Beheer: naar hetzelfde onderdeel in de cockpit van die discipline. */
+  function disciplineChooser(tab) {
+    const target = TABS.find((t) => t.id === tab && t.perDiscipline) ? tab : 'inhoud';
+    const activeId = ns.cockpit.activeId();
+    return el('div', { className: 'admin__scope' }, [
+      el('span', { className: 'admin__scope-label', text: 'Discipline' }),
+      el('nav', { className: 'toggles', attrs: { 'aria-label': 'Discipline om te beheren' } }, ns.cockpit.registry().map((discipline) =>
+        el('a', {
+          className: 'toggle',
+          attrs: {
+            href: ns.cockpit.href(discipline.id, '#/beheer/' + target),
+            'aria-current': discipline.id === activeId ? 'page' : null,
+            title: discipline.status === 'open' ? 'Open voor iedereen' : 'Op slot: alleen beheerders'
+          }
+        }, [discipline.status === 'open' ? null : icon('lock'), el('span', { text: discipline.name })])
+      ))
+    ]);
+  }
+
+  /** Waarin Beheer → Inhoud of Gedeelde basis werkt (zie js/admin-content.js). */
+  function scopeFor(tab) {
+    const discipline = ns.cockpit.active();
+    return tab === 'basis'
+      ? { kind: 'basis', namespace: ns.cockpit.GENERAL_NAMESPACE, base: '#/beheer/basis', name: 'de gedeelde basis', id: 'algemeen', files: false }
+      : { kind: 'discipline', namespace: ns.cockpit.namespace(discipline.id), base: '#/beheer/inhoud', name: discipline.name, id: discipline.id, files: discipline.id === ns.cockpit.FILES_ID };
+  }
 
   /* ---- Inloggen ---------------------------------------------------------------- */
   function loginForm(onDone) {
@@ -295,7 +328,7 @@
     const tab = TABS.some((t) => t.id === params[0]) ? params[0] : 'inhoud';
     const content = el('div', { className: 'admin' });
     const node = el('div', { className: 'page container' }, [
-      pageHeader({ eyebrow: 'Beheer', title: 'Beheer van het platform', lead: 'Voor het AI-team: alle inhoud aanpassen en aanvullen, inzendingen uit de ideeënhub beantwoorden en zien wat er gebruikt wordt.' }),
+      pageHeader({ eyebrow: 'Beheer', title: 'Beheer van het platform', lead: 'Voor het AI-team: de inhoud per discipline en de gedeelde basis aanpassen, disciplines openzetten of op slot houden, inzendingen uit de ideeënhub beantwoorden en zien wat er gebruikt wordt.' }),
       content
     ]);
     let canLeave = null;
@@ -315,10 +348,15 @@
 
     const panel = el('div', { className: 'admin__panel' });
     panel.addEventListener('signedout', () => ns.app.reloadContent());
+    const disciplineName = ns.cockpit.active().name;
     const tabs = el('nav', { className: 'toggles', attrs: { 'aria-label': 'Onderdeel van beheer' } }, TABS.map((t) =>
-      el('a', { className: 'toggle', attrs: { href: '#/beheer/' + t.id, 'aria-current': t.id === tab ? 'page' : null } }, [icon(t.icon), el('span', { text: t.label })])
+      el('a', { className: 'toggle', attrs: { href: '#/beheer/' + t.id, 'aria-current': t.id === tab ? 'page' : null } }, [
+        icon(t.icon),
+        el('span', { text: t.id === 'inhoud' ? 'Inhoud ' + disciplineName : t.label })
+      ])
     ));
     content.append(
+      ...(TABS.find((t) => t.id === tab).perDiscipline ? [disciplineChooser(tab)] : []),
       el('div', { className: 'admin__bar' }, [
         tabs,
         el('p', { className: 'admin__user' }, [icon('lock'), el('span', { text: 'Ingelogd als ' + ns.central.signedIn() })]),
@@ -334,8 +372,12 @@
     );
     if (tab === 'gebruik') usageTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);
-    else {
-      const result = ns.adminContent.render(params.slice(1), { status: ns.content.adminStatus });
+    else if (tab === 'disciplines') {
+      const result = ns.adminDisciplines.render();
+      panel.append(result.node);
+      canLeave = result.canLeave;
+    } else {
+      const result = ns.adminContent.render(params.slice(1), { status: ns.content.adminStatus }, scopeFor(tab));
       panel.append(result.node);
       canLeave = result.canLeave;
     }

@@ -25,7 +25,7 @@
 
     return el('section', { className: 'hero on-dark', attrs: { 'aria-labelledby': 'home-title' } }, [
       el('div', { className: 'hero__inner container' }, [
-        el('p', { className: 'hero__eyebrow', text: `${config.organizationName} · Copilot in de controlepraktijk` }),
+        el('p', { className: 'hero__eyebrow', text: `${config.organizationName} · ${ns.cockpit.active().eyebrow}` }),
         el('h1', { className: 'hero__title', attrs: { id: 'home-title', tabindex: '-1' } }, [
           el('span', { text: config.applicationTitle + ' ' }),
           el('span', { className: 'hero__discipline', text: config.discipline })
@@ -42,7 +42,7 @@
     const c = ns.content;
     const withDemo = c.usecases.filter((u) => u.hasDemo).length;
     const items = [
-      { href: '#/usecases', icon: 'play-circle', accent: 'crimson', title: 'Usecases', count: c.usecases.length, text: `Praktische toepassingen per fase van de controle, ${withDemo} met een demo.` },
+      { href: '#/usecases', icon: 'play-circle', accent: 'crimson', title: 'Usecases', count: c.usecases.length, text: `Praktische toepassingen per fase van ${ns.cockpit.active().phases}, ${withDemo} met een demo.` },
       { href: '#/prompts', icon: 'chat', accent: 'teal', title: 'Promptdatabase', count: c.prompts.length, text: 'Direct te gebruiken prompts. Vul de plaatshouders in en kopieer.' },
       { href: '#/tips', icon: 'bulb', accent: 'steel', title: 'Tips & tricks', count: c.openTips.length, text: 'Iedere vrijdag een nieuwe tip, plus de basis: instructies, Facilitator en meer.' },
       { href: '#/trainingen', icon: 'cap', accent: 'deepteal', title: 'Trainingen', count: c.trainings.filter((t) => t.available).length || null, text: 'Opnames en naslagwerk van trainingen en sessies om terug te kijken.' },

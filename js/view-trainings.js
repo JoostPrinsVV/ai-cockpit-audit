@@ -50,6 +50,7 @@
         training.subtitle ? el('p', { className: 'tr-card__subtitle', text: training.subtitle }) : null,
         el('div', { className: 'chips' }, [
           ns.ui.draftBadge(training),
+          ns.cockpit.sharedBadge(training),
           training.hasNaslag ? chip('Naslagwerk', { icon: 'book' }) : null,
           training.level ? chip(training.level, { icon: 'sparkle' }) : null,
           licenseBadge(training.license, { short: true }),
@@ -85,7 +86,7 @@
         el('div', { className: 'empty' }, [
           el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('cap')]),
           el('p', { className: 'empty__title', text: 'De eerste opnames komen eraan' }),
-          el('p', { className: 'empty__text', text: 'Hier verschijnen de opnames van trainingen en sessies over Copilot in de audit, met de slides en de prompts die erin aan bod komen.' }),
+          el('p', { className: 'empty__text', text: `Hier verschijnen de opnames van trainingen en sessies over Copilot in ${ns.cockpit.active().label}, met de slides en de prompts die erin aan bod komen.` }),
           el('a', { className: 'btn btn--primary', attrs: { href: '#/ideeen/verzoek' } }, [icon('flag'), el('span', { text: 'Vraag een training aan' })])
         ])
       ]);

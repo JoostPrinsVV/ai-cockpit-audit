@@ -11,10 +11,12 @@
      #/ideeen                ideeënhub              #/ideeen/vraag   met 'Vraag' alvast gekozen
      #/zoeken/<woorden>      zoeken
      #/beheer                beheer (inloggen)      #/beheer/inhoud  inhoud aanpassen
+   Andere discipline: ?d=<id> vóór de #, bijv. ?d=accountancy#/prompts (zie js/disciplines.js).
 
    Inhoud: uit de database (als die is ingericht via Beheer → Inhoud), anders
    uit de bestanden in data/. Bezoekers krijgen eerst de laatst bekende versie
-   uit hun browser (snel), daarna de actuele uit de database.
+   uit hun browser (snel), daarna de actuele uit de database. Een cockpit is de
+   gedeelde basis plus de eigen inhoud van de discipline.
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -101,13 +103,25 @@
       type = 'usecase';
       label = 'de usecase van deze prompt';
     }
+    // Een item uit de gedeelde basis pas je aan bij Beheer → Gedeelde basis
+    const area = item.shared ? 'basis' : 'inhoud';
     return el('div', { className: 'edit-bar' }, [
       el('div', { className: 'container edit-bar__inner' }, [
         el('span', { className: 'edit-bar__label' }, [icon('lock'), el('span', { text: 'Beheer' })]),
         item.draft ? el('span', { className: 'badge badge--draft' }, [icon('pencil-line'), 'Concept: alleen zichtbaar voor beheerders']) : null,
-        el('a', { className: 'btn btn--primary btn--sm', attrs: { href: `#/beheer/inhoud/${type}/${item.id}` } }, [icon('pencil-line'), el('span', { text: 'Bewerk ' + label })])
+        el('a', { className: 'btn btn--primary btn--sm', attrs: { href: `#/beheer/${area}/${type}/${item.id}` } }, [icon('pencil-line'), el('span', { text: 'Bewerk ' + label + (item.shared ? ' (gedeelde basis)' : '') })])
       ])
     ]);
+  }
+
+  /** Detailpagina van een gedeeld item: een regel uitleg onder de titel. */
+  const NOTE_WHAT = { usecase: 'Deze usecase', prompt: 'Deze prompt', tip: 'Deze tip', training: 'Deze training', agent: 'Deze agent' };
+  function sharedNote(parsed, node) {
+    const info = EDITABLE[parsed.name];
+    const item = info ? ns.content[info.map].get(parsed.params[0]) : null;
+    const note = item ? ns.cockpit.sharedNote(item, NOTE_WHAT[parsed.name]) : null;
+    const heading = note ? node.querySelector('h1') : null;
+    if (heading) heading.insertAdjacentElement('afterend', note);
   }
 
   /* ---- Routeren ----------------------------------------------------------------------- */
@@ -147,7 +161,8 @@
 
     const viewNode = document.getElementById('view');
     const scrollY = window.scrollY;
-    viewNode.replaceChildren(...[editBar(parsed), result.node].filter(Boolean));
+    sharedNote(parsed, result.node);
+    viewNode.replaceChildren(...[ns.cockpit.lockBar(), editBar(parsed), result.node].filter(Boolean));
     document.body.dataset.view = parsed.name || 'home';
     // Tabbladtitel volgt de naam uit Beheer → Teksten (of js/config.js)
     const siteTitle = [config.applicationTitle, config.discipline].filter(Boolean).join(' ') || SITE_TITLE;
@@ -183,6 +198,13 @@
       const value = settings[name];
       if (Array.isArray(value) ? value.length : typeof value === 'string' && value.trim()) config[name] = value;
     });
+    // De naam komt uit Beheer → Disciplines. De uitleg in js/config.js gaat over de audit:
+    // een andere discipline zonder eigen uitleg krijgt een algemene.
+    const discipline = ns.cockpit.active();
+    config.discipline = discipline.name;
+    if (!(settings.applicationSubtitle || '').trim() && discipline.id !== ns.cockpit.FILES_ID) {
+      config.applicationSubtitle = `Usecases, prompts, tips, trainingen en agents: alles over Copilot in ${discipline.label} op één plek.`;
+    }
     if (ns.content.source !== 'bestanden' && ns.content.updatedAt) {
       config.lastUpdated = new Date(ns.content.updatedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
     }
@@ -205,12 +227,18 @@
   async function loadContent(options) {
     const opts = options || {};
     const asAdmin = Boolean(ns.central.signedIn());
+    ns.cockpit.setAdmin(asAdmin && ns.central.isAdmin());
+    // Deze cockpit: de eigen inhoud van de discipline plus de gedeelde basis
+    const discipline = ns.cockpit.activeId();
+    const space = { own: ns.cockpit.namespace(discipline), general: ns.cockpit.GENERAL_NAMESPACE, discipline };
+    const compose = (rows) => ns.content.fromCockpitRows(rows, space);
+    const cacheKey = 'inhoud:' + discipline;
     let shownSignature = '';
 
     // 1. Snel: de laatst bekende versie uit deze browser (alleen voor bezoekers)
     if (!rendered && !asAdmin) {
-      const cached = storage.get('inhoud', null);
-      const source = cached && Array.isArray(cached.rows) ? ns.content.fromRows(cached.rows) : null;
+      const cached = storage.get(cacheKey, null);
+      const source = cached && Array.isArray(cached.rows) ? compose(cached.rows) : null;
       if (source) {
         useSource(source, 'cache');
         shownSignature = signature(cached.rows);
@@ -222,7 +250,7 @@
     }
 
     // 2. Actueel: de database (met een maximale wachttijd voor de eerste weergave)
-    const fetching = ns.central.fetchContent({ admin: asAdmin });
+    const fetching = ns.central.fetchContent({ admin: asAdmin, namespaces: [space.own, space.general] });
     const timer = new Promise((resolve) => window.setTimeout(() => resolve(null), FETCH_TIMEOUT));
     let result = await Promise.race([fetching, timer]);
     if (!result && !rendered) {
@@ -236,8 +264,10 @@
     ns.content.adminStatus = result.status;
 
     if (result.status === 'ok') {
-      const source = ns.content.fromRows(result.rows);
-      if (!asAdmin) storage.set('inhoud', source ? { at: Date.now(), rows: result.rows } : null);
+      // Lijst met disciplines bijwerken; deze cockpit (inmiddels) op slot: naar de standaard
+      if (!ns.cockpit.updateRegistry(result.rows)) return 'op slot';
+      const source = compose(result.rows);
+      if (!asAdmin) storage.set(cacheKey, source ? { at: Date.now(), rows: result.rows } : null);
       if (source) {
         if (!rendered || opts.force || signature(result.rows) !== shownSignature || ns.content.source === 'bestanden') {
           const wasRendered = rendered;
@@ -281,7 +311,7 @@
   /* ---- Kop en voet ----------------------------------------------------------------- */
   function fillChrome() {
     document.getElementById('brand-title').textContent = config.applicationTitle;
-    document.getElementById('brand-discipline').textContent = config.discipline;
+    ns.cockpit.renderSwitcher();
     document.getElementById('footer-rules').replaceChildren(...(config.rules || []).map((rule, index) =>
       el('li', { className: 'rules__item' }, [el('span', { className: 'rules__number', text: String(index + 1) }), el('span', { text: rule })])
     ));
@@ -306,9 +336,12 @@
         namespace: 'ai-audit',
         storageNamespace: 'ai-snackbar-audit'
       }, ns.config || {});
-      config = Object.assign({}, baseConfig);
       ns.ui.init({ config: baseConfig });
       ns.central.init({ config: baseConfig });
+      // Welke discipline (zet ook de naamruimte voor inzendingen en tellers)
+      ns.cockpit.init({ config: baseConfig, admin: Boolean(ns.central.signedIn()) && ns.central.isAdmin() });
+      config = Object.assign({}, baseConfig);
+      storage.remove('inhoud'); // bewaarplek van vóór de disciplines
       initTheme();
       fillChrome();
       window.addEventListener('hashchange', () => route());

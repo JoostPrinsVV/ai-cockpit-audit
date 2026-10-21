@@ -1,22 +1,21 @@
 /* ==========================================================================
-   AI COCKPIT · PROTOTYPE — VOORBEELDINHOUD ACCOUNTANCY
+   AI COCKPIT — VOORBEELDINHOUD ACCOUNTANCY
    --------------------------------------------------------------------------
-   De eigen inhoud van de cockpit Accountancy, bovenop de gedeelde basis
-   (zie prototype/js/disciplines.js). Dezelfde velden als de bestanden in
-   data/ (uitleg staat daar bovenin).
+   Startinhoud voor de discipline Accountancy. Niet zichtbaar op de site:
+   Beheer → Inhoud (in de cockpit van Accountancy) biedt aan deze inhoud
+   over te nemen zolang Accountancy nog leeg is. Daarna pas je alles daar
+   aan; dit bestand doet dan niet meer mee.
 
-   Voorbeeldinhoud voor het prototype: de usecases zijn gebaseerd op de
-   snacks van de AI Snackbar (Boost & Learn), de rest is ter illustratie.
-   Alle namen en organisaties zijn verzonnen.
-
-   overrides: aanpassingen op gedeelde items, alleen in deze cockpit
-   (bijv. een eigen voorbeeldinstructie bij de gedeelde tip 'instructies').
+   Dezelfde velden als de bestanden in data/ (uitleg staat daar bovenin).
+   De usecases zijn gebaseerd op de snacks van de AI Snackbar (Boost & Learn).
+   De fase 'communicatie' hoort bij de gedeelde basis. Alle namen en
+   organisaties zijn verzonnen.
    ========================================================================== */
 
 window.AIAudit = window.AIAudit || {};
-window.AIAudit.disciplineData = window.AIAudit.disciplineData || {};
+window.AIAudit.examples = window.AIAudit.examples || {};
 
-window.AIAudit.disciplineData.accountancy = {
+window.AIAudit.examples.accountancy = {
   /* ---- Fasen (de gedeelde fasen 'communicatie' en 'eigen-werk' komen erachter) ---- */
   phases: [
     { id: 'administratie', label: 'Administratie & verwerking', short: 'Administratie', accent: 'teal', icon: 'table' },
@@ -408,29 +407,4 @@ Loop de tekst hieronder na op woorden die suggereren dat de jaarrekening is geco
       usecases: ['klantpresentatie', 'icbo-jaarrekening']
     }
   ],
-
-  /* ---- Aanpassingen op gedeelde items, alleen in deze cockpit ------------------------ */
-  overrides: {
-    tip: {
-      instructies: {
-        why: 'Je hoeft niet in iedere prompt opnieuw uit te leggen dat je jaarrekeningen samenstelt, dat je in het Nederlands wilt werken en dat je bronnen wilt zien. Dat scheelt typwerk en levert direct beter bruikbare antwoorden op.',
-        example: {
-          label: 'Voorbeeldinstructie voor accountancy',
-          text: `Ik werk als [FUNCTIE, bijv. assistent-accountant] bij Visser & Visser. Ik stel jaarrekeningen samen voor MKB-ondernemingen en adviseer ondernemers over hun cijfers.
-
-Hoe je antwoordt:
-- Altijd in het Nederlands, zakelijk en beknopt. Begin met de kern, daarna de onderbouwing.
-- Gebruik tabellen voor overzichten.
-- Vermeld bij feiten uit bestanden de bron (bestandsnaam en pagina of tabblad).
-- Maak onderscheid tussen feiten uit de stukken, berekeningen en aannames. Markeer aannames met "Aanname".
-- Schrijf teksten voor klanten in begrijpelijke taal, zonder vakjargon.
-- Gebruik geen woorden als "controle" of "goedgekeurd": ik werk aan samenstellingsopdrachten.
-- Is mijn vraag onduidelijk, vraag dan door in plaats van te gokken.`
-        }
-      },
-      controleren: {
-        why: 'Bedragen in een jaarrekening, aangifte of klantpresentatie moeten kloppen. Copilot kan rekenfouten maken, bronnen verkeerd citeren of iets aannemen dat niet in de stukken staat. Door gericht te controleren, vang je dat op.'
-      }
-    }
-  }
 };

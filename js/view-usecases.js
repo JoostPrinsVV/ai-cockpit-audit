@@ -19,7 +19,7 @@
     return el('a', { className: 'uc-card ' + accentClass(usecase.accent), attrs: { href: '#/usecase/' + usecase.id } }, [
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(usecase.icon)]),
-        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })])
+        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), ns.cockpit.sharedBadge(usecase), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })])
       ]),
       el('div', { className: 'uc-card__body' }, [
         el('p', { className: 'uc-card__phase', text: usecase.phase.label }),
@@ -70,8 +70,8 @@
     const node = el('div', { className: 'page container' }, [
       pageHeader({
         eyebrow: 'Usecases',
-        title: 'Copilot in de praktijk van de audit',
-        lead: 'Per fase van de controle: wat je met Copilot kunt doen, hoe het eruitziet in een demo en welke prompts je direct kunt gebruiken. Alle demo\'s werken met fictieve gegevens.'
+        title: `Copilot in de praktijk van ${ns.cockpit.active().label}`,
+        lead: `Per fase van ${ns.cockpit.active().phases}: wat je met Copilot kunt doen, hoe het eruitziet in een demo en welke prompts je direct kunt gebruiken. Alle demo's werken met fictieve gegevens.`
       }),
       el('div', { className: 'filters' }, [
         el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Fase' }), phaseGroup]),

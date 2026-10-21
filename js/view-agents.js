@@ -43,7 +43,7 @@
     return el('a', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : ''), attrs: { href: '#/agent/' + agent.id } }, [
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(agent.icon)]),
-        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), newBadge(agent.added), agentLicense(agent, true)])
+        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), ns.cockpit.sharedBadge(agent), newBadge(agent.added), agentLicense(agent, true)])
       ]),
       el('div', { className: 'uc-card__body' }, [
         el('p', { className: 'uc-card__phase', text: agent.kind }),
@@ -97,7 +97,7 @@
         el('div', { className: 'empty' }, [
           el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('robot')]),
           el('p', { className: 'empty__title', text: 'De catalogus wordt gevuld' }),
-          el('p', { className: 'empty__text', text: 'Hier komen de AI-agents en tools die je in de audit kunt gebruiken, met waarvoor ze bedoeld zijn en hoe je toegang krijgt.' }),
+          el('p', { className: 'empty__text', text: `Hier komen de AI-agents en tools die je in ${ns.cockpit.active().label} kunt gebruiken, met waarvoor ze bedoeld zijn en hoe je toegang krijgt.` }),
           el('a', { className: 'btn btn--primary', attrs: { href: '#/ideeen/vraag' } }, [icon('message-plus'), el('span', { text: 'Stel een vraag' })])
         ])
       ]);
@@ -187,7 +187,7 @@
       agent.license === true || agent.license === false ? ['Licentie', agent.license
         ? (agent.kind === 'Extern product' ? 'Er is een eigen licentie of account nodig.' : 'Werkt met een Microsoft 365 Copilot-licentie.')
         : (agent.kind === 'Extern product' ? 'Geen aparte licentie nodig.' : 'Ook te gebruiken zonder Copilot-licentie.')] : null,
-      agent.phases.length ? ['Fasen', allPhases(agent) ? 'Alle fasen van de controle' : agent.phases.map((phase) => phase.label).join(', ')] : null,
+      agent.phases.length ? ['Fasen', allPhases(agent) ? `Alle fasen van ${ns.cockpit.active().phases}` : agent.phases.map((phase) => phase.label).join(', ')] : null,
       agent.owner ? ['Aanspreekpunt', agent.owner] : null
     ].filter(Boolean);
     return el('section', { className: 'side-card', attrs: { 'aria-labelledby': 'ag-facts' } }, [

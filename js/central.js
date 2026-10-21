@@ -17,6 +17,10 @@
    - Inhoud aanpassen en alles lezen, beantwoorden, publiceren en wissen kan
      alleen een beheerder die inlogt (e-mailadres in de tabel audit_admins).
 
+   Naamruimte (kolom namespace): iedere discipline heeft er een eigen ('ai-audit',
+   'ai-accountancy', ...), de gedeelde basis heeft 'ai-algemeen' (zie js/disciplines.js).
+   Inzendingen en tellers gaan naar de discipline waarin je zit.
+
    Inloggen: de sessie staat in sessionStorage (alleen dit tabblad; weg zodra
    je het tabblad sluit) en wordt automatisch verlengd zolang je bezig bent.
 
@@ -28,7 +32,7 @@
   const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content' };
   // Kolommen die iedereen mag lezen (geen naam of e-mailadres).
   const PUBLIC_COLUMNS = 'id,ref,created_at,kind,title,body,phase,status,answer,answered_at,votes';
-  const CONTENT_COLUMNS = 'type,id,data,position,status,updated_at';
+  const CONTENT_COLUMNS = 'namespace,type,id,data,position,status,updated_at';
   const PAGE_SIZE = 1000;
   const SESSION_KEY = 'ai-snackbar-audit:sessie';
 
@@ -87,14 +91,21 @@
   }
 
   /* ---- Inhoud (voor iedereen: alleen gepubliceerd) -------------------------------- */
+  /** Filter op één naamruimte of op een lijst ervan. */
+  function namespaceFilter(namespaces) {
+    const list = (Array.isArray(namespaces) && namespaces.length ? namespaces : [config.namespace]).map(encodeURIComponent);
+    return list.length === 1 ? 'namespace=eq.' + list[0] : 'namespace=in.(' + list.join(',') + ')';
+  }
+
   /**
-   * Alle inhoudsrijen. Met een beheerderssessie ook concepten en de prullenbak.
+   * Alle inhoudsrijen (options.namespaces: welke naamruimtes, standaard die van de discipline).
+   * Met een beheerderssessie ook concepten en de prullenbak.
    * @returns {Promise<{ status: 'ok'|'missing'|'failed'|'off', rows: object[] }>}
    */
   async function fetchContent(options) {
     if (!enabled) return { status: 'off', rows: [] };
     const asAdmin = options && options.admin && signedIn();
-    const query = `?select=${CONTENT_COLUMNS}&namespace=eq.${encodeURIComponent(config.namespace)}&order=type.asc,position.asc,id.asc&limit=5000`;
+    const query = `?select=${CONTENT_COLUMNS}&${namespaceFilter(options && options.namespaces)}&order=type.asc,position.asc,id.asc&limit=5000`;
     try {
       const response = await request('/rest/v1/' + TABLES.content + query, { headers: asAdmin ? await adminHeaders() : headers(null) });
       if (response.ok) return { status: 'ok', rows: await response.json() };
@@ -315,13 +326,13 @@
     return rows;
   }
 
-  /* ---- Beheer: inhoud --------------------------------------------------------------- */
-  const contentFilter = (type, id) => `?namespace=eq.${encodeURIComponent(config.namespace)}&type=eq.${encodeURIComponent(type)}&id=eq.${encodeURIComponent(id)}`;
+  /* ---- Beheer: inhoud (namespace: standaard die van de discipline) ------------------------ */
+  const contentFilter = (type, id, namespace) => `?namespace=eq.${encodeURIComponent(namespace || config.namespace)}&type=eq.${encodeURIComponent(type)}&id=eq.${encodeURIComponent(id)}`;
 
   /** Eén of meer rijen opslaan (nieuw of bestaand). rows: [{ type, id, data, position, status }] */
-  async function saveContent(rows) {
+  async function saveContent(rows, namespace) {
     const list = (Array.isArray(rows) ? rows : [rows]).map((row) => ({
-      namespace: config.namespace,
+      namespace: namespace || config.namespace,
       type: row.type,
       id: row.id,
       data: row.data,
@@ -340,8 +351,8 @@
   }
 
   /** Alleen bepaalde kolommen aanpassen, bijv. { status } of { position }. */
-  async function patchContent(type, id, patch) {
-    const response = await request('/rest/v1/' + TABLES.content + contentFilter(type, id), {
+  async function patchContent(type, id, patch, namespace) {
+    const response = await request('/rest/v1/' + TABLES.content + contentFilter(type, id, namespace), {
       method: 'PATCH',
       headers: await adminHeaders({ Prefer: 'return=representation' }),
       body: JSON.stringify(patch)
@@ -353,8 +364,8 @@
   }
 
   /** Definitief verwijderen (de vorige versie blijft in de geschiedenis). */
-  async function deleteContent(type, id) {
-    const response = await request('/rest/v1/' + TABLES.content + contentFilter(type, id), {
+  async function deleteContent(type, id, namespace) {
+    const response = await request('/rest/v1/' + TABLES.content + contentFilter(type, id, namespace), {
       method: 'DELETE',
       headers: await adminHeaders({ Prefer: 'return=representation' })
     });

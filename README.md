@@ -17,8 +17,11 @@ css/variables.css     Huisstijl: kleuren, maten, lettertypes (eigen kopie, overg
 css/base.css          Lettertypes, reset en hulpklassen (eigen kopie)
 css/audit.css         De opmaak van dit platform
 js/config.js          Instellingen: titel, gouden regels, Supabase
-js/*.js               De applicatie (iedere pagina een view-*.js)
-data/*.js             Startinhoud en terugval als de database niet bereikbaar is
+js/disciplines.js     Disciplines: welke cockpit je ziet, wat op slot staat, de wisselaar in de kopbalk
+js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
+data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
+data/*.js             Startinhoud van Audit en terugval als de database niet bereikbaar is
+data/voorbeelden/     Voorbeeldinhoud om een nieuwe discipline mee te beginnen (alleen via Beheer)
 demos/                Nagespeelde Copilot-demo's (player.html + scripts.js)
 assets/fonts/         IBM Plex (SIL Open Font License, zie OFL.txt)
 assets/branding/      Favicon
@@ -26,8 +29,6 @@ assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …)
 setup/                Het SQL-bestand voor Supabase
-prototype.html        Prototype: één AI Cockpit voor alle disciplines (los van de live cockpit)
-prototype/            De bestanden van het prototype (zie prototype/README.md)
 ```
 
 Alle paden zijn relatief binnen deze repository (geen `../`). De enige link naar buiten in de pagina is
@@ -45,10 +46,39 @@ Alle paden zijn relatief binnen deze repository (geen `../`). De enige link naar
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
 | `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; gepubliceerde inzendingen met antwoord en 'Ik ook' |
 | `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk |
-| `#/beheer` | Voor het AI-team: alle inhoud beheren, inzendingen beantwoorden en publiceren, gebruik bekijken |
+| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen beantwoorden en publiceren, gebruik bekijken |
 
 Ieder adres is deelbaar, bijvoorbeeld in Teams: `https://joostprinsvv.github.io/ai-cockpit-audit/#/tip/facilitator`.
 Met `#/ideeen/vraag` (of `idee`, `verzoek`, `prompt`) staat de soort in de ideeënhub alvast goed.
+Een andere discipline: `?d=<id>` vóór de `#`, bijv. `…/ai-cockpit-audit/?d=accountancy#/prompts`. Zonder `?d=`
+kom je in de laatst gekozen discipline, of in Audit.
+
+## Disciplines en gedeelde basis
+
+De cockpit is er per discipline (Audit, Accountancy, Belastingadvies, Salarisadministratie, …), op één gedeelde basis.
+
+- **Wisselaar:** in de kopbalk staat achter 'AI Cockpit' een knopje met de discipline ('Audit ⌄'). Daarin kies je een
+  andere discipline. Je komt op dezelfde pagina; een detailpagina alleen als het item gedeeld is.
+- **Open of op slot** (Beheer → Disciplines): een discipline op slot staat in de wisselaar met een slotje. Collega's
+  kunnen er niet in (wie het adres toch opent, komt in Audit); beheerders wel, met bovenaan een balk 'Op slot'. Zo
+  zet je de inhoud alvast klaar en zet je de discipline open als hij af is. Hier pas je ook naam, omschrijving,
+  volgorde, icoon en kleur aan, en voeg je een discipline toe. Zolang je hier niets opslaat, geldt `data/disciplines.js`.
+- **Wisselen in Beheer:** bovenaan Beheer kies je de discipline. *Inhoud*, *Inzendingen* en *Gebruik* gaan over de
+  discipline waarin je zit.
+- **Gedeelde basis** (Beheer → Gedeelde basis): wat in iedere cockpit staat, zoals de tips (met de tip van de week),
+  agents & tools, trainingen en een paar algemene usecases en prompts. Eenmalig inrichten vanuit Audit: je vinkt aan
+  wat voor iedereen is (het voorstel komt uit `sharedBasis` in `data/disciplines.js`), en die items verhuizen naar de
+  basis. Voor Audit verandert er niets. Daarna pas je ze aan bij *Gedeelde basis*; op de site zie je als beheerder het
+  label 'Voor iedereen'. Collega's zien dat label pas als er meer dan één discipline open is.
+- **Nieuwe discipline:** open in Beheer de cockpit van die discipline. Zolang hij leeg is, kies je *Begin met een lege
+  cockpit* (eerst de fasen toevoegen) of *Voorbeeldinhoud overnemen* (voor Accountancy: `data/voorbeelden/accountancy.js`,
+  usecases gebaseerd op de snacks van de AI Snackbar).
+- **Teksten per discipline:** Beheer → Inhoud → Teksten in een discipline gaat voor de teksten in de gedeelde basis, en
+  die weer voor `js/config.js`. Hoe de discipline in lopende tekst heet ('Waarom handig in de audit', 'Per fase van de
+  controle') stel je in bij Disciplines.
+
+In de database heeft iedere discipline een eigen naamruimte (`ai-audit`, `ai-accountancy`, …) en de basis `ai-algemeen`;
+inzendingen en tellers gaan naar de discipline waarin je zit. Daarvoor hoeft de SQL niet opnieuw te worden uitgevoerd.
 
 ## Inhoud beheren (Beheer → Inhoud)
 

@@ -38,7 +38,7 @@
     return el('a', { className: 'tip-card ' + accentClass(tip.accent) + (large ? ' tip-card--large' : ''), attrs: { href: '#/tip/' + tip.id } }, [
       el('div', { className: 'tip-card__top' }, [
         el('span', { className: 'tip-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(tip.icon)]),
-        el('div', { className: 'tip-card__badges' }, [ns.ui.draftBadge(tip), weekBadge(tip), tip.weekly ? null : newBadge(tip.added), licenseBadge(tip.license, { short: true })])
+        el('div', { className: 'tip-card__badges' }, [ns.ui.draftBadge(tip), ns.cockpit.sharedBadge(tip), weekBadge(tip), tip.weekly ? null : newBadge(tip.added), licenseBadge(tip.license, { short: true })])
       ]),
       el('p', { className: 'tip-card__category', text: eyebrow || tip.category.label }),
       el(headingTag || 'h3', { className: 'tip-card__title', text: tip.title }),
@@ -171,7 +171,7 @@
         ].filter(Boolean))
       ]),
       tip.why ? el('section', { className: 'why', attrs: { 'aria-labelledby': 'tip-why' } }, [
-        el('h2', { className: 'why__title', attrs: { id: 'tip-why' } }, [icon('sparkle'), el('span', { text: 'Waarom handig in de audit' })]),
+        el('h2', { className: 'why__title', attrs: { id: 'tip-why' } }, [icon('sparkle'), el('span', { text: `Waarom handig in ${ns.cockpit.active().label}` })]),
         el('p', { text: tip.why })
       ]) : null,
       el('section', { className: 'block', attrs: { 'aria-labelledby': 'tip-steps' } }, [

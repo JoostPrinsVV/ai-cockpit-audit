@@ -1,12 +1,21 @@
 /* ==========================================================================
-   Beheer → Inhoud (#/beheer/inhoud, #/beheer/inhoud/<soort>, #/beheer/inhoud/<soort>/<id|nieuw>)
+   Beheer → Inhoud en Gedeelde basis
+   (#/beheer/inhoud/<soort>/<id|nieuw> en #/beheer/basis/<soort>/<id|nieuw>)
    --------------------------------------------------------------------------
    Alle inhoud aanpassen, toevoegen en verwijderen: usecases, prompts, tips,
    trainingen, agents & tools, fasen en de teksten van de site. Alles staat in
    de tabel audit_content in Supabase (zie setup/supabase-audit.sql).
 
-   - Eerste keer: 'Overzetten' zet de bestanden uit data/ in de database.
+   Twee omgevingen (scope):
+   - Inhoud: de eigen inhoud van de discipline waarin je zit (naamruimte
+     'ai-<id>'). Wissel van discipline bovenaan Beheer.
+   - Gedeelde basis: wat in de cockpit van iedere discipline staat
+     ('ai-algemeen'). Eenmalig inrichten vanuit Audit: je kiest welke items
+     daarheen verhuizen.
+
+   - Eerste keer (Audit): 'Overzetten' zet de bestanden uit data/ in de database.
      Daarna is de database leidend en zijn de bestanden alleen nog terugval.
+   - Een nieuwe discipline begint leeg of met voorbeeldinhoud (data/voorbeelden/).
    - Een nieuwe soort in de bestanden (bijv. agents) waarvan de database nog
      geen enkele rij heeft: een melding biedt aan die items toe te voegen.
    - Status: Gepubliceerd (iedereen), Concept (alleen beheerders) of
@@ -38,7 +47,11 @@
     'assets/demos/snack-01.html', 'assets/videos/snack-01.mp4', 'assets/videos/snack-02.mp4', 'assets/videos/snack-03.mp4'
   ];
 
-  const phaseOptions = () => ns.content.phases.map((phase) => ({ value: phase.id, label: phase.label }));
+  // Omgeving waarin je werkt (zie render): { kind: 'discipline'|'basis', namespace, base, name, id, files }
+  let scope = { kind: 'discipline', namespace: '', base: '#/beheer/inhoud', name: '', id: '', files: true };
+
+  // In de gedeelde basis alleen de gedeelde fasen: die bestaan in iedere cockpit
+  const phaseOptions = () => ns.content.phases.filter((phase) => scope.kind !== 'basis' || phase.shared).map((phase) => ({ value: phase.id, label: phase.label }));
   const unique = (values) => Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'nl'));
   const asOptions = (values) => values.map((value) => ({ value, label: value }));
   // Lijsten waaruit je bij 'refs' kiest
@@ -109,7 +122,7 @@
         { key: 'license', label: 'Licentie', type: 'license', half: true },
         { key: 'added', label: 'Toegevoegd op', type: 'date', half: true },
         { key: 'featured', label: 'Uitlichten bij "Begin hier" en op de startpagina', type: 'bool' },
-        { key: 'why', label: 'Waarom handig in de audit', type: 'textarea' },
+        { key: 'why', label: 'Waarom handig in de praktijk', type: 'textarea' },
         { key: 'steps', label: 'Zo doe je het', type: 'list', required: true, hint: 'Eén stap per regel' },
         { key: 'example', label: 'Voorbeeld om te kopiëren', type: 'object', fields: [
           { key: 'label', label: 'Kop', type: 'text', placeholder: 'bijv. Voorbeeldinstructie voor auditors' },
@@ -205,7 +218,7 @@
         { key: 'link', label: 'Link om te openen', type: 'url', hint: 'Begint met https://. Opent in een nieuw tabblad.' },
         { key: 'owner', label: 'Aanspreekpunt', type: 'text', hint: 'Liever een afdeling of functie dan een naam, bijv. ICT of het AI-team.' },
         { key: 'notFor', label: 'Niet gebruiken voor', type: 'list', hint: 'Eén punt per regel' },
-        { key: 'phases', label: 'Fasen van de controle', type: 'refs', ref: 'phase' },
+        { key: 'phases', label: 'Fasen', type: 'refs', ref: 'phase' },
         { key: 'usecases', label: 'Usecases hierbij', type: 'refs', ref: 'usecase' },
         { key: 'trainings', label: 'Trainingen hierover', type: 'refs', ref: 'training' },
         { key: 'tips', label: 'Tips hierbij', type: 'refs', ref: 'tip' },
@@ -227,9 +240,9 @@
     },
     setting: {
       label: 'Teksten', one: 'teksten', single: 'site',
+      note: 'De naam van de discipline (turquoise, achter de naam) pas je aan bij Beheer → Disciplines. Leeg = de tekst uit de gedeelde basis of uit js/config.js.',
       fields: [
         { key: 'applicationTitle', label: 'Naam van het platform', type: 'text', half: true },
-        { key: 'discipline', label: 'Achter de naam (turquoise)', type: 'text', half: true },
         { key: 'tagline', label: 'Slogan onder de titel', type: 'text', placeholder: 'Jij bepaalt de koers, Copilot navigeert mee.' },
         { key: 'applicationSubtitle', label: 'Uitleg onder de slogan op de startpagina', type: 'textarea' },
         { key: 'rules', label: 'Gouden regels (onderaan iedere pagina)', type: 'list', hint: 'Eén regel per regel' }
@@ -240,8 +253,11 @@
   const view = { type: '', status: 'live', query: '' }; // filters in de lijst
 
   /* ---- Rijen uit de database ------------------------------------------------------- */
+  // Alle opgehaalde rijen: de eigen inhoud van deze cockpit én de gedeelde basis
+  const everywhere = () => (Array.isArray(ns.content.adminRows) ? ns.content.adminRows : []);
+  // Alleen de rijen van de omgeving waarin je werkt
   function allRows() {
-    return Array.isArray(ns.content.adminRows) ? ns.content.adminRows : [];
+    return everywhere().filter((row) => row.namespace === scope.namespace);
   }
   const rowsOf = (type) => allRows().filter((row) => row.type === type).sort((a, b) => (a.position || 0) - (b.position || 0) || (a.id < b.id ? -1 : 1));
   const findRow = (type, id) => allRows().find((row) => row.type === type && row.id === id) || null;
@@ -515,7 +531,8 @@
     const ctx = {
       idTaken: (value) => {
         if (existing && value === existing.id) return false;
-        if (findRow(type, value)) return true;
+        // Ook niet hetzelfde adres als een item in de andere omgeving (basis of discipline)
+        if (everywhere().some((row) => row.type === type && row.id === value)) return true;
         if (type === 'prompt') {
           if (ns.content.usecaseById.has(value)) return true;
           const match = /^(.+)-(\d+)$/.exec(value);
@@ -567,7 +584,7 @@
 
     const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
     const save = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('check'), el('span', { text: 'Opslaan' })]);
-    const cancel = el('a', { className: 'btn btn--secondary', attrs: { href: schema.single ? '#/beheer/inhoud' : `#/beheer/inhoud/${type}` } }, [el('span', { text: schema.single ? 'Terug' : 'Terug naar de lijst' })]);
+    const cancel = el('a', { className: 'btn btn--secondary', attrs: { href: schema.single ? scope.base : `${scope.base}/${type}` } }, [el('span', { text: schema.single ? 'Terug' : 'Terug naar de lijst' })]);
     const viewLink = existing && schema.route && existing.status !== 'trash'
       ? el('a', { className: 'btn btn--quiet', attrs: { href: `#/${schema.route}/${existing.id}` } }, [icon('eye'), el('span', { text: 'Bekijk op de site' })])
       : null;
@@ -603,10 +620,10 @@
       saving = true;
       save.disabled = true;
       try {
-        await ns.central.saveContent([{ type, id: newId, data: record, position, status: schema.single ? 'published' : statusSelect.value }]);
-        if (renamed) await ns.central.deleteContent(type, existing.id);
+        await ns.central.saveContent([{ type, id: newId, data: record, position, status: schema.single ? 'published' : statusSelect.value }], scope.namespace);
+        if (renamed) await ns.central.deleteContent(type, existing.id, scope.namespace);
         initial = snapshot();
-        const target = schema.single ? '#/beheer/inhoud/setting' : `#/beheer/inhoud/${type}/${newId}`;
+        const target = schema.single ? `${scope.base}/setting` : `${scope.base}/${type}/${newId}`;
         if (window.location.hash !== target) window.history.replaceState(null, '', target);
         await afterChange(isNew ? 'Toegevoegd' : 'Opgeslagen');
       } catch (error) {
@@ -627,9 +644,9 @@
         }
         if (!(await confirm(`"${data.title || data.label || existing.id}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return;
         try {
-          await ns.central.patchContent(type, existing.id, { status: 'trash' });
+          await ns.central.patchContent(type, existing.id, { status: 'trash' }, scope.namespace);
           initial = snapshot();
-          window.location.hash = `#/beheer/inhoud/${type}`;
+          window.location.hash = `${scope.base}/${type}`;
           await afterChange('In de prullenbak gezet');
         } catch (error) {
           toast('Mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
@@ -641,7 +658,7 @@
       el('div', { className: 'cms-editor__head' }, [
         el('h2', { className: 'cms-editor__title', text: schema.single ? 'Teksten van de site' : isNew ? schema.add : `${schema.one.charAt(0).toUpperCase() + schema.one.slice(1)} bewerken` }),
         existing && existing.updated_at ? el('p', { className: 'field__hint', text: 'Laatst opgeslagen: ' + new Date(existing.updated_at).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }) }) : null,
-        type === 'prompt' ? el('p', { className: 'field__hint', text: SCHEMAS.prompt.note }) : null
+        type === 'prompt' || schema.single ? el('p', { className: 'field__hint', text: schema.note }) : null
       ]),
       warningNotice(schema),
       form
@@ -656,8 +673,9 @@
   /* ---- Lijst per soort ---------------------------------------------------------------- */
   const STATUS_LABEL = { published: 'Gepubliceerd', draft: 'Concept', trash: 'Prullenbak' };
 
+  // Over beide omgevingen: ook items van de discipline kunnen een gedeelde fase gebruiken
   function usageOfPhase(phaseId) {
-    return allRows().filter((row) => row.status !== 'trash' && row.data && (
+    return everywhere().filter((row) => row.status !== 'trash' && row.data && (
       ((row.type === 'usecase' || row.type === 'prompt') && row.data.phase === phaseId) ||
       (row.type === 'agent' && Array.isArray(row.data.phases) && row.data.phases.includes(phaseId))
     )).length;
@@ -708,8 +726,8 @@
             const a = row.position || 0;
             let b = other.position || 0;
             if (a === b) b = a + (live.indexOf(other) > index ? 1 : -1);
-            await ns.central.patchContent(type, row.id, { position: b });
-            await ns.central.patchContent(type, other.id, { position: a });
+            await ns.central.patchContent(type, row.id, { position: b }, scope.namespace);
+            await ns.central.patchContent(type, other.id, { position: a }, scope.namespace);
           });
           up.addEventListener('click', () => swap(live[index - 1]));
           down.addEventListener('click', () => swap(live[index + 1]));
@@ -717,15 +735,15 @@
         }
         if (row.status === 'trash') {
           const restore = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Terugzetten' })]);
-          restore.addEventListener('click', () => act(() => ns.central.patchContent(type, row.id, { status: 'draft' }), 'Teruggezet als concept'));
+          restore.addEventListener('click', () => act(() => ns.central.patchContent(type, row.id, { status: 'draft' }, scope.namespace), 'Teruggezet als concept'));
           const destroy = el('button', { className: 'btn btn--danger btn--sm', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Definitief verwijderen' })]);
           destroy.addEventListener('click', async () => {
             if (!(await confirm(`"${data.title || data.label || row.id}" wordt definitief verwijderd. Herstellen kan dan alleen nog via de geschiedenis in Supabase.`, { title: 'Definitief verwijderen?', confirmLabel: 'Definitief verwijderen', danger: true }))) return;
-            act(() => ns.central.deleteContent(type, row.id), 'Definitief verwijderd');
+            act(() => ns.central.deleteContent(type, row.id, scope.namespace), 'Definitief verwijderd');
           });
           actions.push(restore, destroy);
         } else {
-          actions.push(el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: `#/beheer/inhoud/${type}/${row.id}` } }, [icon('pencil-line'), el('span', { text: 'Bewerken' })]));
+          actions.push(el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: `${scope.base}/${type}/${row.id}` } }, [icon('pencil-line'), el('span', { text: 'Bewerken' })]));
           if (schema.route) actions.push(el('a', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { href: `#/${schema.route}/${row.id}`, 'aria-label': 'Bekijk op de site: ' + (data.title || row.id), title: 'Bekijk op de site' } }, [icon('eye')]));
           const toTrash = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Naar de prullenbak: ' + (data.title || data.label || row.id), title: 'Naar de prullenbak' } }, [icon('trash')]);
           toTrash.addEventListener('click', async () => {
@@ -734,13 +752,13 @@
               return;
             }
             if (!(await confirm(`"${data.title || data.label || row.id}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return;
-            act(() => ns.central.patchContent(type, row.id, { status: 'trash' }), 'In de prullenbak gezet');
+            act(() => ns.central.patchContent(type, row.id, { status: 'trash' }, scope.namespace), 'In de prullenbak gezet');
           });
           actions.push(toTrash);
         }
         return el('div', { className: 'cms-row' + (row.status === 'draft' ? ' cms-row--draft' : '') }, [
           el('div', { className: 'cms-row__main' }, [
-            el('a', { className: 'cms-row__title', attrs: { href: row.status === 'trash' ? null : `#/beheer/inhoud/${type}/${row.id}` }, text: data.title || data.label || row.id }),
+            el('a', { className: 'cms-row__title', attrs: { href: row.status === 'trash' ? null : `${scope.base}/${type}/${row.id}` }, text: data.title || data.label || row.id }),
             el('p', { className: 'cms-row__meta' }, [
               el('code', { text: row.id }),
               schema.meta && schema.meta(data) ? ' · ' + schema.meta(data) : '',
@@ -771,7 +789,7 @@
       el('div', { className: 'cms-toolbar' }, [
         search,
         statusFilter,
-        el('a', { className: 'btn btn--primary btn--sm', attrs: { href: `#/beheer/inhoud/${type}/nieuw` } }, [icon('message-plus'), el('span', { text: schema.add })])
+        el('a', { className: 'btn btn--primary btn--sm', attrs: { href: `${scope.base}/${type}/nieuw` } }, [icon('message-plus'), el('span', { text: schema.add })])
       ]),
       schema.note ? el('p', { className: 'field__hint', text: schema.note }) : null,
       warningNotice(schema),
@@ -800,7 +818,7 @@
       button.disabled = true;
       button.querySelector('span').textContent = 'Bezig met overzetten…';
       try {
-        await ns.central.saveContent(rows);
+        await ns.central.saveContent(rows, scope.namespace);
         await afterChange('Overgezet: de database is nu leidend');
       } catch (error) {
         button.disabled = false;
@@ -825,7 +843,8 @@
    */
   function missingTypePanels() {
     const fileRows = ns.content.toRows();
-    return ns.content.TYPES.filter((type) => SCHEMAS[type] && !rowsOf(type).length).map((type) => {
+    // Ook niet als de soort al in de gedeelde basis staat (bijv. agents na het inrichten van de basis)
+    return ns.content.TYPES.filter((type) => SCHEMAS[type] && !everywhere().some((row) => row.type === type)).map((type) => {
       const rows = fileRows.filter((row) => row.type === type);
       if (!rows.length) return null;
       const schema = SCHEMAS[type];
@@ -837,7 +856,7 @@
         button.disabled = true;
         button.querySelector('span').textContent = 'Bezig met toevoegen…';
         try {
-          await ns.central.saveContent(rows);
+          await ns.central.saveContent(rows, scope.namespace);
           await afterChange(`${what} toegevoegd`);
         } catch (error) {
           button.disabled = false;
@@ -856,6 +875,169 @@
     }).filter(Boolean);
   }
 
+  /* ---- Nieuwe discipline: leeg beginnen of met voorbeeldinhoud ----------------------------- */
+  // Met deze rij is de database leidend voor een omgeving (zie fromRows in js/content.js)
+  const startRow = () => ({ type: 'meta', id: 'bron', data: { gestart: new Date().toISOString() }, position: 0, status: 'published' });
+  const EXAMPLE_KEYS = { phase: 'phases', usecase: 'usecases', prompt: 'prompts', tip: 'tips', training: 'trainings', agent: 'agents' };
+
+  /** Laadt de voorbeeldinhoud van een discipline (data/voorbeelden/<id>.js, zie data/disciplines.js), of null. */
+  function loadExample(id) {
+    const path = (ns.disciplineExamples || {})[id];
+    if (!path) return Promise.resolve(null);
+    if (ns.examples && ns.examples[id]) return Promise.resolve(ns.examples[id]);
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = path;
+      script.onload = () => resolve((ns.examples || {})[id] || null);
+      script.onerror = () => resolve(null);
+      document.head.append(script);
+    });
+  }
+
+  function exampleRows(example) {
+    const rows = [];
+    ns.content.TYPES.forEach((type) => {
+      (Array.isArray(example[EXAMPLE_KEYS[type]]) ? example[EXAMPLE_KEYS[type]] : []).forEach((item, index) => {
+        if (!item || !ID_PATTERN.test(item.id || '')) return;
+        const data = Object.assign({}, item);
+        delete data.id;
+        rows.push({ type, id: item.id, data, position: (index + 1) * 10, status: 'published' });
+      });
+    });
+    return rows;
+  }
+
+  function newDisciplinePanel() {
+    const discipline = ns.cockpit.active();
+    const empty = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [icon('message-plus'), el('span', { text: 'Begin met een lege cockpit' })]);
+    const fromExample = el('button', { className: 'btn btn--primary', attrs: { type: 'button', hidden: true } }, [icon('download'), el('span', { text: 'Voorbeeldinhoud overnemen' })]);
+    const exampleText = el('p', { attrs: { hidden: true } });
+    let rows = [];
+    loadExample(discipline.id).then((example) => {
+      rows = example ? exampleRows(example) : [];
+      if (!rows.length) return;
+      const count = (type) => rows.filter((row) => row.type === type).length;
+      exampleText.textContent = `Er is voorbeeldinhoud klaargezet: ${count('phase')} fasen, ${count('usecase')} usecases, ${count('prompt')} losse prompts en ${count('tip')} tip. Neem die over en pas hem daarna hier aan.`;
+      exampleText.hidden = false;
+      fromExample.hidden = false;
+    });
+
+    async function start(withExample) {
+      const list = (withExample ? rows : []).concat([startRow()]);
+      const what = withExample ? `de voorbeeldinhoud (${list.length - 1} items)` : 'een lege omgeving';
+      if (!(await confirm(`${discipline.name} begint met ${what}. Daarna voeg je hier inhoud toe en pas je die aan.${discipline.status === 'open' ? '' : ' Collega\'s zien er niets van zolang de discipline op slot staat.'}`, { title: 'Discipline inrichten?', confirmLabel: 'Inrichten' }))) return;
+      empty.disabled = true;
+      fromExample.disabled = true;
+      try {
+        await ns.central.saveContent(list, scope.namespace);
+        await afterChange(`${discipline.name} heeft nu een eigen omgeving`);
+      } catch (error) {
+        empty.disabled = false;
+        fromExample.disabled = false;
+        toast('Inrichten mislukt: ' + error.message, { tone: 'warning', duration: 8000 });
+      }
+    }
+    empty.addEventListener('click', () => start(false));
+    fromExample.addEventListener('click', () => start(true));
+
+    return el('div', { className: 'notice notice--cta seed' }, [
+      icon('info'),
+      el('div', {}, [
+        el('p', { className: 'notice__title', text: `${discipline.name} heeft nog geen eigen inhoud` }),
+        el('p', { text: 'De gedeelde basis (tips, agents, trainingen) staat er vanzelf in zodra die is ingericht. Begin leeg en voeg zelf fasen, usecases en prompts toe (eerst de fasen), of neem de voorbeeldinhoud over.' }),
+        exampleText
+      ]),
+      el('div', { className: 'seed__actions' }, [fromExample, empty])
+    ]);
+  }
+
+  /* ---- Gedeelde basis eenmalig inrichten (vanuit Audit) -------------------------------------- */
+  const BASIS_ORDER = ['tip', 'agent', 'training', 'usecase', 'prompt', 'phase'];
+
+  function basisPanel() {
+    const filesId = ns.cockpit.FILES_ID;
+    const source = ns.cockpit.namespace(filesId);
+    const filesName = (ns.cockpit.find(filesId) || { name: 'Audit' }).name;
+    if (ns.cockpit.activeId() !== filesId) {
+      return el('div', { className: 'notice' }, [icon('info'), el('div', {}, [
+        el('p', { className: 'notice__title', text: 'De gedeelde basis is nog niet ingericht' }),
+        el('p', {}, [
+          `Dat doe je eenmalig vanuit de cockpit van ${filesName}: daar kies je welke items voor iedereen zijn. `,
+          el('a', { attrs: { href: ns.cockpit.href(filesId, '#/beheer/basis') }, text: `Naar Beheer in ${filesName}` })
+        ])
+      ])]);
+    }
+    const fromDatabase = everywhere().filter((row) => row.namespace === source && SCHEMAS[row.type] && !SCHEMAS[row.type].single && row.status !== 'trash');
+    // Een soort die nog helemaal niet in de database staat (bijv. agents): uit de bestanden
+    const fromFiles = ns.content.toRows()
+      .filter((row) => SCHEMAS[row.type] && !SCHEMAS[row.type].single && !everywhere().some((r) => r.type === row.type))
+      .map((row) => Object.assign({}, row, { namespace: '' }));
+    const candidates = fromDatabase.concat(fromFiles);
+    const basis = ns.sharedBasis || {};
+    const proposed = (row) => basis[row.type] === '*' || (Array.isArray(basis[row.type]) && basis[row.type].includes(row.id));
+    const groups = BASIS_ORDER.map((type) => {
+      const rows = candidates.filter((row) => row.type === type).sort((a, b) => (a.position || 0) - (b.position || 0));
+      if (!rows.length) return null;
+      return el('fieldset', { className: 'field field--wide refs' }, [
+        el('legend', { className: 'field__label', text: SCHEMAS[type].label }),
+        el('div', { className: 'refs__list' }, rows.map((row) => {
+          const id = nextId();
+          return el('label', { className: 'check check--compact', attrs: { for: id } }, [
+            el('input', { attrs: { id, type: 'checkbox', checked: proposed(row) }, dataset: { type, item: row.id } }),
+            el('span', { text: ((row.data && (row.data.title || row.data.label)) || row.id) + (row.namespace ? '' : ' (uit de bestanden)') })
+          ]);
+        }))
+      ]);
+    }).filter(Boolean);
+
+    const button = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('globe'), el('span', { text: 'Gedeelde basis inrichten' })]);
+    const panel = el('div', { className: 'notice notice--cta seed basis-setup' }, [
+      icon('globe'),
+      el('div', {}, [
+        el('p', { className: 'notice__title', text: 'Richt de gedeelde basis in' }),
+        el('p', { text: `Kies welke items voor iedereen zijn. Die verhuizen van ${filesName} naar de gedeelde basis en staan straks in de cockpit van iedere discipline. In ${filesName} blijft alles gewoon zichtbaar. Het voorstel komt uit data/disciplines.js: vink aan of uit wat je wilt.` }),
+        groups.length ? el('div', { className: 'basis-setup__groups' }, groups) : el('p', { text: `${filesName} heeft nog geen inhoud in de database.` }),
+        el('div', { className: 'seed__actions' }, [button])
+      ])
+    ]);
+
+    button.addEventListener('click', async () => {
+      const picked = Array.from(panel.querySelectorAll('input[type="checkbox"]:checked'))
+        .map((box) => candidates.find((row) => row.type === box.dataset.type && row.id === box.dataset.item))
+        .filter(Boolean);
+      // Gedeelde usecases en prompts hebben hun fase ook in de basis nodig
+      const phaseIds = new Set(picked.filter((row) => (row.type === 'usecase' || row.type === 'prompt') && row.data && row.data.phase).map((row) => row.data.phase));
+      candidates.filter((row) => row.type === 'phase' && phaseIds.has(row.id) && !picked.includes(row)).forEach((row) => picked.push(row));
+      if (!picked.length) {
+        toast('Kies minimaal één item.', { tone: 'warning' });
+        return;
+      }
+      const count = (type) => picked.filter((row) => row.type === type).length;
+      const summary = BASIS_ORDER.filter(count).map((type) => `${count(type)} ${count(type) === 1 ? SCHEMAS[type].one : SCHEMAS[type].many}`).join(', ');
+      if (!(await confirm(`${summary} verhuizen van ${filesName} naar de gedeelde basis. In ${filesName} blijft alles zichtbaar; zodra je een andere discipline openzet, staat het daar ook in. Daarna pas je deze items aan bij Gedeelde basis.`, { title: 'Gedeelde basis inrichten?', confirmLabel: 'Inrichten' }))) return;
+      button.disabled = true;
+      const label = button.querySelector('span');
+      try {
+        label.textContent = 'Bezig met kopiëren…';
+        await ns.central.saveContent(picked.map((row) => ({ type: row.type, id: row.id, data: row.data, position: row.position || 0, status: row.status })).concat([startRow()]), ns.cockpit.GENERAL_NAMESPACE);
+        // Wat uit Audit kwam, daar weghalen (wat uit de bestanden kwam, stond nog nergens)
+        const moved = picked.filter((row) => row.namespace === source);
+        for (let index = 0; index < moved.length; index++) {
+          label.textContent = `Bezig met verhuizen (${index + 1} van ${moved.length})…`;
+          await ns.central.deleteContent(moved[index].type, moved[index].id, source);
+        }
+        window.history.replaceState(null, '', '#/beheer/basis');
+        await afterChange('De gedeelde basis staat klaar');
+      } catch (error) {
+        button.disabled = false;
+        label.textContent = 'Gedeelde basis inrichten';
+        await afterChange();
+        toast(`Inrichten mislukt: ${error.message}. Wat al verhuisd is, staat in de gedeelde basis; de rest staat nog in ${filesName}.`, { tone: 'warning', duration: 10000 });
+      }
+    });
+    return panel;
+  }
+
   function download(name, text) {
     const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
     const link = el('a', { attrs: { href: url, download: name } });
@@ -869,7 +1051,7 @@
     const exportButton = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('download'), el('span', { text: 'Exporteer alles (JSON)' })]);
     exportButton.addEventListener('click', () => {
       const rows = allRows().map(({ type, id, data, position, status, updated_at: updatedAt }) => ({ type, id, data, position, status, updated_at: updatedAt }));
-      download(`ai-cockpit-audit-inhoud-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ exported_at: new Date().toISOString(), rows }, null, 2));
+      download(`ai-cockpit-${scope.id}-inhoud-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ exported_at: new Date().toISOString(), namespace: scope.namespace, rows }, null, 2));
     });
     const fileInput = el('input', { className: 'sr-only', attrs: { type: 'file', accept: 'application/json,.json', tabindex: '-1' } });
     const importButton = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Importeer back-up' })]);
@@ -883,8 +1065,8 @@
         const rows = (Array.isArray(parsed) ? parsed : parsed.rows || []).filter((row) =>
           row && ['meta', 'setting'].concat(ns.content.TYPES).includes(row.type) && ID_PATTERN.test(row.id) && row.data && typeof row.data === 'object');
         if (!rows.length) throw new Error('geen bruikbare inhoud in dit bestand');
-        if (!(await confirm(`${rows.length} items uit de back-up worden teruggezet. Items met hetzelfde adres worden overschreven; andere items blijven staan.`, { title: 'Back-up terugzetten?', confirmLabel: 'Terugzetten' }))) return;
-        await ns.central.saveContent(rows.map((row) => ({ type: row.type, id: row.id, data: row.data, position: row.position || 0, status: ['published', 'draft', 'trash'].includes(row.status) ? row.status : 'draft' })));
+        if (!(await confirm(`${rows.length} items uit de back-up worden teruggezet in ${scope.name}. Items met hetzelfde adres worden overschreven; andere items blijven staan.`, { title: 'Back-up terugzetten?', confirmLabel: 'Terugzetten' }))) return;
+        await ns.central.saveContent(rows.map((row) => ({ type: row.type, id: row.id, data: row.data, position: row.position || 0, status: ['published', 'draft', 'trash'].includes(row.status) ? row.status : 'draft' })), scope.namespace);
         await afterChange('Back-up teruggezet');
       } catch (error) {
         toast('Importeren mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
@@ -897,20 +1079,30 @@
   /**
    * @param {string[]} params  [soort, id] uit het adres
    * @param {object} state     { status } van het laatste ophalen
+   * @param {object} where     de omgeving: { kind: 'discipline'|'basis', namespace, base, name, id, files }
    */
-  function render(params, state) {
+  function render(params, state, where) {
+    if (where) scope = where;
     const type = SCHEMAS[params[0]] ? params[0] : 'usecase';
     const seeded = isSeeded();
     const tabs = el('nav', { className: 'toggles cms-tabs', attrs: { 'aria-label': 'Soort inhoud' } }, ORDER.map((key) => {
       const count = SCHEMAS[key].single ? null : rowsOf(key).filter((row) => row.status !== 'trash').length;
-      return el('a', { className: 'toggle', attrs: { href: `#/beheer/inhoud/${key}`, 'aria-current': key === type ? 'page' : null } }, [
+      return el('a', { className: 'toggle', attrs: { href: `${scope.base}/${key}`, 'aria-current': key === type ? 'page' : null } }, [
         el('span', { text: SCHEMAS[key].label }),
         count != null && seeded ? el('span', { className: 'toggle__count', text: String(count) }) : null
       ]);
     }));
+    const intro = el('p', { className: 'cms__scope' }, [
+      icon(scope.kind === 'basis' ? 'globe' : 'pencil-line'),
+      el('span', { text: scope.kind === 'basis'
+        ? 'Gedeelde basis: wat je hier aanpast, staat in de cockpit van iedere discipline.'
+        : `Inhoud van ${scope.name}: alleen in deze cockpit. Wat voor iedereen is, pas je aan bij Gedeelde basis.` })
+    ]);
 
     if (!seeded) {
-      return { node: el('div', { className: 'cms' }, [seedPanel(state && state.status)]), canLeave: null };
+      const status = state && state.status;
+      const panel = status === 'missing' || scope.files ? seedPanel(status) : scope.kind === 'basis' ? basisPanel() : newDisciplinePanel();
+      return { node: el('div', { className: 'cms' }, [intro, panel]), canLeave: null };
     }
 
     let body;
@@ -925,7 +1117,8 @@
     }
     return {
       node: el('div', { className: 'cms' }, [
-        ...(editing ? [] : missingTypePanels()),
+        intro,
+        ...(editing || !scope.files ? [] : missingTypePanels()),
         el('div', { className: 'cms__bar' }, [tabs, backupTools()]),
         body
       ]),

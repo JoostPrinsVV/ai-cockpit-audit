@@ -3,6 +3,8 @@
    --------------------------------------------------------------------------
    De inhoud komt uit de database (Beheer → Inhoud) of, zolang die nog niet
    is ingericht of even niet bereikbaar is, uit de bestanden in data/.
+   Een cockpit toont de gedeelde basis (naamruimte 'ai-algemeen') plus de
+   eigen inhoud van de discipline; items uit de basis krijgen 'shared'.
    Beide hebben dezelfde velden. Hier vullen we ontbrekende velden aan en
    melden fouten in de console, zonder dat de pagina stukgaat. De prompts
    uit de usecases komen automatisch in de promptdatabase.
@@ -94,7 +96,8 @@
         label: text(item.label) || id,
         short: text(item.short) || text(item.label) || id,
         accent: ACCENTS.includes(item.accent) ? item.accent : 'navy',
-        icon: text(item.icon) || 'grid'
+        icon: text(item.icon) || 'grid',
+        shared: item._shared === true
       };
       state.phases.push(phase);
       state.phaseById.set(id, phase);
@@ -151,7 +154,8 @@
         watchOut: list(item.watchOut),
         tip: text(item.tip),
         relatedTips: list(item.relatedTips),
-        draft: item._draft === true
+        draft: item._draft === true,
+        shared: item._shared === true
       };
       usecase.hasDemo = Boolean(usecase.video || usecase.demo);
       state.usecases.push(usecase);
@@ -191,7 +195,8 @@
         added: text(item.added),
         author: text(item.author),
         usecase: null,
-        draft: item._draft === true
+        draft: item._draft === true,
+        shared: item._shared === true
       };
       standalone.push(entry);
       state.promptById.set(id, entry);
@@ -226,7 +231,8 @@
           usecase,
           step: n + 1,
           steps: usecase.prompts.length,
-          draft: usecase.draft
+          draft: usecase.draft,
+          shared: usecase.shared
         };
         usecase.promptIds.push(id);
         derived.push(entry);
@@ -273,7 +279,8 @@
         added: text(item.added),
         release: '',
         usecases: list(item.usecases),
-        draft: item._draft === true
+        draft: item._draft === true,
+        shared: item._shared === true
       };
       const release = text(item.release);
       if (release && !DATE.test(release)) warn(`Tip '${id}': release '${release}' is geen datum (JJJJ-MM-DD); de tip is altijd zichtbaar.`);
@@ -428,7 +435,8 @@
         usecases: list(item.usecases),
         tips: list(item.tips),
         added: text(item.added) || text(item.date),
-        draft: item._draft === true
+        draft: item._draft === true,
+        shared: item._shared === true
       };
       Object.assign(training, loadNaslag(item, id));
       training.hasRecording = Boolean(training.link || training.video);
@@ -480,7 +488,8 @@
         description: text(item.description),
         phases: list(item.phases).filter((pid) => {
           if (state.phaseById.has(pid)) return true;
-          warn(`Agent '${id}': onbekende fase '${pid}' (zie data/phases.js); overgeslagen.`);
+          // Een gedeelde agent mag fasen noemen die alleen in een andere cockpit bestaan
+          if (item._shared !== true) warn(`Agent '${id}': onbekende fase '${pid}' (zie data/phases.js); overgeslagen.`);
           return false;
         }).map((pid) => state.phaseById.get(pid)),
         status,
@@ -495,7 +504,8 @@
         icon: text(item.icon) || 'robot',
         added: text(item.added),
         registerUrl: HTTPS_URL.test(registerUrl) ? registerUrl : '',
-        draft: item._draft === true
+        draft: item._draft === true,
+        shared: item._shared === true
       };
       agent.stopped = agent.status === 'Gestopt';
       state.agents.push(agent);
@@ -506,18 +516,16 @@
   }
 
   /* ---- Verwijzingen controleren ------------------------------------------------------ */
+  // Een gedeeld item mag verwijzen naar iets dat alleen in een andere cockpit staat: dan stil weglaten
+  const missing = (item, message) => {
+    if (!item.shared) warn(message);
+    return false;
+  };
+
   function checkReferences() {
     state.trainings.forEach((training) => {
-      training.usecases = training.usecases.filter((uid) => {
-        if (state.usecaseById.has(uid)) return true;
-        warn(`Training '${training.id}' verwijst naar onbekende usecase '${uid}'.`);
-        return false;
-      });
-      training.tips = training.tips.filter((tid) => {
-        if (state.tipById.has(tid)) return true;
-        warn(`Training '${training.id}' verwijst naar onbekende tip '${tid}'.`);
-        return false;
-      });
+      training.usecases = training.usecases.filter((uid) => state.usecaseById.has(uid) || missing(training, `Training '${training.id}' verwijst naar onbekende usecase '${uid}'.`));
+      training.tips = training.tips.filter((tid) => state.tipById.has(tid) || missing(training, `Training '${training.id}' verwijst naar onbekende tip '${tid}'.`));
       // Vervolg: een stap mag naar een andere training linken (die zelf geen link krijgt)
       training.timeline.forEach((step) => {
         if (!step.training) return;
@@ -526,27 +534,15 @@
       });
     });
     state.usecases.forEach((usecase) => {
-      usecase.relatedTips = usecase.relatedTips.filter((id) => {
-        if (state.tipById.has(id)) return true;
-        warn(`Usecase '${usecase.id}' verwijst naar onbekende tip '${id}'.`);
-        return false;
-      });
+      usecase.relatedTips = usecase.relatedTips.filter((id) => state.tipById.has(id) || missing(usecase, `Usecase '${usecase.id}' verwijst naar onbekende tip '${id}'.`));
     });
     state.tips.forEach((tip) => {
-      tip.usecases = tip.usecases.filter((id) => {
-        if (state.usecaseById.has(id)) return true;
-        warn(`Tip '${tip.id}' verwijst naar onbekende usecase '${id}'.`);
-        return false;
-      });
+      tip.usecases = tip.usecases.filter((id) => state.usecaseById.has(id) || missing(tip, `Tip '${tip.id}' verwijst naar onbekende usecase '${id}'.`));
     });
     const known = { usecases: ['usecaseById', 'usecase'], trainings: ['trainingById', 'training'], tips: ['tipById', 'tip'] };
     state.agents.forEach((agent) => {
       Object.entries(known).forEach(([field, [map, label]]) => {
-        agent[field] = agent[field].filter((id) => {
-          if (state[map].has(id)) return true;
-          warn(`Agent '${agent.id}' verwijst naar onbekende ${label} '${id}'.`);
-          return false;
-        });
+        agent[field] = agent[field].filter((id) => state[map].has(id) || missing(agent, `Agent '${agent.id}' verwijst naar onbekende ${label} '${id}'.`));
       });
     });
   }
@@ -615,8 +611,12 @@
 
   /* ---- Bronnen: bestanden of database ------------------------------------------------ */
   const TYPES = ['phase', 'usecase', 'prompt', 'tip', 'training', 'agent'];
-  // Teksten die je in Beheer kunt aanpassen (de rest van de instellingen blijft in js/config.js)
-  const SETTING_KEYS = ['applicationTitle', 'discipline', 'tagline', 'applicationSubtitle', 'rules'];
+  // Teksten die je in Beheer kunt aanpassen (de rest van de instellingen blijft in js/config.js;
+  // de naam van de discipline komt uit Beheer → Disciplines)
+  const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules'];
+  // Bij het samenvoegen: eigen fasen, usecases en prompts vóór die van de basis; tips, trainingen en agents erna
+  const OWN_FIRST = { phase: true, usecase: true, prompt: true };
+  const filesId = () => (ns.cockpit ? ns.cockpit.FILES_ID : 'audit');
 
   function reset() {
     Object.assign(state, {
@@ -630,21 +630,41 @@
     });
   }
 
-  /** De inhoud uit de bestanden in data/ (startinhoud, en terugval als de database niet bereikbaar is). */
-  function fromFiles() {
+  const emptySource = () => ({ phase: [], usecase: [], prompt: [], tip: [], training: [], agent: [], setting: {}, updatedAt: '' });
+
+  /**
+   * De inhoud uit de bestanden in data/ (startinhoud, en terugval als de database niet bereikbaar is).
+   * Die bestanden zijn van Audit. Voor een andere discipline: alleen de gedeelde basis daaruit
+   * (zie sharedBasis in data/disciplines.js).
+   */
+  function fromFiles(disciplineId) {
+    const id = disciplineId || (ns.cockpit ? ns.cockpit.activeId() : filesId());
     const setting = {};
     SETTING_KEYS.forEach((name) => {
       if (ns.config && ns.config[name] != null) setting[name] = ns.config[name];
     });
-    return { phase: ns.phases || [], usecase: ns.usecases || [], prompt: ns.prompts || [], tip: ns.tips || [], training: ns.trainings || [], agent: ns.agents || [], setting };
+    const files = { phase: ns.phases || [], usecase: ns.usecases || [], prompt: ns.prompts || [], tip: ns.tips || [], training: ns.trainings || [], agent: ns.agents || [], setting };
+    if (id === filesId()) return files;
+    const basis = ns.sharedBasis || {};
+    const shared = (type, itemId) => basis[type] === '*' || (Array.isArray(basis[type]) && basis[type].includes(itemId));
+    const source = emptySource();
+    TYPES.forEach((type) => {
+      source[type] = files[type].filter((item) => item && shared(type, item.id)).map((item) => Object.assign({}, item, { _shared: true }));
+    });
+    // De uitleg onder de slogan gaat over de audit: die niet
+    source.setting = Object.assign({}, setting);
+    delete source.setting.applicationSubtitle;
+    return source;
   }
 
   /**
    * Databaserijen → bron. Geeft null zolang de database nog niet leidend is (geen rij meta/bron):
-   * dan blijven de bestanden gelden. Prullenbak telt niet mee; concepten (alleen voor beheerders) krijgen _draft.
+   * dan blijven de bestanden gelden. Prullenbak telt niet mee; concepten (alleen voor beheerders) krijgen _draft,
+   * met options.shared krijgt alles _shared (de gedeelde basis).
    */
-  function fromRows(rows) {
+  function fromRows(rows, options) {
     if (!Array.isArray(rows) || !rows.some((row) => row.type === 'meta' && row.id === 'bron')) return null;
+    const shared = Boolean(options && options.shared);
     const source = { phase: [], usecase: [], prompt: [], tip: [], training: [], agent: [], setting: {}, updatedAt: '' };
     rows.slice()
       .sort((a, b) => (a.position || 0) - (b.position || 0) || (a.id < b.id ? -1 : 1))
@@ -658,14 +678,42 @@
         if (!TYPES.includes(row.type)) return;
         const item = Object.assign({}, row.data, { id: row.id });
         if (row.status === 'draft') item._draft = true;
+        if (shared) item._shared = true;
         source[row.type].push(item);
       });
     return source;
   }
 
-  /** De bestanden als databaserijen (Beheer → Inhoud → Overzetten). */
+  /** Gedeelde basis + eigen inhoud tot één bron. Teksten: die van de discipline gaan voor. */
+  function merge(general, own) {
+    if (!general) return own;
+    const source = {
+      setting: Object.assign({}, general.setting, own.setting),
+      updatedAt: general.updatedAt > own.updatedAt ? general.updatedAt : own.updatedAt
+    };
+    TYPES.forEach((type) => {
+      source[type] = OWN_FIRST[type] ? own[type].concat(general[type]) : general[type].concat(own[type]);
+    });
+    return source;
+  }
+
+  /**
+   * De rijen van één cockpit → bron: de gedeelde basis plus de eigen inhoud van de discipline.
+   * options: { own, general } (naamruimtes) en discipline (id). Geeft null als geen van beide al in
+   * de database staat; dan gelden de bestanden. Staat alleen de basis er al, dan is de eigen inhoud
+   * die uit de bestanden (Audit) of leeg (andere discipline).
+   */
+  function fromCockpitRows(rows, options) {
+    const list = Array.isArray(rows) ? rows : [];
+    const own = fromRows(list.filter((row) => row.namespace === options.own));
+    const general = fromRows(list.filter((row) => row.namespace === options.general), { shared: true });
+    if (!own && !general) return null;
+    return merge(general, own || (options.discipline === filesId() ? fromFiles(filesId()) : emptySource()));
+  }
+
+  /** De bestanden van Audit als databaserijen (Beheer → Inhoud → Overzetten). */
   function toRows() {
-    const files = fromFiles();
+    const files = fromFiles(filesId());
     const rows = [];
     TYPES.forEach((type) => {
       (files[type] || []).forEach((item, index) => {
@@ -697,5 +745,5 @@
     return state;
   }
 
-  ns.content = Object.assign(state, { load, fromFiles, fromRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES });
+  ns.content = Object.assign(state, { load, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES });
 })(window.AIAudit);
