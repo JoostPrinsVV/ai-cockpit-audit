@@ -22,6 +22,7 @@ window.AIAudit.config = {
   tagline: 'Jij bepaalt de koers, Copilot navigeert mee.', // Slogan onder de titel op de startpagina
   applicationSubtitle: 'Usecases met demo, direct bruikbare prompts, tips, trainingen en agents: alles over Copilot in de audit op één plek.',
   organizationName: 'Visser & Visser',
+  siteUrl: 'https://joostprinsvv.github.io/ai-cockpit-audit/', // Voor de links in de nieuwsbrief (Beheer → Nieuwsbrief)
   lastUpdated: '19 oktober 2026',       // 'Laatst bijgewerkt' onderaan de pagina
   newDays: 45,                          // Zo lang (in dagen) krijgt nieuwe inhoud het label 'Nieuw'
   launchDate: '2026-10-19',             // Inhoud van vóór of op deze datum krijgt geen label 'Nieuw' (anders staat bij de start alles op 'Nieuw')

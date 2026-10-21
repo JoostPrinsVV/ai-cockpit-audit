@@ -46,7 +46,7 @@ buiten staan alleen in de inhoud (bijv. de opname van een training of een agent)
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
 | `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; gepubliceerde inzendingen met antwoord en 'Ik ook' |
 | `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk |
-| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen beantwoorden en publiceren, gebruik bekijken |
+| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, de nieuwsbrief maken, gebruik bekijken |
 
 Ieder adres is deelbaar, bijvoorbeeld in Teams: `https://joostprinsvv.github.io/ai-cockpit-audit/#/tip/facilitator`.
 Met `#/ideeen/vraag` (of `idee`, `verzoek`, `prompt`) staat de soort in de ideeënhub alvast goed.
@@ -267,6 +267,31 @@ Onderaan iedere usecase en prompt staat **Wat vond je ervan?**: 1 tot 5 sterren,
   verwijderen, en per usecase en prompt het gemiddelde en het aantal reviews.
 - Zolang de tabel `audit_reviews` nog niet bestaat (stap 6 in `setup/supabase-audit.sql`), verschijnt het blok niet.
   Uitzetten kan met `enableReviews: false` in `js/config.js`.
+
+## Nieuwsbrief (Beheer → Nieuwsbrief)
+
+Een weekupdate of maandnieuwsbrief, vanzelf samengesteld uit wat er in die periode nieuw was in de cockpit van de
+discipline waarin je zit (plus de gedeelde basis):
+
+- tips van de week die vrijkwamen en nieuwe tips, nieuwe usecases en prompts, trainingen, agents & tools;
+- beantwoorde en gepubliceerde vragen uit de ideeënhub (nooit naam of e-mailadres);
+- populair: meest bekeken usecases en meest gekopieerde prompts (de anonieme tellers);
+- best beoordeeld, met eventueel een gepubliceerde toelichting als citaat (reviews);
+- binnenkort: de volgende tip van de week, alleen het thema en de datum (het slot blijft dicht);
+- ook bijgewerkt: staat standaard uit, want ook kleine correcties tellen mee.
+
+**Week** is maandag tot en met zondag (verstuur je hem op vrijdag, dan staat de tip van de week erin), **maand** is de
+kalendermaand. Op de laatste dag van de maand staat bovenaan Beheer een melding dat de maandnieuwsbrief compleet is.
+Met de pijltjes kies je een eerdere periode. Per onderdeel en per item vink je aan wat erin komt, en je past
+onderwerp, inleiding, afsluiting en ondertekening aan. Dat onthoudt de browser per periode.
+
+- **PDF opslaan:** opent het afdrukvenster met alleen de nieuwsbrief op A4; kies *Opslaan als PDF* (Edge of Chrome).
+- **E-mail (Outlook):** downloadt een `.eml`-bestand. Dubbelklik erop: Outlook opent een nieuw bericht met onderwerp en
+  opmaak; vul de ontvangers in en verstuur.
+- **Kopieer voor e-mail of Teams:** zet de nieuwsbrief met opmaak op het klembord, om te plakken in een bericht.
+
+Er wordt niets automatisch verstuurd en niets in de database opgeslagen. Alle links gaan naar `siteUrl` uit
+`js/config.js` (de live cockpit), ook als je de nieuwsbrief lokaal maakt.
 
 ## Supabase instellen (eenmalig, voor beheer en ideeënhub)
 

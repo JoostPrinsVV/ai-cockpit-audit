@@ -2070,6 +2070,112 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .admin-review__title { color: var(--color-text); font-weight: var(--fw-bold); }
 .admin-review__text--empty { color: var(--color-text-muted); font-style: italic; }
 
+/* ---- Beheer → Nieuwsbrief: bediening links, voorbeeld rechts (het voorbeeld is ook de PDF) ---- */
+.nl { display: grid; grid-template-columns: minmax(0, 23rem) minmax(0, 1fr); gap: var(--space-7); align-items: start; }
+.nl__controls { display: grid; gap: var(--space-4); }
+.nl__period { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.nl__range { display: grid; flex: 1; min-width: 9rem; text-align: center; line-height: var(--lh-snug); }
+.nl__range strong { color: var(--color-text); font-size: var(--fs-md); }
+.nl__range span { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.nl__status { display: flex; align-items: flex-start; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); background: var(--color-surface-muted); font-size: var(--fs-sm); }
+.nl__status .icon { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.15em; color: var(--accent-steel-ink); }
+.nl__status--ready { background: var(--accent-teal-wash, var(--accent-teal-tint)); }
+.nl__status--ready .icon { color: var(--color-success); }
+.nl__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.nl__choices { display: grid; gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.nl__choice.is-empty { color: var(--color-text-muted); }
+.nl__count { color: var(--color-text-muted); font-weight: var(--fw-regular); }
+.nl__items { display: grid; gap: 2px; margin: var(--space-1) 0 var(--space-2) 1.9rem; font-size: var(--fs-sm); }
+
+.nl__preview {
+  position: sticky;
+  top: calc(var(--topbar-height) + var(--space-5));
+  max-height: calc(100vh - var(--topbar-height) - var(--space-8));
+  overflow: auto;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+}
+
+@media (max-width: 1100px) {
+  .nl { grid-template-columns: minmax(0, 1fr); }
+  .nl__preview { position: static; max-height: none; padding: var(--space-3); }
+}
+
+/* Het document zelf: altijd licht (zoals de PDF en de e-mail), in de huisstijl van de cockpit */
+.nl-doc { max-width: 46rem; margin: 0 auto; border: 1px solid var(--vv-gray-200); background: #ffffff; color: var(--vv-gray-700); box-shadow: var(--shadow-card); font-size: 1rem; line-height: 1.6; }
+.nl-doc__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1.5rem; padding: 1.35rem 2rem; border-bottom: 4px solid var(--vv-teal); background: var(--vv-navy); color: #ffffff; }
+.nl-doc__brand { display: flex; align-items: center; gap: 0.65rem; }
+.nl-doc__mark { display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 0.65rem; background: var(--vv-teal); color: var(--vv-navy); }
+.nl-doc__mark .icon { width: 1.25rem; height: 1.25rem; }
+.nl-doc__name { color: #ffffff; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.01em; }
+.nl-doc__discipline { color: var(--vv-teal); }
+.nl-doc__edition { display: grid; color: #c9cede; font-size: 0.8rem; line-height: 1.45; text-align: right; }
+.nl-doc__edition span:first-child { color: #ffffff; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.nl-doc__body { padding: 1.75rem 2rem 1.25rem; }
+.nl-doc__title { color: var(--vv-navy); font-size: 1.95rem; line-height: 1.15; letter-spacing: -0.02em; }
+.nl-doc__intro { margin-top: 0.6rem; font-size: 1.02rem; }
+.nl-doc__summary { margin-top: 1rem; padding: 0.6rem 0.9rem; border-radius: 0.5rem; background: #f1f3f7; color: var(--vv-gray-600); font-size: 0.88rem; }
+.nl-doc__summary strong { color: var(--vv-navy); }
+.nl-doc__empty { margin-top: 1.5rem; color: var(--vv-gray-600); font-style: italic; }
+
+.nl-section { margin-top: 1.8rem; }
+.nl-section__title { display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--vv-teal); color: var(--vv-navy); font-size: 1.1rem; break-after: avoid; }
+.nl-section__title .icon { width: 1.15rem; height: 1.15rem; color: var(--vv-teal-700); }
+.nl-section__list { display: grid; gap: 0.95rem; margin: 0.95rem 0 0; padding: 0; list-style: none; }
+.nl-section--compact .nl-section__list { gap: 0.15rem; padding-left: 1.2rem; list-style: disc; }
+
+.nl-item,
+.nl-qa,
+.nl-rank { break-inside: avoid; }
+.nl-item__meta { color: var(--vv-teal-700); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.02em; }
+.nl-item__title { color: var(--vv-navy); font-size: 1.02rem; font-weight: 700; line-height: 1.35; text-decoration: none; }
+.nl-item__title:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+.nl-item__text { margin-top: 0.2rem; font-size: 0.94rem; }
+.nl-item--highlight { padding: 0.9rem 1.1rem; border-left: 4px solid var(--vv-teal); border-radius: 0 0.5rem 0.5rem 0; background: #e8f6f3; }
+.nl-item--upcoming { padding: 0.8rem 1.1rem; border-left: 4px solid var(--vv-gray-200); border-radius: 0 0.5rem 0.5rem 0; background: #f1f3f7; }
+
+.nl-qa p { display: grid; grid-template-columns: 5.25rem minmax(0, 1fr); gap: 0.5rem; }
+.nl-qa__q { color: var(--vv-navy); font-weight: 700; }
+.nl-qa__a { margin-top: 0.15rem; font-size: 0.94rem; }
+.nl-qa__label { padding-top: 0.2em; color: var(--vv-teal-700); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.nl-rank { display: flex; align-items: flex-start; gap: 0.75rem; }
+.nl-rank__n { display: grid; flex: none; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--vv-navy); color: #ffffff; font-size: 0.82rem; font-weight: 700; }
+.nl-rank__body { display: grid; gap: 0.1rem; }
+.nl-rank .nl-item__meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: var(--vv-gray-600); font-weight: 500; }
+.nl-compact a { color: var(--vv-navy); }
+.nl-doc .stars__on { color: #c47f00; }
+.nl-doc .stars__off { color: var(--vv-gray-200); }
+.nl-quote { margin: 1rem 0 0; padding: 0.55rem 1rem; border-left: 3px solid var(--vv-gray-200); color: var(--vv-gray-600); font-style: italic; }
+.nl-quote cite { display: block; margin-top: 0.2rem; font-size: 0.8rem; font-style: normal; }
+
+.nl-doc__closing { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--vv-gray-200); }
+.nl-doc__signature { margin-top: 0.4rem; color: var(--vv-navy); font-weight: 700; }
+.nl-doc__buttons { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
+.nl-button { display: inline-block; padding: 0.55rem 1.2rem; border: 2px solid var(--vv-crimson-600); border-radius: 999px; background: var(--vv-crimson-600); color: #ffffff; font-size: 0.9rem; font-weight: 700; text-decoration: none; }
+.nl-button--quiet { border-color: var(--vv-gray-200); background: transparent; color: var(--vv-navy); }
+.nl-doc__foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; padding: 0.9rem 2rem; border-top: 1px solid var(--vv-gray-200); background: #f1f3f7; color: var(--vv-gray-600); font-size: 0.78rem; }
+
+@media (max-width: 600px) {
+  .nl-doc__head, .nl-doc__body, .nl-doc__foot { padding-inline: 1.1rem; }
+  .nl-doc__edition { text-align: left; }
+  .nl-qa p { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+/* Afdrukken als PDF: alleen de nieuwsbrief, op A4 (js/admin-newsletter.js zet hem in .nl-print) */
+.nl-print { display: none; }
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body.is-printing-newsletter { background: #ffffff; }
+  body.is-printing-newsletter > *:not(.nl-print) { display: none !important; }
+  body.is-printing-newsletter > .nl-print { display: block; }
+  .nl-print .nl-doc { max-width: none; border: 0; box-shadow: none; font-size: 10.5pt; }
+  .nl-print .nl-doc,
+  .nl-print .nl-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
 /* Beheer: van discipline wisselen, en waarin je werkt */
 .admin__scope { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
 .admin__scope-label { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; }

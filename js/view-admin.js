@@ -13,6 +13,8 @@
      publiceren in de hub, verwijderen en exporteren (CSV).
    - Reviews: sterren en toelichtingen bij usecases en prompts; toelichting
      publiceren of verwijderen (js/reviews.js).
+   - Nieuwsbrief: weekupdate of maandnieuwsbrief als PDF of e-mail
+     (js/admin-newsletter.js).
    - Gebruik: anonieme tellers per usecase, demo, prompt, tip, training en agent.
    De sessie blijft bewaard zolang dit tabblad open is.
    ========================================================================== */
@@ -27,6 +29,7 @@
     { id: 'disciplines', label: 'Disciplines', icon: 'layers' },
     { id: 'inzendingen', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true },
     { id: 'reviews', label: 'Reviews', icon: 'star', perDiscipline: true },
+    { id: 'nieuwsbrief', label: 'Nieuwsbrief', icon: 'mail', perDiscipline: true },
     { id: 'gebruik', label: 'Gebruik', icon: 'chart', perDiscipline: true }
   ];
 
@@ -471,7 +474,9 @@
         el('span', { text: t.id === 'inhoud' ? 'Inhoud ' + disciplineName : t.label })
       ])
     ));
+    const reminder = tab === 'nieuwsbrief' ? null : ns.adminNewsletter.reminder();
     content.append(
+      ...(reminder ? [reminder] : []),
       ...(TABS.find((t) => t.id === tab).perDiscipline ? [disciplineChooser(tab)] : []),
       el('div', { className: 'admin__bar' }, [
         tabs,
@@ -489,6 +494,7 @@
     if (tab === 'gebruik') usageTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);
     else if (tab === 'reviews') reviewsTab(panel);
+    else if (tab === 'nieuwsbrief') panel.append(ns.adminNewsletter.render().node);
     else if (tab === 'disciplines') {
       const result = ns.adminDisciplines.render();
       panel.append(result.node);
