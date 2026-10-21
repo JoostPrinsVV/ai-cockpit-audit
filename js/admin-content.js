@@ -1017,9 +1017,11 @@
       if (!(await confirm(`${summary} verhuizen van ${filesName} naar de gedeelde basis. In ${filesName} blijft alles zichtbaar; zodra je een andere discipline openzet, staat het daar ook in. Daarna pas je deze items aan bij Gedeelde basis.`, { title: 'Gedeelde basis inrichten?', confirmLabel: 'Inrichten' }))) return;
       button.disabled = true;
       const label = button.querySelector('span');
+      let copied = false;
       try {
         label.textContent = 'Bezig met kopiëren…';
         await ns.central.saveContent(picked.map((row) => ({ type: row.type, id: row.id, data: row.data, position: row.position || 0, status: row.status })).concat([startRow()]), ns.cockpit.GENERAL_NAMESPACE);
+        copied = true;
         // Wat uit Audit kwam, daar weghalen (wat uit de bestanden kwam, stond nog nergens)
         const moved = picked.filter((row) => row.namespace === source);
         for (let index = 0; index < moved.length; index++) {
@@ -1032,7 +1034,10 @@
         button.disabled = false;
         label.textContent = 'Gedeelde basis inrichten';
         await afterChange();
-        toast(`Inrichten mislukt: ${error.message}. Wat al verhuisd is, staat in de gedeelde basis; de rest staat nog in ${filesName}.`, { tone: 'warning', duration: 10000 });
+        // Kopiëren gaat in één keer: mislukt dat, dan is er niets verhuisd. Daarna gaat het weghalen per item.
+        toast(copied
+          ? `Inrichten deels mislukt: ${error.message}. Alles staat in de gedeelde basis; een deel staat ook nog in ${filesName}. Haal dat daar weg via Inhoud.`
+          : `Inrichten mislukt: ${error.message}. Er is niets verhuisd: alles staat nog in ${filesName}.`, { tone: 'warning', duration: 10000 });
       }
     });
     return panel;
