@@ -45,7 +45,7 @@
       { href: '#/usecases', icon: 'play-circle', accent: 'crimson', title: 'Usecases', count: c.usecases.length, text: `Praktische toepassingen per fase van de controle, ${withDemo} met een demo.` },
       { href: '#/prompts', icon: 'chat', accent: 'teal', title: 'Promptdatabase', count: c.prompts.length, text: 'Direct te gebruiken prompts. Vul de plaatshouders in en kopieer.' },
       { href: '#/tips', icon: 'bulb', accent: 'steel', title: 'Tips & tricks', count: c.openTips.length, text: 'Iedere vrijdag een nieuwe tip, plus de basis: instructies, Facilitator en meer.' },
-      { href: '#/trainingen', icon: 'cap', accent: 'deepteal', title: 'Trainingen', count: c.trainings.filter((t) => t.hasRecording).length || null, text: 'Opnames van trainingen en sessies om terug te kijken.' },
+      { href: '#/trainingen', icon: 'cap', accent: 'deepteal', title: 'Trainingen', count: c.trainings.filter((t) => t.available).length || null, text: 'Opnames en naslagwerk van trainingen en sessies om terug te kijken.' },
       { href: '#/agents', icon: 'robot', accent: 'navy', title: 'Agents & tools', count: c.agents.filter((a) => !a.stopped).length || null, text: 'Welke AI-agents en tools er zijn, waarvoor je ze gebruikt en hoe je toegang krijgt.' },
       { href: '#/ideeen', icon: 'message-plus', accent: 'rose', title: 'Ideeënhub', count: null, text: 'Stuur een idee, vraag of verzoek in en zie wat collega\'s aandragen.' }
     ];

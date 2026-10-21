@@ -146,7 +146,46 @@
         ] },
         { key: 'usecases', label: 'Usecases uit de training', type: 'refs', ref: 'usecase' },
         { key: 'tips', label: 'Tips uit de training', type: 'refs', ref: 'tip' },
-        { key: 'added', label: 'Toegevoegd op', type: 'date', hint: 'Leeg = de datum van de training.' }
+        { key: 'added', label: 'Toegevoegd op', type: 'date', hint: 'Leeg = de datum van de training.' },
+        // Naslagwerk (allemaal optioneel; uitleg per veld in data/trainings.js)
+        { key: '_naslag', label: 'Naslagwerk', type: 'heading', hint: 'Alles hieronder is optioneel. Afbeeldingen van slides kun je hier niet uploaden: zet ze via de repository in assets/trainingen/<adres van de training>/ (zie README.md) en vul hier het pad in. De site is openbaar bereikbaar: geen interne of klantinformatie, geen namen van deelnemers.' },
+        { key: 'slides', label: 'Slides', type: 'group', itemLabel: 'Slide', fields: [
+          { key: 'image', label: 'Afbeelding', type: 'path', placeholder: 'assets/trainingen/…/slide-01.jpg', half: true },
+          { key: 'title', label: 'Titel', type: 'text', half: true }
+        ] },
+        { key: 'takeaways', label: 'Wat je meeneemt (3 tot 5 kaarten)', type: 'group', itemLabel: 'Kaart', fields: [
+          { key: 'title', label: 'Kop', type: 'text' },
+          { key: 'text', label: 'Tekst', type: 'textarea' },
+          { key: 'warning', label: 'Waarschuwing (rode kaart met een uitroepteken)', type: 'bool' }
+        ] },
+        { key: 'actions', label: 'Aan de slag (afvinklijst)', type: 'group', itemLabel: 'Actie', fields: [
+          { key: 'title', label: 'Kop', type: 'text', hint: 'Het vinkje van een collega hoort bij deze kop: pas hem na publiceren liever niet meer aan.' },
+          { key: 'text', label: 'Tekst', type: 'textarea' },
+          { key: 'slide', label: 'Link naar slide (nummer)', type: 'text', placeholder: 'bijv. 14', half: true, hint: 'De hoeveelste slide in de lijst hierboven.' },
+          { key: 'more', label: 'Kop van het uitklapblok', type: 'text', placeholder: 'Zo pak je het aan', half: true, hint: 'Boven de stappen en prompts.' },
+          { key: 'howto', label: 'Stappen', type: 'group', itemLabel: 'Stappenlijst', fields: [
+            { key: 'title', label: 'Kop', type: 'text', placeholder: 'bijv. Direct instellen' },
+            { key: 'steps', label: 'Stappen', type: 'list', hint: 'Eén stap per regel' }
+          ] },
+          { key: 'note', label: 'Kleine letters onder de stappen', type: 'textarea' },
+          { key: 'prompts', label: 'Prompts en sjablonen', type: 'group', itemLabel: 'Prompt', fields: [
+            { key: 'label', label: 'Kop', type: 'text', placeholder: 'bijv. Sjabloon voor je persoonlijke instructies' },
+            { key: 'text', label: 'Tekst', type: 'code', hint: 'Plaatshouders in hoofdletters tussen blokhaken: [NAAM], [TEAM, bijv. audit]' }
+          ] }
+        ] },
+        { key: 'ideas', label: 'Uit de zaal: ideeën', type: 'group', itemLabel: 'Idee', fields: [
+          { key: 'title', label: 'Kop', type: 'text' },
+          { key: 'text', label: 'Tekst', type: 'textarea' }
+        ] },
+        { key: 'questions', label: 'Uit de zaal: open vragen', type: 'list', hint: 'Eén vraag per regel' },
+        { key: 'timelineIntro', label: 'Vervolg: inleiding', type: 'textarea', hint: 'Bijv. hoe vaak de reeks terugkomt.' },
+        { key: 'timeline', label: 'Vervolg: tijdlijn', type: 'group', itemLabel: 'Sessie', fields: [
+          { key: 'month', label: 'Maand', type: 'text', placeholder: 'bijv. December', half: true },
+          { key: 'title', label: 'Titel', type: 'text', half: true },
+          { key: 'text', label: 'Tekst', type: 'text' },
+          { key: 'training', label: 'Link naar de training', type: 'select', options: () => ns.content.trainings.map((t) => ({ value: t.id, label: t.title })), half: true },
+          { key: 'current', label: 'Dit is deze training', type: 'bool' }
+        ] }
       ]
     },
     agent: {
@@ -234,6 +273,9 @@
   function datalist(id, values) {
     return el('datalist', { attrs: { id } }, values.map((value) => el('option', { attrs: { value } })));
   }
+
+  // Leeg veld (ook een lege lijst): niet bewaren
+  const isEmpty = (value) => value === '' || value == null || (Array.isArray(value) && !value.length);
 
   /** Bouwt één veld. Geeft { node, get(), validate() } terug. */
   function control(field, value, ctx) {
@@ -359,7 +401,7 @@
             const result = {};
             field.fields.forEach((f, index) => {
               const v = sub[index].get();
-              if (v !== '' && v != null) result[f.key] = v;
+              if (!isEmpty(v)) result[f.key] = v;
             });
             return Object.keys(result).length ? result : undefined;
           },
@@ -372,9 +414,14 @@
         const groupError = el('p', { className: 'field__error' });
         function renumber() {
           items.forEach((item, index) => {
-            item.title.textContent = `${field.itemLabel || 'Item'} ${index + 1}`;
+            const name = `${field.itemLabel || 'Item'} ${index + 1}`;
+            item.title.textContent = name;
             item.up.disabled = index === 0;
             item.down.disabled = index === items.length - 1;
+            // Met naam, want binnen een groep kunnen weer groepen staan (bijv. prompts bij een actie)
+            item.up.setAttribute('aria-label', name + ' omhoog');
+            item.down.setAttribute('aria-label', name + ' omlaag');
+            item.remove.setAttribute('aria-label', name + ' verwijderen');
           });
         }
         function addItem(itemValue) {
@@ -387,7 +434,7 @@
             el('div', { className: 'repeater__head' }, [title, el('span', { className: 'repeater__actions' }, [up, down, remove])]),
             el('div', { className: 'form-grid' }, sub.map((s) => s.node))
           ]);
-          const item = { node, sub, title, up, down };
+          const item = { node, sub, title, up, down, remove };
           up.addEventListener('click', () => move(item, -1));
           down.addEventListener('click', () => move(item, 1));
           remove.addEventListener('click', () => {
@@ -424,7 +471,7 @@
               const obj = {};
               field.fields.forEach((f, index) => {
                 const v = item.sub[index].get();
-                if (v !== '' && v != null) obj[f.key] = v;
+                if (!isEmpty(v)) obj[f.key] = v;
               });
               return obj;
             }).filter((obj) => Object.keys(obj).length);
@@ -436,6 +483,14 @@
             groupError.textContent = tooFew ? `Voeg minimaal ${field.min} toe.` : '';
             return inner || (tooFew ? groupError.textContent : null);
           }
+        };
+      }
+      case 'heading': {
+        // Tussenkop in het formulier (geen veld: er wordt niets bewaard)
+        return {
+          node: el('div', { className: 'field form-section' }, [el('h3', { className: 'form-section__title', text: field.label }), field.hint ? el('p', { className: 'field__hint', text: field.hint }) : null]),
+          get: () => undefined,
+          validate: () => null
         };
       }
       default:
@@ -502,7 +557,7 @@
       controls.forEach(({ field, ctl }) => {
         const v = ctl.get();
         if (field.key === 'id') return;
-        if (v === '' || v == null || (Array.isArray(v) && !v.length)) return;
+        if (isEmpty(v)) return;
         result[field.key] = v;
       });
       return result;

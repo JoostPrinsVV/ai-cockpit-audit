@@ -323,6 +323,72 @@
     return time.split(':').reduce((total, part) => total * 60 + Number(part), 0);
   }
 
+  const objects = (value) => (Array.isArray(value) ? value.filter((item) => item && typeof item === 'object') : []);
+
+  /** Sleutel van een actie voor het afvinken: uit de kop, uniek binnen de training. */
+  function actionKey(title, taken) {
+    const base = normalize(title).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'actie';
+    let key = base;
+    for (let n = 2; taken.has(key); n++) key = `${base}-${n}`;
+    taken.add(key);
+    return key;
+  }
+
+  /**
+   * Naslagwerk bij een training (allemaal optioneel): slides, wat je meeneemt, acties om af te vinken,
+   * ideeën en vragen uit de zaal en het vervolg. Zie data/trainings.js voor de velden.
+   */
+  function loadNaslag(item, id) {
+    const where = `Training '${id}'`;
+    const slides = objects(item.slides)
+      .map((slide, n) => ({ image: localPath(slide.image, `${where} (slide ${n + 1})`), title: text(slide.title) }))
+      .filter((slide) => slide.image)
+      .map((slide, n) => Object.assign(slide, { number: n + 1, title: slide.title || 'Slide ' + (n + 1) }));
+
+    const takeaways = objects(item.takeaways)
+      .map((card) => ({ title: text(card.title), text: text(card.text), warning: card.warning === true }))
+      .filter((card) => card.title || card.text);
+
+    const keys = new Set();
+    const actions = objects(item.actions).map((action, n) => {
+      const title = text(action.title);
+      if (!title) {
+        warn(`${where}: actie ${n + 1} heeft geen kop; overgeslagen.`);
+        return null;
+      }
+      // Slidenummer: getal of tekst ('14'), binnen het aantal slides
+      let slide = 0;
+      const rawSlide = typeof action.slide === 'number' ? String(action.slide) : text(action.slide);
+      if (rawSlide) {
+        const number = /^\d+$/.test(rawSlide) ? Number(rawSlide) : 0;
+        if (number >= 1 && number <= slides.length) slide = number;
+        else warn(`${where}: actie '${title}' verwijst naar slide '${rawSlide}', maar er zijn ${slides.length} slides; link weggelaten.`);
+      }
+      return {
+        key: actionKey(title, keys),
+        title,
+        text: text(action.text),
+        slide,
+        more: text(action.more),
+        howto: objects(action.howto).map((part) => ({ title: text(part.title), steps: list(part.steps) })).filter((part) => part.steps.length),
+        note: text(action.note),
+        prompts: objects(action.prompts)
+          .map((prompt, p) => ({ label: text(prompt.label) || 'Prompt ' + (p + 1), text: text(prompt.text) }))
+          .filter((prompt) => prompt.text)
+      };
+    }).filter(Boolean);
+
+    const ideas = objects(item.ideas)
+      .map((idea) => ({ title: text(idea.title), text: text(idea.text) }))
+      .filter((idea) => idea.title || idea.text);
+
+    const timeline = objects(item.timeline)
+      .map((step) => ({ month: text(step.month), title: text(step.title), text: text(step.text), current: step.current === true, training: text(step.training) }))
+      .filter((step) => step.title || step.month);
+
+    return { slides, takeaways, actions, ideas, questions: list(item.questions), timeline, timelineIntro: text(item.timelineIntro) };
+  }
+
   function loadTrainings(raw) {
     const categories = [];
     (Array.isArray(raw) ? raw : []).forEach((item, index) => {
@@ -364,7 +430,11 @@
         added: text(item.added) || text(item.date),
         draft: item._draft === true
       };
+      Object.assign(training, loadNaslag(item, id));
       training.hasRecording = Boolean(training.link || training.video);
+      training.hasNaslag = ['slides', 'takeaways', 'actions', 'ideas', 'questions', 'timeline'].some((key) => training[key].length > 0);
+      // Iets om te bekijken: een opname of een naslagwerk (anders: 'Gepland' of 'Opname volgt')
+      training.available = training.hasRecording || training.hasNaslag;
       state.trainings.push(training);
       state.trainingById.set(id, training);
     });
@@ -448,6 +518,12 @@
         warn(`Training '${training.id}' verwijst naar onbekende tip '${tid}'.`);
         return false;
       });
+      // Vervolg: een stap mag naar een andere training linken (die zelf geen link krijgt)
+      training.timeline.forEach((step) => {
+        if (!step.training) return;
+        if (!state.trainingById.has(step.training)) warn(`Training '${training.id}': het vervolg verwijst naar onbekende training '${step.training}'.`);
+        if (!state.trainingById.has(step.training) || step.training === training.id) step.training = '';
+      });
     });
     state.usecases.forEach((usecase) => {
       usecase.relatedTips = usecase.relatedTips.filter((id) => {
@@ -487,7 +563,17 @@
       tip.haystack = normalize([tip.title, tip.summary, tip.category.label, tip.why, tip.steps.join(' '), tip.example ? tip.example.text : '', tip.note].join(' '));
     });
     state.trainings.forEach((training) => {
-      training.haystack = normalize([training.title, training.subtitle, training.category, training.trainer, training.description, training.chapters.map((c) => c.title).join(' ')].join(' '));
+      training.haystack = normalize([
+        training.title, training.subtitle, training.category, training.trainer, training.description, training.chapters.map((c) => c.title).join(' '),
+        // Naslagwerk
+        training.slides.map((s) => s.title).join(' '),
+        training.takeaways.map((t) => t.title + ' ' + t.text).join(' '),
+        training.actions.map((a) => [a.title, a.text, a.more, a.note, a.howto.map((h) => h.title + ' ' + h.steps.join(' ')).join(' '), a.prompts.map((p) => p.label + ' ' + p.text).join(' ')].join(' ')).join(' '),
+        training.ideas.map((i) => i.title + ' ' + i.text).join(' '),
+        training.questions.join(' '),
+        training.timelineIntro,
+        training.timeline.map((t) => [t.month, t.title, t.text].join(' ')).join(' ')
+      ].join(' '));
     });
     state.agents.forEach((agent) => {
       agent.haystack = normalize([agent.title, agent.summary, agent.description, agent.kind, agent.status, agent.access, agent.owner, agent.notFor.join(' '), agent.phases.map((p) => p.label).join(' ')].join(' '));
@@ -516,7 +602,7 @@
     const entries = (kind, items) => items.filter((item) => item.added).map((item, rank) => ({ kind, item, added: item.added, rank }));
     const byDate = (a, b) => (a.added < b.added ? 1 : a.added > b.added ? -1 : a.rank - b.rank || KIND_ORDER[a.kind] - KIND_ORDER[b.kind]);
     const all = []
-      .concat(entries('training', state.trainings.filter((item) => item.hasRecording)))
+      .concat(entries('training', state.trainings.filter((item) => item.available)))
       .concat(entries('agent', state.agents.filter((item) => !item.stopped).sort((a, b) => b.order - a.order)))
       .concat(entries('usecase', state.usecases.slice().sort((a, b) => b.order - a.order)))
       .concat(entries('prompt', state.prompts.filter((item) => !item.usecase).sort((a, b) => b.order - a.order)))

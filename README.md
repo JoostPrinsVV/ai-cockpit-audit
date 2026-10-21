@@ -24,6 +24,7 @@ assets/fonts/         IBM Plex (SIL Open Font License, zie OFL.txt)
 assets/branding/      Favicon
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
+assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …)
 setup/                Het SQL-bestand voor Supabase
 ```
 
@@ -38,7 +39,7 @@ Alle paden zijn relatief binnen deze repository (geen `../`). De enige link naar
 | `#/usecases`, `#/usecase/<id>` | Praktische usecases per fase van de controle, elk met demo, stappen, prompts en aandachtspunten |
 | `#/prompts`, `#/prompt/<id>` | Promptdatabase: zoeken, filteren, favorieten, plaatshouders invullen en kopiëren |
 | `#/tips`, `#/tip/<id>` | Tips & tricks, o.a. eigen instructies, Facilitator en geplande prompts |
-| `#/trainingen`, `#/training/<id>` | Opnames van trainingen en sessies om terug te kijken, met hoofdstukken en materiaal |
+| `#/trainingen`, `#/training/<id>` | Opnames van trainingen en sessies om terug te kijken, met hoofdstukken en materiaal, en per training een naslagwerk: slides, wat je meeneemt, acties om af te vinken, uit de zaal en het vervolg |
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
 | `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; gepubliceerde inzendingen met antwoord en 'Ik ook' |
 | `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk |
@@ -56,7 +57,8 @@ Na het eenmalig instellen (zie 'Supabase instellen' hieronder) beheer je alle in
    dat moment tonen alle collega's de inhoud uit de database.
 3. Kies een soort (Usecases, Prompts, Tips, Trainingen, Agents & tools, Fasen, Teksten) en klik op **Bewerken** of
    **Nieuwe …**. Je kunt alles aanpassen: teksten, prompts (met plaatshouders), stappen, fase, icoon, licentie, demo
-   of video, de 'tip van de week'-datum, hoofdstukken en materiaal van trainingen, gekoppelde tips en usecases.
+   of video, de 'tip van de week'-datum, hoofdstukken, materiaal en het naslagwerk van trainingen, gekoppelde tips
+   en usecases.
 4. **Status:** *Gepubliceerd* (iedereen ziet het) of *Concept* (alleen jij als beheerder, met een label 'Concept').
    Zo kun je iets rustig voorbereiden en via **Bekijk op de site** controleren voordat je het publiceert.
 5. **Volgorde:** met de pijltjes in de lijst. **Verwijderen:** eerst naar de prullenbak (terug te zetten), daarna
@@ -91,7 +93,7 @@ de terugval. Uitleg per veld staat bovenin elk bestand.
 | `data/usecases.js` | Usecases. De prompts komen automatisch ook in de promptdatabase |
 | `data/prompts.js` | Losse prompts voor de promptdatabase |
 | `data/tips.js` | Tips & tricks |
-| `data/trainings.js` | Trainingen (opnames), met een voorbeeld onderaan om te kopiëren |
+| `data/trainings.js` | Trainingen (opnames en naslagwerk): een fictief voorbeeld van een naslagwerk en onderaan een voorbeeld met opname |
 | `data/agents.js` | Agents & tools (startinhoud: de Microsoft-standaard agents) |
 | `demos/scripts.js` | De gesprekken van de nagespeelde Copilot-demo's |
 
@@ -130,7 +132,75 @@ Een training toevoegen: kopieer het voorbeeld onderaan `data/trainings.js` en vu
   de pagina zelf en de hoofdstukken springen naar het juiste moment. Deze website en de repository zijn openbaar
   bereikbaar en GitHub accepteert geen bestanden boven 100 MB: zet hier nooit een opname met interne of klantinformatie.
 - **Nog geen opname:** laat `link` en `video` leeg. Ligt de datum in de toekomst, dan staat de training onder
-  'Binnenkort'; daarna onder 'Terugkijken' met 'Opname volgt'.
+  'Binnenkort'; daarna onder 'Terugkijken' met 'Opname volgt' (met een naslagwerk staan daar de slides).
+
+### Naslagwerk na een training
+
+Bij iedere training kan een naslagwerk staan, op dezelfde pagina (`#/training/<id>`). Alles is optioneel; een
+onderdeel zonder inhoud verschijnt niet. Zie `data/trainings.js` voor een fictief voorbeeld.
+
+| Onderdeel | Veld | Wat collega's zien |
+| --- | --- | --- |
+| Slides | `slides` | De eerste slide groot met 'Bekijk de slides', daaronder alle slides als miniatuur. Het venster bladert met knoppen, pijltjestoetsen of vegen. |
+| Wat je meeneemt | `takeaways` | 3 tot 5 kaarten met een kop en uitleg; `warning: true` maakt er een rode waarschuwing van. |
+| Aan de slag | `actions` | Een afvinklijst. Per actie kop en tekst, optioneel een link naar een slide, stappen (`howto`, met `more` als kop van het uitklapblok), kleine letters (`note`) en prompts of sjablonen om in te vullen en te kopiëren. |
+| Uit de zaal | `ideas`, `questions` | Ideeën (kop en tekst) en open vragen. |
+| Vervolg | `timelineIntro`, `timeline` | Een tijdlijn van de reeks (maand, titel, tekst); `current: true` markeert deze training, `training` linkt naar een andere training. |
+
+Boven de onderdelen staat een inhoudsopgave (op een breed scherm blijft die links in beeld). De vinkjes bij 'Aan de
+slag' staan alleen in de browser van die collega (lokale opslag, per training) en horen bij de kop van de actie:
+pas een kop na publiceren liever niet meer aan. Alle velden staan uitgelegd bovenin `data/trainings.js`; in Beheer
+staan dezelfde velden onder de kop **Naslagwerk**.
+
+> **Let op: deze site en de repository zijn openbaar bereikbaar.** Zet in een naslagwerk alleen wat iedereen mag
+> zien. Laat slides met interne informatie weg (bijv. de strategie van een vestiging, interne tools of documenten,
+> QR-codes en deelnamecodes, foto's van collega's), en noem geen namen of uitspraken van deelnemers. Geen persoonlijke
+> instructies of systeemprompts, geen klantinformatie. Twijfel je? Laat het weg.
+
+**Zo voeg je na een training een naslagwerk toe:**
+
+1. **Slides als afbeeldingen.** In PowerPoint: *Bestand → Exporteren → Bestandstype wijzigen → JPEG*, alle dia's.
+   Laat de slides weg die niet openbaar mogen. Noem de bestanden `slide-01.jpg`, `slide-02.jpg`, … (twee cijfers) in
+   de volgorde van het naslagwerk. Liefst 16:9, ongeveer 1600 px breed en hooguit ongeveer 150 kB per slide.
+2. **Afbeeldingen in de repository.** Zet ze in `assets/trainingen/<id>/`, waarbij `<id>` het adres van de training
+   is (bijv. `assets/trainingen/learn-play-sessie-2/slide-01.jpg`). Commit en push via GitHub Desktop; GitHub Pages
+   zet ze binnen een paar minuten online. **Beheer kan geen afbeeldingen uploaden**: dat gaat altijd via de repository.
+3. **De inhoud.**
+   - *Zolang de database nog geen trainingen heeft:* zet de training in `data/trainings.js` en klik in Beheer → Inhoud
+     op de melding **… uit de bestanden toevoegen**.
+   - *Daarna (de database is leidend):* Beheer → Inhoud → Trainingen → **Nieuwe training**, en vul de velden onder
+     **Naslagwerk** in (bij slides het pad, bijv. `assets/trainingen/learn-play-sessie-2/slide-01.jpg`). Een training
+     die je alleen in `data/trainings.js` zet, verschijnt dan niet meer vanzelf.
+   - *Of met een importbestand:* een JSON-bestand in de vorm hieronder zet je terug met **Importeer back-up**. Alleen
+     items met hetzelfde adres worden overschreven; met `"status": "draft"` komt hij er als concept in.
+4. **Controleren en publiceren.** Zet hem eerst op *Concept*, bekijk hem via **Bekijk op de site** en zet hem dan
+   op *Gepubliceerd*. Een link naar een slide (`slide: 14`) telt vanaf 1 in de lijst met slides: laat je een slide
+   weg, pas dan ook de nummers aan.
+
+```json
+{
+  "rows": [
+    {
+      "type": "training",
+      "id": "learn-play-sessie-2",
+      "status": "draft",
+      "data": {
+        "title": "Verspilling in beeld",
+        "date": "2026-12-10",
+        "category": "Basistraining",
+        "slides": [{ "image": "assets/trainingen/learn-play-sessie-2/slide-01.jpg", "title": "Titel" }],
+        "takeaways": [{ "title": "Kop", "text": "Uitleg" }],
+        "actions": [{ "title": "Kop", "text": "Uitleg", "slide": 1, "prompts": [{ "label": "Prompt", "text": "…" }] }],
+        "timeline": [{ "month": "December", "title": "Verspilling in beeld", "current": true }]
+      }
+    }
+  ]
+}
+```
+
+**Met Claude:** geef Claude de PowerPoint (of de geëxporteerde slides) en je aantekeningen, en vraag om een
+naslagwerk volgens deze sectie: de slides als `assets/trainingen/<id>/slide-NN.jpg` in deze repository en de inhoud
+als importbestand (JSON) of als blok in `data/trainings.js`. Controleer daarna zelf of er niets interns in staat.
 
 ## Agents & tools
 
@@ -172,7 +242,8 @@ storing de inzending ook per mail sturen.
 ## Privacy en veiligheid
 
 - Geen klantgegevens op het platform: alle demo's zijn fictief, en wat je in 'Invullen' typt wordt nergens bewaard.
-- In de browser bewaren we alleen favorieten, het thema, een willekeurige stem-code en de titels van je eigen inzendingen.
+- In de browser bewaren we alleen favorieten, het thema, een willekeurige stem-code, de titels van je eigen inzendingen
+  en de afgevinkte acties uit een naslagwerk.
 - De site en de repository zijn openbaar bereikbaar. Alles op het platform is informatie voor gebruikers; zet er nooit
   configuratie, systeemprompts, goedkeuringsdocumenten, interne opnames of klantinformatie op.
 - De tellers in Beheer zijn anoniem (welke usecase, demo, prompt, tip, training of agent), zonder apparaat- of
