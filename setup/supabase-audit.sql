@@ -2,8 +2,8 @@
 -- AI COCKPIT AUDIT — CENTRALE OPSLAG (Supabase)
 -- ----------------------------------------------------------------------------
 -- Tabellen voor de inhoud van het platform (usecases, prompts, tips,
--- trainingen, agents & tools, fasen en teksten), de ideeënhub, de 'Ik ook'-stemmen en de
--- anonieme tellers. Gebruikt hetzelfde Supabase-project als de AI Snackbar;
+-- trainingen, agents & tools, fasen en teksten), de ideeënhub, de 'Ik ook'-stemmen,
+-- de reviews van usecases en prompts en de anonieme tellers. Gebruikt hetzelfde Supabase-project als de AI Snackbar;
 -- raakt de tabellen van de snackbar niet aan.
 --
 -- Eenmalig uitvoeren:
@@ -20,8 +20,9 @@
 --
 -- Rechten in het kort (Row Level Security):
 --   - Iedereen mag gepubliceerde inhoud lezen (usecases, prompts, tips, ...).
---   - Iedereen mag een inzending, stem of teller toevoegen, niets anders.
---   - Iedereen mag alleen gepubliceerde inzendingen lezen, zonder naam en e-mail.
+--   - Iedereen mag een inzending, stem, review of teller toevoegen, niets anders.
+--   - Iedereen mag alleen gepubliceerde inzendingen lezen, zonder naam en e-mail,
+--     en van reviews alleen het gemiddelde en de gepubliceerde toelichtingen.
 --   - Inhoud aanpassen, alles lezen, beantwoorden, publiceren en wissen kan
 --     alleen een ingelogde beheerder van wie het e-mailadres in audit_admins staat.
 -- ============================================================================
@@ -286,6 +287,74 @@ create trigger audit_content_stamp
   before insert or update or delete on public.audit_content
   for each row execute function public.audit_content_stamp();
 
--- Klaar. Controle: deze query moet de zes tabellen tonen
--- (audit_admins, audit_content, audit_content_history, audit_events, audit_ideas, audit_idea_votes).
+-- ---- 6. Reviews van usecases en prompts --------------------------------------------
+-- Een collega geeft een usecase of prompt 1 tot 5 sterren, met eventueel een korte
+-- toelichting. Eén review per apparaat per item (willekeurige code, geen persoonsgegeven).
+-- De sterren tellen direct mee in het gemiddelde; een toelichting is pas voor iedereen
+-- zichtbaar als een beheerder hem publiceert (Beheer → Reviews).
+create table if not exists public.audit_reviews (
+  id          bigint generated always as identity primary key,
+  namespace   text not null check (char_length(namespace) between 1 and 60),
+  item_type   text not null check (item_type in ('usecase', 'prompt')),
+  item_id     text not null check (char_length(item_id) between 1 and 80),
+  voter       uuid not null,
+  rating      smallint not null check (rating between 1 and 5),
+  comment     text check (comment is null or char_length(comment) <= 500),
+  is_public   boolean not null default false,
+  created_at  timestamptz not null default now(),
+  unique (namespace, item_type, item_id, voter)
+);
+create index if not exists audit_reviews_item_idx on public.audit_reviews (namespace, item_type, item_id);
+alter table public.audit_reviews enable row level security;
+revoke all on public.audit_reviews from anon, authenticated;
+-- Bezoekers: alleen een review toevoegen, en gepubliceerde toelichtingen lezen (zonder apparaatcode)
+grant insert (namespace, item_type, item_id, voter, rating, comment) on public.audit_reviews to anon, authenticated;
+grant select (id, namespace, item_type, item_id, rating, comment, created_at) on public.audit_reviews to anon;
+grant select, update, delete on public.audit_reviews to authenticated;
+grant usage on sequence public.audit_reviews_id_seq to anon, authenticated;
+
+drop policy if exists "audit_reviews toevoegen" on public.audit_reviews;
+create policy "audit_reviews toevoegen" on public.audit_reviews
+  for insert to anon, authenticated
+  with check (is_public = false);
+
+drop policy if exists "audit_reviews gepubliceerd lezen" on public.audit_reviews;
+create policy "audit_reviews gepubliceerd lezen" on public.audit_reviews
+  for select to anon
+  using (is_public and comment is not null);
+
+drop policy if exists "audit_reviews beheer lezen" on public.audit_reviews;
+create policy "audit_reviews beheer lezen" on public.audit_reviews
+  for select to authenticated
+  using (public.audit_is_admin());
+
+drop policy if exists "audit_reviews beheer wijzigen" on public.audit_reviews;
+create policy "audit_reviews beheer wijzigen" on public.audit_reviews
+  for update to authenticated
+  using (public.audit_is_admin())
+  with check (public.audit_is_admin());
+
+drop policy if exists "audit_reviews beheer wissen" on public.audit_reviews;
+create policy "audit_reviews beheer wissen" on public.audit_reviews
+  for delete to authenticated
+  using (public.audit_is_admin());
+
+-- Gemiddelde en aantal per item, voor iedereen (zonder de losse reviews)
+create or replace function public.audit_review_stats(p_namespace text)
+returns table (item_type text, item_id text, reviews integer, average numeric)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select r.item_type, r.item_id, count(*)::integer, round(avg(r.rating)::numeric, 1)
+  from public.audit_reviews r
+  where r.namespace = p_namespace
+  group by r.item_type, r.item_id;
+$$;
+revoke all on function public.audit_review_stats(text) from public;
+grant execute on function public.audit_review_stats(text) to anon, authenticated;
+
+-- Klaar. Controle: deze query moet de zeven tabellen tonen
+-- (audit_admins, audit_content, audit_content_history, audit_events, audit_ideas, audit_idea_votes, audit_reviews).
 -- select table_name from information_schema.tables where table_name like 'audit_%';

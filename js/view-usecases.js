@@ -111,7 +111,8 @@
       usecase.watchOut.length ? el('section', { className: 'callout callout--warning', attrs: { 'aria-labelledby': 'uc-watch' } }, [
         el('h2', { className: 'callout__title', attrs: { id: 'uc-watch' } }, [icon('alert'), el('span', { text: 'Let op' })]),
         el('ul', { className: 'callout__list' }, usecase.watchOut.map((item) => el('li', { text: item })))
-      ]) : null
+      ]) : null,
+      ns.reviews.block('usecase', usecase)
     ]);
 
     const promptBoxes = usecase.prompts.map((prompt, index) =>

@@ -7,6 +7,7 @@
      audit_content      de inhoud: usecases, prompts, tips, trainingen, agents, fasen, teksten
      audit_ideas        inzendingen uit de ideeënhub
      audit_idea_votes   'Ik ook'-stemmen (één per apparaat per inzending)
+     audit_reviews      sterren en toelichting bij usecases en prompts (één per apparaat per item)
      audit_events       anonieme tellers: bekeken, afgespeeld, gekopieerd
 
    Rechten (Row Level Security):
@@ -29,7 +30,7 @@
 (function (ns) {
   'use strict';
 
-  const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content' };
+  const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content', reviews: 'audit_reviews' };
   // Kolommen die iedereen mag lezen (geen naam of e-mailadres).
   const PUBLIC_COLUMNS = 'id,ref,created_at,kind,title,body,phase,status,answer,answered_at,votes';
   const CONTENT_COLUMNS = 'namespace,type,id,data,position,status,updated_at';
@@ -176,6 +177,67 @@
       return 'failed';
     } catch (error) {
       return 'failed';
+    }
+  }
+
+  /* ---- Reviews van usecases en prompts --------------------------------------------- */
+  /**
+   * Nieuwe review: { type: 'usecase'|'prompt', id, rating (1-5), comment?, voter }.
+   * Twee keer hetzelfde item vanaf één apparaat geeft 409: telt als al beoordeeld.
+   * @returns {Promise<'ok'|'duplicate'|'missing'|'failed'|'off'>}
+   */
+  async function submitReview(review) {
+    if (!enabled) return 'off';
+    const row = {
+      namespace: config.namespace,
+      item_type: review.type,
+      item_id: String(review.id).slice(0, 80),
+      voter: review.voter,
+      rating: review.rating,
+      comment: review.comment || null
+    };
+    try {
+      const response = await insert(TABLES.reviews, [row]);
+      if (response.ok) return 'ok';
+      if (response.status === 409) return 'duplicate';
+      if (await isMissingTable(response)) return 'missing';
+      console.warn('[AI Cockpit] Review geweigerd:', response.status, await response.text());
+      return 'failed';
+    } catch (error) {
+      return 'failed';
+    }
+  }
+
+  /**
+   * Gemiddelde en aantal reviews per item in deze discipline.
+   * @returns {Promise<{ status: 'ok'|'missing'|'failed'|'off', items: { item_type, item_id, reviews, average }[] }>}
+   */
+  async function reviewStats() {
+    if (!enabled) return { status: 'off', items: [] };
+    try {
+      const response = await request('/rest/v1/rpc/audit_review_stats', { method: 'POST', headers: headers(null), body: JSON.stringify({ p_namespace: config.namespace }) });
+      if (response.ok) return { status: 'ok', items: await response.json() };
+      if (await isMissingTable(response)) return { status: 'missing', items: [] };
+      return { status: 'failed', items: [] };
+    } catch (error) {
+      return { status: 'failed', items: [] };
+    }
+  }
+
+  /**
+   * Gepubliceerde toelichtingen bij één item (nieuwste eerst).
+   * @returns {Promise<{ status: 'ok'|'missing'|'failed'|'off', items: object[] }>}
+   */
+  async function listReviews(type, id) {
+    if (!enabled) return { status: 'off', items: [] };
+    const query = `?select=id,rating,comment,created_at&namespace=eq.${encodeURIComponent(config.namespace)}&item_type=eq.${encodeURIComponent(type)}&item_id=eq.${encodeURIComponent(id)}&order=created_at.desc&limit=20`;
+    try {
+      const response = await request('/rest/v1/' + TABLES.reviews + query, { headers: headers(null) });
+      if (response.ok) return { status: 'ok', items: await response.json() };
+      if (await isMissingTable(response)) return { status: 'missing', items: [] };
+      return { status: 'failed', items: [] };
+    } catch (error) {
+      return { status: 'failed', items: [] };
     }
   }
 
@@ -406,6 +468,36 @@
     return true;
   }
 
+  /* ---- Beheer: reviews ------------------------------------------------------------------- */
+  /** Alle reviews van deze discipline, ook de niet-gepubliceerde toelichtingen. */
+  function adminListReviews() {
+    return readAll(TABLES.reviews, 'id,item_type,item_id,rating,comment,is_public,created_at', 'created_at.desc');
+  }
+
+  /** Bijv. { is_public: true } om een toelichting te publiceren. */
+  async function adminUpdateReview(id, patch) {
+    const response = await request(`/rest/v1/${TABLES.reviews}?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: await adminHeaders({ Prefer: 'return=representation' }),
+      body: JSON.stringify(patch)
+    });
+    if (!response.ok) throw await failure(response, 'opslaan');
+    const rows = await response.json();
+    if (!rows.length) throw new Error('geen beheerdersrechten (staat je e-mailadres in audit_admins?)');
+    return rows[0];
+  }
+
+  async function adminDeleteReview(id) {
+    const response = await request(`/rest/v1/${TABLES.reviews}?id=eq.${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: await adminHeaders({ Prefer: 'return=representation' })
+    });
+    if (!response.ok) throw await failure(response, 'verwijderen');
+    const rows = await response.json();
+    if (!rows.length) throw new Error('niet verwijderd (geen beheerdersrechten?)');
+    return true;
+  }
+
   /** Tellers van de afgelopen dagen. */
   async function adminEvents(days) {
     const since = new Date(Date.now() - (days || 90) * 86400000).toISOString();
@@ -428,6 +520,9 @@
     submitIdea,
     listIdeas,
     vote,
+    submitReview,
+    reviewStats,
+    listReviews,
     track,
     signIn,
     signOut,
@@ -439,6 +534,9 @@
     adminListIdeas,
     adminUpdateIdea,
     adminDeleteIdea,
+    adminListReviews,
+    adminUpdateReview,
+    adminDeleteReview,
     adminEvents
   };
 })(window.AIAudit);

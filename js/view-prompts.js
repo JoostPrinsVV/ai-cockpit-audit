@@ -219,6 +219,7 @@
         el('p', {}, [el('strong', { text: 'Tip ' }), prompt.tip])
       ]) : null,
       prompt.author ? el('p', { className: 'detail__credit', text: 'Aangedragen door ' + prompt.author }) : null,
+      ns.reviews.block('prompt', prompt),
 
       siblings.length ? el('section', { className: 'related', attrs: { 'aria-labelledby': 'pr-steps' } }, [
         el('h2', { className: 'related__title', text: 'De andere stappen', attrs: { id: 'pr-steps' } }),

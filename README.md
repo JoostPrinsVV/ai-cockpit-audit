@@ -39,8 +39,8 @@ Alle paden zijn relatief binnen deze repository (geen `../`). De enige link naar
 | Adres | Wat |
 | --- | --- |
 | `#/` | Startpagina: zoeken, de onderdelen, uitgelichte usecases en tips, nieuw toegevoegd |
-| `#/usecases`, `#/usecase/<id>` | Praktische usecases per fase van de controle, elk met demo, stappen, prompts en aandachtspunten |
-| `#/prompts`, `#/prompt/<id>` | Promptdatabase: zoeken, filteren, favorieten, plaatshouders invullen en kopiëren |
+| `#/usecases`, `#/usecase/<id>` | Praktische usecases per fase van de controle, elk met demo, stappen, prompts, aandachtspunten en reviews |
+| `#/prompts`, `#/prompt/<id>` | Promptdatabase: zoeken, filteren, favorieten, plaatshouders invullen, kopiëren en beoordelen |
 | `#/tips`, `#/tip/<id>` | Tips & tricks, o.a. eigen instructies, Facilitator en geplande prompts |
 | `#/trainingen`, `#/training/<id>` | Opnames van trainingen en sessies om terug te kijken, met hoofdstukken en materiaal, en per training een naslagwerk: slides, wat je meeneemt, acties om af te vinken, uit de zaal en het vervolg |
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
@@ -254,6 +254,20 @@ elders; een agent kan er met `registerUrl` naar linken (afgeschermde omgeving).
 - **Niet gebruiken voor:** een paar korte punten; ze staan als waarschuwing op de pagina.
 - Alle velden staan uitgelegd bovenin `data/agents.js`; in Beheer → Inhoud → Agents & tools vul je dezelfde velden in.
 
+## Reviews bij usecases en prompts
+
+Onderaan iedere usecase en prompt staat **Wat vond je ervan?**: 1 tot 5 sterren, met eventueel een korte toelichting
+(maximaal 500 tekens).
+
+- **Anoniem:** één review per apparaat per item, met dezelfde willekeurige code als de 'Ik ook'-stemmen. Wat je gaf,
+  onthoudt de browser ('Bedankt! Je gaf 4 sterren').
+- **Sterren tellen direct mee** in het gemiddelde bij de usecase of prompt. Een **toelichting** staat er pas als een
+  beheerder hem publiceert, want de site is openbaar.
+- **Beheer → Reviews** (per discipline): de toelichtingen die nog bekeken moeten worden, publiceren of verbergen,
+  verwijderen, en per usecase en prompt het gemiddelde en het aantal reviews.
+- Zolang de tabel `audit_reviews` nog niet bestaat (stap 6 in `setup/supabase-audit.sql`), verschijnt het blok niet.
+  Uitzetten kan met `enableReviews: false` in `js/config.js`.
+
 ## Supabase instellen (eenmalig, voor beheer en ideeënhub)
 
 Beheer, de ideeënhub en de tellers gebruiken hetzelfde Supabase-project als de snackbar, met eigen tabellen. Tot die
@@ -274,8 +288,8 @@ storing de inzending ook per mail sturen.
 ## Privacy en veiligheid
 
 - Geen klantgegevens op het platform: alle demo's zijn fictief, en wat je in 'Invullen' typt wordt nergens bewaard.
-- In de browser bewaren we alleen favorieten, het thema, een willekeurige stem-code, de titels van je eigen inzendingen
-  en de afgevinkte acties uit een naslagwerk.
+- In de browser bewaren we alleen favorieten, het thema, een willekeurige stem-code, de titels van je eigen inzendingen,
+  welke usecases en prompts je hebt beoordeeld, de gekozen discipline en de afgevinkte acties uit een naslagwerk.
 - De site en de repository zijn openbaar bereikbaar. Alles op het platform is informatie voor gebruikers; zet er nooit
   configuratie, systeemprompts, goedkeuringsdocumenten, interne opnames of klantinformatie op.
 - De tellers in Beheer zijn anoniem (welke usecase, demo, prompt, tip, training of agent), zonder apparaat- of

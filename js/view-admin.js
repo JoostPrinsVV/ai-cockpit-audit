@@ -11,6 +11,8 @@
    - Disciplines: welke er zijn en welke open of op slot (js/admin-disciplines.js).
    - Inzendingen: lezen (met naam en e-mail), status zetten, beantwoorden,
      publiceren in de hub, verwijderen en exporteren (CSV).
+   - Reviews: sterren en toelichtingen bij usecases en prompts; toelichting
+     publiceren of verwijderen (js/reviews.js).
    - Gebruik: anonieme tellers per usecase, demo, prompt, tip, training en agent.
    De sessie blijft bewaard zolang dit tabblad open is.
    ========================================================================== */
@@ -18,12 +20,13 @@
   'use strict';
 
   const { el, icon, toast, formatDate, pageHeader } = ns.ui;
-  const view = { status: 'open', kind: 'all', days: 90 };
+  const view = { status: 'open', kind: 'all', days: 90, reviews: 'todo' };
   const TABS = [
     { id: 'inhoud', label: 'Inhoud', icon: 'pencil-line', perDiscipline: true },
     { id: 'basis', label: 'Gedeelde basis', icon: 'globe' },
     { id: 'disciplines', label: 'Disciplines', icon: 'layers' },
     { id: 'inzendingen', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true },
+    { id: 'reviews', label: 'Reviews', icon: 'star', perDiscipline: true },
     { id: 'gebruik', label: 'Gebruik', icon: 'chart', perDiscipline: true }
   ];
 
@@ -240,6 +243,119 @@
     load();
   }
 
+  /* ---- Reviews ---------------------------------------------------------------- */
+  function reviewsTab(container) {
+    const summary = el('div');
+    const list = el('div', { className: 'admin-list' });
+    let items = [];
+    const filter = el('select', { className: 'field__input field__input--sm', attrs: { id: 'adm-reviews' } }, [
+      el('option', { attrs: { value: 'todo' }, text: 'Toelichting nog niet gepubliceerd' }),
+      el('option', { attrs: { value: 'comments' }, text: 'Alle met toelichting' }),
+      el('option', { attrs: { value: 'all' }, text: 'Alle reviews' })
+    ]);
+    filter.value = view.reviews || 'todo';
+
+    const lookup = (type) => (type === 'usecase' ? ns.content.usecaseById : ns.content.promptById);
+    const titleOf = (type, id) => {
+      const found = lookup(type).get(id);
+      return found ? (found.usecase ? found.usecase.title + ' · ' + found.title : found.title) : id + ' (verwijderd)';
+    };
+
+    function reviewRow(item) {
+      const publish = item.comment ? el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon(item.is_public ? 'eye' : 'check'), el('span', { text: item.is_public ? 'Toelichting verbergen' : 'Toelichting publiceren' })]) : null;
+      const remove = el('button', { className: 'btn btn--danger btn--sm', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Verwijderen' })]);
+      if (publish) publish.addEventListener('click', async () => {
+        publish.disabled = true;
+        try {
+          Object.assign(item, await ns.central.adminUpdateReview(item.id, { is_public: !item.is_public }));
+          toast(item.is_public ? 'Gepubliceerd: de toelichting staat nu bij de ' + (item.item_type === 'usecase' ? 'usecase' : 'prompt') : 'Verborgen', { tone: 'success' });
+          update();
+        } catch (error) {
+          toast('Mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+          publish.disabled = false;
+        }
+      });
+      remove.addEventListener('click', async () => {
+        if (!(await ns.ui.confirmDialog('Deze review wordt definitief verwijderd en telt niet meer mee in het gemiddelde.', { title: 'Review verwijderen?', confirmLabel: 'Verwijderen', danger: true }))) return;
+        remove.disabled = true;
+        try {
+          await ns.central.adminDeleteReview(item.id);
+          items = items.filter((other) => other !== item);
+          toast('Verwijderd');
+          update();
+        } catch (error) {
+          toast('Verwijderen mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+          remove.disabled = false;
+        }
+      });
+      return el('div', { className: 'admin-review' }, [
+        el('div', { className: 'admin-review__head' }, [
+          el('span', { className: 'admin-item__date', text: formatDate(item.created_at) }),
+          ns.reviews.starRow(item.rating),
+          el('a', { className: 'admin-review__title', attrs: { href: `#/${item.item_type}/${item.item_id}` }, text: titleOf(item.item_type, item.item_id) }),
+          el('span', { className: 'chip', text: item.item_type === 'usecase' ? 'Usecase' : 'Prompt' }),
+          item.comment ? el('span', { className: 'badge ' + (item.is_public ? 'badge--free' : 'badge--draft') }, [icon(item.is_public ? 'eye' : 'pencil-line'), item.is_public ? 'Gepubliceerd' : 'Niet gepubliceerd']) : null
+        ]),
+        el('p', { className: 'admin-review__text' + (item.comment ? '' : ' admin-review__text--empty'), text: item.comment || 'Alleen sterren, geen toelichting.' }),
+        el('div', { className: 'admin-item__actions' }, [publish, remove])
+      ]);
+    }
+
+    function update() {
+      // Per item: gemiddelde en aantal, meest beoordeeld eerst
+      const per = new Map();
+      items.forEach((item) => {
+        const k = item.item_type + ':' + item.item_id;
+        const entry = per.get(k) || { type: item.item_type, id: item.item_id, count: 0, sum: 0 };
+        entry.count += 1;
+        entry.sum += item.rating;
+        per.set(k, entry);
+      });
+      const rows = Array.from(per.values()).sort((a, b) => b.count - a.count || b.sum / b.count - a.sum / a.count);
+      summary.replaceChildren(rows.length ? el('section', { className: 'usage-table' }, [
+        el('h3', { className: 'usage-table__title', text: 'Gemiddelde per usecase en prompt' }),
+        el('table', { className: 'table' }, [
+          el('thead', {}, [el('tr', {}, ['Usecase of prompt', 'Soort', 'Gemiddeld', 'Reviews'].map((column, index) => el('th', { text: column, attrs: { scope: 'col', class: index > 1 ? 'num' : null } })))]),
+          el('tbody', {}, rows.map((entry) => el('tr', {}, [
+            el('th', { attrs: { scope: 'row' } }, [el('a', { attrs: { href: `#/${entry.type}/${entry.id}` }, text: titleOf(entry.type, entry.id) })]),
+            el('td', { text: entry.type === 'usecase' ? 'Usecase' : 'Prompt' }),
+            el('td', { className: 'num', text: (entry.sum / entry.count).toFixed(1).replace('.', ',') }),
+            el('td', { className: 'num', text: String(entry.count) })
+          ])))
+        ])
+      ]) : el('p', { className: 'section__lead', text: 'Nog geen reviews.' }));
+      const shown = items.filter((item) => (view.reviews === 'all' ? true : view.reviews === 'comments' ? Boolean(item.comment) : item.comment && !item.is_public));
+      list.replaceChildren(...(shown.length ? shown.map(reviewRow) : [el('p', { className: 'section__lead', text: view.reviews === 'todo' ? 'Geen toelichtingen die nog bekeken moeten worden.' : 'Geen reviews met dit filter.' })]));
+    }
+
+    filter.addEventListener('change', () => {
+      view.reviews = filter.value;
+      update();
+    });
+
+    async function load() {
+      list.replaceChildren(el('p', { className: 'loading', text: 'Reviews laden…' }));
+      try {
+        items = await ns.central.adminListReviews();
+        update();
+      } catch (error) {
+        summary.replaceChildren();
+        list.replaceChildren(el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [el('p', { className: 'notice__title', text: 'Laden mislukt' }), el('p', { text: error.message })])]));
+      }
+    }
+
+    container.append(
+      el('p', { className: 'field__hint', text: 'Collega\'s geven usecases en prompts 1 tot 5 sterren, met eventueel een toelichting. De sterren tellen direct mee; een toelichting staat pas bij de usecase of prompt als je hem hier publiceert. Reviews zijn anoniem.' }),
+      el('div', { className: 'filters filters--inline' }, [
+        el('label', { className: 'sr-only', text: 'Welke reviews', attrs: { for: 'adm-reviews' } }), filter,
+        el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: load } }, [icon('refresh'), el('span', { text: 'Vernieuwen' })])
+      ]),
+      list,
+      summary
+    );
+    load();
+  }
+
   /* ---- Gebruik ---------------------------------------------------------------- */
   function usageTab(container) {
     const body = el('div');
@@ -372,6 +488,7 @@
     );
     if (tab === 'gebruik') usageTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);
+    else if (tab === 'reviews') reviewsTab(panel);
     else if (tab === 'disciplines') {
       const result = ns.adminDisciplines.render();
       panel.append(result.node);

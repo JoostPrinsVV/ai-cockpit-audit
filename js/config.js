@@ -41,6 +41,7 @@ window.AIAudit.config = {
   ideaFallbackEmail: '',                // Optioneel: e-mailadres waar een inzending naartoe kan als de centrale
                                         // opslag nog niet werkt (bijv. 'ai-audit@visser-visser.nl'). Leeg = alleen kopiëren
   enableVotes: true,                    // 'Ik ook'-stem bij gepubliceerde ideeën en vragen
+  enableReviews: true,                  // 'Wat vond je ervan?' (sterren en toelichting) bij usecases en prompts
 
   /* ---- Gebruik meten ------------------------------------------------------ */
   enableUsageStats: true,               // Anoniem tellen welke usecases, demo's en prompts gebruikt worden (zichtbaar in Beheer)
