@@ -26,6 +26,8 @@ assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …)
 setup/                Het SQL-bestand voor Supabase
+prototype.html        Prototype: één AI Cockpit voor alle disciplines (los van de live cockpit)
+prototype/            De bestanden van het prototype (zie prototype/README.md)
 ```
 
 Alle paden zijn relatief binnen deze repository (geen `../`). De enige link naar buiten in de pagina is
