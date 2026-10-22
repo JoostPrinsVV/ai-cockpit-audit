@@ -187,18 +187,18 @@ Maak op basis van mijn agenda, verzonden mail en bewerkte bestanden van deze wee
   {
     id: 'prompts-bewaren',
     title: 'Bewaar je favoriete prompts',
-    summary: 'Een goede prompt wil je terugvinden. Markeer hem met een ster op dit platform, of bewaar hem in Copilot zelf.',
+    summary: 'Een goede prompt wil je terugvinden. Bewaar hem met de bladwijzer op dit platform, of bewaar hem in Copilot zelf.',
     category: 'Automatiseren',
-    icon: 'star',
+    icon: 'bookmark',
     license: false,
     minutes: '1 min',
     why: 'De beste prompts zijn de prompts die je vaker gebruikt en steeds een beetje verbetert. Door ze te bewaren hoef je niet elke keer opnieuw te beginnen.',
     steps: [
-      'Op dit platform: klik op de ster bij een prompt. Je vindt hem terug in de promptdatabase met het filter Mijn favorieten (bewaard in deze browser).',
+      'Op dit platform: klik op de bladwijzer bij een prompt (dat kan ook bij usecases en tips). Je vindt hem terug op de startpagina bij Jouw bewaarde items, en in de lijsten met het filter Bewaard.',
       'In Copilot: ga met de muis over een prompt die je hebt verstuurd en kies Prompt opslaan (als je die optie ziet). Je vindt hem terug bij je opgeslagen prompts.',
       'Een eigen, verbeterde versie? Deel hem via de ideeënhub (kies Prompt delen), dan kan iedereen hem gebruiken.'
     ],
-    note: 'Favorieten op dit platform staan alleen in deze browser op dit apparaat. Of je prompts kunt opslaan in Copilot, hangt af van je versie.',
+    note: 'Wat je op dit platform bewaart, staat alleen in deze browser op dit apparaat. Of je prompts kunt opslaan in Copilot, hangt af van je versie.',
     added: '2026-10-19',
     release: '2026-12-18',
     usecases: []
