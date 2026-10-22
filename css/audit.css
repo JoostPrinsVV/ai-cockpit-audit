@@ -29,6 +29,15 @@
   scroll-padding-top: 6rem;
 }
 
+/* Pagina: lichtgrijs met een fijn stippenraster, net als het Lab (samenhang tussen beide) */
+:root { --page-dot: rgba(16, 29, 79, 0.12); }
+:root[data-theme='donker'] { --page-dot: rgba(255, 255, 255, 0.07); }
+
+body {
+  background-image: radial-gradient(var(--page-dot) 1px, transparent 1.5px);
+  background-size: 24px 24px;
+}
+
 /* De container van dit platform is iets smaller dan die van de snackbar (leesbaarheid) */
 .container {
   max-width: var(--page-max);
