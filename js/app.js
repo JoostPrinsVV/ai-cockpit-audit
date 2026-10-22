@@ -216,6 +216,7 @@
       if (link.dataset.nav === navKey) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
+    ns.instruments.update(); // koersband: het pijltje naar deze pagina
 
     if (opts.keepScroll) {
       // Was de vorige plek nog niet te halen (eerst alleen 'Inhoud laden…')? Dan nu alsnog
@@ -397,6 +398,7 @@
       storage.remove('inhoud'); // bewaarplek van vóór de disciplines
       initTheme();
       fillChrome();
+      ns.instruments.init();
       // Scrollen bij terug en vooruit doen we zelf (zie Scrollpositie)
       if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
       loadScrollPositions();

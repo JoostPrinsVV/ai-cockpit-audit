@@ -51,13 +51,14 @@
       grid.hidden = items.length === 0;
     }
 
+    // De fasen als route: genummerde waypoints (01 Planning, 02 …) op een stippellijn
     const phases = ns.content.phases
-      .map((phase) => ({ value: phase.id, label: phase.short, accent: phase.accent, count: all.filter((u) => u.phase.id === phase.id).length }))
+      .map((phase, index) => ({ value: phase.id, label: phase.short, accent: phase.accent, step: String(index + 1).padStart(2, '0'), count: all.filter((u) => u.phase.id === phase.id).length }))
       .filter((item) => item.count > 0);
     const phaseGroup = toggleGroup('Filter op fase', [{ value: 'all', label: 'Alle fasen', count: all.length }].concat(phases), filters.phase, (value) => {
       filters.phase = value;
       update();
-    });
+    }, { className: 'toggles--route' });
     const licenseGroup = toggleGroup('Filter op licentie', [
       { value: 'all', label: 'Alle' },
       { value: 'no', label: 'Zonder licentie', icon: 'check' },

@@ -18,6 +18,7 @@ css/base.css          Lettertypes, reset en hulpklassen (eigen kopie)
 css/audit.css         De opmaak van dit platform
 js/config.js          Instellingen: titel, gouden regels, Supabase
 js/disciplines.js     Disciplines: welke cockpit je ziet, wat op slot staat, de wisselaar in de kopbalk
+js/instruments.js     Cockpitstijl: de koersband (onder kopbalk en hero) en de kompasroos in de hero
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
 data/*.js             Startinhoud van Audit en terugval als de database niet bereikbaar is

@@ -24,6 +24,7 @@
     });
 
     return el('section', { className: 'hero on-dark', attrs: { 'aria-labelledby': 'home-title' } }, [
+      ns.instruments.rose(),
       el('div', { className: 'hero__inner container' }, [
         el('p', { className: 'hero__eyebrow', text: `${config.organizationName} · ${ns.cockpit.active().eyebrow}` }),
         el('h1', { className: 'hero__title', attrs: { id: 'home-title', tabindex: '-1' } }, [
@@ -34,7 +35,7 @@
         config.applicationSubtitle ? el('p', { className: 'hero__subtitle', text: config.applicationSubtitle }) : null,
         form
       ]),
-      el('div', { className: 'awning-edge', attrs: { 'aria-hidden': 'true' } })
+      ns.instruments.heroTape()
     ]);
   }
 
@@ -57,7 +58,11 @@
             el('span', { className: 'tile__body' }, [
               el('span', { className: 'tile__title' }, [
                 el('span', { text: item.title }),
-                item.count != null ? el('span', { className: 'tile__count', text: String(item.count) }) : null
+                // Uitleesvenster met twee cijfers (09); een schermlezer hoort gewoon het getal
+                item.count != null ? el('span', { className: 'tile__count' }, [
+                  el('span', { text: String(item.count).padStart(2, '0'), attrs: { 'aria-hidden': 'true' } }),
+                  el('span', { className: 'sr-only', text: String(item.count) })
+                ]) : null
               ]),
               el('span', { className: 'tile__text', text: item.text })
             ]),

@@ -129,13 +129,14 @@
     ]);
     search.addEventListener('submit', (event) => event.preventDefault());
 
+    // De fasen als route: genummerde waypoints op een stippellijn
     const phaseItems = ns.content.phases
-      .map((phase) => ({ value: phase.id, label: phase.short, accent: phase.accent, count: all.filter((p) => p.phase.id === phase.id).length }))
+      .map((phase, index) => ({ value: phase.id, label: phase.short, accent: phase.accent, step: String(index + 1).padStart(2, '0'), count: all.filter((p) => p.phase.id === phase.id).length }))
       .filter((item) => item.count > 0);
     const phaseGroup = toggleGroup('Filter op fase', [{ value: 'all', label: 'Alle fasen', count: all.length }].concat(phaseItems), filters.phase, (value) => {
       filters.phase = value;
       update();
-    });
+    }, { className: 'toggles--route' });
     const licenseGroup = toggleGroup('Filter op licentie', [
       { value: 'all', label: 'Alle' },
       { value: 'no', label: 'Zonder licentie', icon: 'check' },

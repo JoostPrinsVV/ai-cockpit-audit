@@ -89,13 +89,18 @@
 }
 
 /* ==========================================================================
-   Kopbalk met luifel
+   Kopbalk als instrumentenpaneel
    ========================================================================== */
+/* Effen navy met een heel fijn plotraster (de kleur heet nog --awning-a: uit de huisstijl van de snackbar) */
 .topbar,
 .hero,
-.cta {
+.cta,
+.recording,
+.slides__cover {
   background-color: var(--awning-a);
-  background-image: repeating-linear-gradient(90deg, var(--awning-a) 0 var(--awning-stripe), var(--awning-b) var(--awning-stripe) calc(var(--awning-stripe) * 2));
+  background-image: radial-gradient(rgba(255, 255, 255, 0.075) 1px, transparent 1.6px);
+  background-size: 26px 26px;
+  background-position: 13px 13px;
 }
 
 .topbar {
@@ -113,44 +118,39 @@
   padding-block: var(--space-2);
 }
 
-/* Geschulpte onderrand (op de startpagina zit die onder de hero) */
-.awning-edge {
-  --scallop: calc(var(--awning-stripe) / 2);
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  height: var(--scallop);
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle var(--scallop) at var(--scallop) 0, var(--awning-a) calc(var(--scallop) - 1px), transparent var(--scallop)),
-    radial-gradient(circle var(--scallop) at calc(var(--scallop) * 3) 0, var(--awning-b) calc(var(--scallop) - 1px), transparent var(--scallop));
-  background-size: calc(var(--awning-stripe) * 2) var(--scallop);
-  background-repeat: repeat-x;
-  filter: drop-shadow(0 6px 5px rgba(16, 29, 79, 0.14));
-}
-
-/* Op de andere pagina's: de schulprand staat bovenaan de inhoud en scrolt mee
-   (zo valt hij nooit over tekst als de kopbalk blijft staan) */
-main::before {
-  content: '';
-  --scallop: calc(var(--awning-stripe) / 2);
+/* Koersband (js/instruments.js): dun onder de kopbalk, groot onder de hero van de startpagina.
+   Het pijltje staat onder de pagina waar je bent; de band schuift mee naar een nieuwe koers. */
+.heading-tape {
   position: relative;
-  top: -1px; /* 1px overlap: geen naadje tussen kopbalk en rand */
-  z-index: 3;
-  display: block;
-  height: var(--scallop);
-  margin-bottom: calc(var(--scallop) * -1);
+  height: 16px; /* 14px streepjes + 2px horizonlijn */
+  overflow: hidden;
+  border-bottom: 2px solid var(--vv-teal);
+  background: color-mix(in srgb, var(--awning-a) 80%, #000000);
   pointer-events: none;
-  background-image:
-    radial-gradient(circle var(--scallop) at var(--scallop) 0, var(--awning-a) calc(var(--scallop) - 1px), transparent var(--scallop)),
-    radial-gradient(circle var(--scallop) at calc(var(--scallop) * 3) 0, var(--awning-b) calc(var(--scallop) - 1px), transparent var(--scallop));
-  background-size: calc(var(--awning-stripe) * 2) var(--scallop);
-  background-repeat: repeat-x;
-  filter: drop-shadow(0 6px 5px rgba(16, 29, 79, 0.14));
 }
 
-body[data-view='home'] main::before { display: none; }
+.heading-tape--large { height: 38px; } /* 36px + 2px */
+body[data-view='home'] .topbar .heading-tape { display: none; } /* daar zit hij onder de hero */
+
+.heading-tape__band { position: absolute; left: 0; top: 0; max-width: none; }
+.heading-tape__tick { stroke: rgba(255, 255, 255, 0.28); stroke-width: 1; }
+.heading-tape__tick--major { stroke: rgba(255, 255, 255, 0.55); stroke-width: 1.5; }
+.heading-tape__label { fill: rgba(255, 255, 255, 0.6); font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.04em; }
+.heading-tape__label--north { fill: #2ee6c8; }
+
+.heading-tape__bug {
+  position: absolute;
+  top: 0;
+  left: -6px;
+  width: 0;
+  height: 0;
+  border-top: 7px solid var(--vv-teal);
+  border-inline: 6px solid transparent;
+}
+
+.heading-tape--large .heading-tape__bug { left: -7px; border-top-width: 9px; border-inline-width: 7px; }
+.heading-tape.is-ready .heading-tape__band,
+.heading-tape.is-ready .heading-tape__bug { transition: transform 450ms var(--ease-out); }
 
 .brand {
   display: flex;
@@ -224,8 +224,20 @@ body[data-view='home'] main::before { display: none; }
 
 .nav__link .icon { width: 1.15em; height: 1.15em; color: var(--vv-teal); }
 .nav__link:hover { border-color: rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.14); }
-.nav__link[aria-current='page'] { border-color: var(--vv-teal); color: var(--vv-navy); background: var(--vv-teal); }
-.nav__link[aria-current='page'] .icon { color: var(--vv-navy); }
+
+/* Statuslampje: elk menu-item heeft er een, het brandt bij de pagina waar je bent */
+.nav__link::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background-color var(--duration) var(--ease-out), box-shadow var(--duration) var(--ease-out);
+}
+
+.nav__link[aria-current='page'] { border-color: rgba(0, 180, 156, 0.8); background: rgba(0, 180, 156, 0.16); }
+.nav__link[aria-current='page']::before { background: #2ee6c8; box-shadow: 0 0 0 3px rgba(0, 180, 156, 0.22), 0 0 8px rgba(46, 230, 200, 0.7); }
 
 .topbar__actions {
   display: flex;
@@ -407,18 +419,58 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .hero {
   position: relative;
   z-index: 2;
+  overflow: hidden;
   color: var(--color-on-dark);
 }
 
 .hero__inner {
+  position: relative;
+  z-index: 1;
   padding-block: clamp(1.25rem, 4vh, 2.75rem) clamp(1.75rem, 5vh, 3rem);
+}
+
+/* Kompasroos (js/instruments.js): licht, rechts naast de tekst; op een smal scherm niet */
+.hero__rose {
+  position: absolute;
+  top: calc(50% - 16px);
+  right: max(-40px, calc((100vw - var(--page-max)) / 2 - 40px));
+  width: 400px;
+  height: 400px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.rose__ring { fill: none; stroke: rgba(255, 255, 255, 0.075); stroke-width: 1.2; }
+.rose__cross { stroke: rgba(255, 255, 255, 0.05); }
+.rose__tick { stroke: rgba(255, 255, 255, 0.1); stroke-width: 1; }
+.rose__tick--major { stroke: rgba(255, 255, 255, 0.2); stroke-width: 1.6; }
+.rose__label { fill: rgba(255, 255, 255, 0.22); font-family: var(--font-mono); font-size: 13px; font-weight: 500; }
+.rose__label--north { fill: rgba(46, 230, 200, 0.75); }
+.rose__course { stroke: rgba(0, 180, 156, 0.55); stroke-width: 2; stroke-dasharray: 6 6; }
+
+@media (max-width: 1099px) {
+  .hero__rose { display: none; }
+}
+
+/* Instrumentlabels: mono-letter tussen twee vizierhoekjes */
+.hero__eyebrow,
+.page-head__eyebrow,
+.section__eyebrow {
+  display: inline-block;
+  padding: 0.35em 0.75em;
+  background:
+    linear-gradient(currentColor, currentColor) top left / 9px 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) top left / 1.5px 9px no-repeat,
+    linear-gradient(currentColor, currentColor) bottom right / 9px 1.5px no-repeat,
+    linear-gradient(currentColor, currentColor) bottom right / 1.5px 9px no-repeat;
+  font-family: var(--font-mono);
+  letter-spacing: 0.12em;
 }
 
 .hero__eyebrow {
   color: var(--color-highlight-on-dark);
   font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--ls-eyebrow);
+  font-weight: 500;
   text-transform: uppercase;
 }
 
@@ -502,7 +554,7 @@ main { display: block; }
 main:focus { outline: none; }
 
 .page {
-  padding-top: calc(var(--awning-stripe) / 2 + var(--space-6));
+  padding-top: var(--space-6);
   padding-bottom: var(--space-9);
 }
 
@@ -518,6 +570,10 @@ main:focus { outline: none; }
   letter-spacing: var(--ls-eyebrow);
   text-transform: uppercase;
 }
+
+/* Instrumentlabel, net als in de hero (de vizierhoekjes staan daar) */
+.page-head__eyebrow,
+.section__eyebrow { font-weight: 500; letter-spacing: 0.12em; }
 
 .page-head__title { margin-top: var(--space-2); font-size: clamp(1.9rem, 1.3rem + 2vw, 2.9rem); }
 .page-head__lead { margin-top: var(--space-3); font-size: var(--fs-md); }
@@ -553,7 +609,7 @@ main:focus { outline: none; }
 
 .section__link:hover { text-decoration: underline; }
 
-.home .hero + .section { padding-top: calc(var(--awning-stripe) / 2 + var(--space-5)); }
+.home .hero + .section { padding-top: var(--space-6); }
 
 /* ---- Tegels naar de onderdelen ---- */
 /* Zes tegels: 3 + 3, op een smaller scherm 2 + 2 + 2, op een telefoon onder elkaar (nooit één losse) */
@@ -586,16 +642,19 @@ main:focus { outline: none; }
   transition: transform var(--duration) var(--ease-out), box-shadow var(--duration) var(--ease-out);
 }
 
+/* Radarbogen in de hoek, in de kleur van het onderdeel */
 .tile::before {
   content: '';
   position: absolute;
   z-index: -1;
-  top: -4rem;
-  right: -4rem;
-  width: 9rem;
-  height: 9rem;
+  top: -5.5rem;
+  right: -5.5rem;
+  width: 12rem;
+  height: 12rem;
   border-radius: 50%;
-  background: var(--accent-wash);
+  background:
+    repeating-radial-gradient(circle, transparent 0 17px, color-mix(in srgb, var(--accent) 30%, transparent) 17px 18px),
+    radial-gradient(circle, color-mix(in srgb, var(--accent) 12%, transparent) 0 60%, transparent 61%);
   transition: transform var(--duration-slow) var(--ease-out);
 }
 
@@ -612,7 +671,19 @@ main:focus { outline: none; }
 .tile__icon .icon { width: 1.6rem; height: 1.6rem; }
 .tile__body { grid-column: 1 / -1; display: grid; gap: var(--space-2); }
 .tile__title { display: flex; align-items: baseline; gap: var(--space-2); color: var(--color-text); font-size: var(--fs-lg); font-weight: var(--fw-bold); }
-.tile__count { color: var(--accent-ink); font-family: var(--font-mono); font-size: var(--fs-md); font-weight: 500; }
+/* Teller als uitleesvenster: 09 */
+.tile__count {
+  padding: 0.12em 0.5em 0.1em;
+  border-radius: 0.4rem;
+  background: var(--vv-navy);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  color: #5ff0d6;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
 .tile__text { color: var(--color-text-muted); font-size: var(--fs-sm); }
 
 .tile__go {
@@ -633,6 +704,43 @@ main:focus { outline: none; }
   .tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-card-hover); }
   .tile:hover::before { transform: scale(1.2); }
   .tile:hover .tile__go { transform: translateX(3px); }
+}
+
+/* ---- Vizier: bij aanwijzen of tabben klikken vier hoekjes vast op de kaart ---- */
+.tr-card { position: relative; }
+
+.tile::after,
+.uc-card::after,
+.tip-card::after,
+.p-card::after,
+.tr-card::after {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  inset: 5px;
+  border: 2px solid var(--accent, var(--vv-teal));
+  border-radius: calc(var(--radius-lg) - 5px);
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.03);
+  transition: opacity var(--duration-fast) var(--ease-out), transform var(--duration) var(--ease-out);
+  /* alleen de vier hoeken van deze rand blijven zichtbaar */
+  -webkit-mask:
+    linear-gradient(#000, #000) top left / 30px 30px no-repeat,
+    linear-gradient(#000, #000) top right / 30px 30px no-repeat,
+    linear-gradient(#000, #000) bottom left / 30px 30px no-repeat,
+    linear-gradient(#000, #000) bottom right / 30px 30px no-repeat;
+  mask:
+    linear-gradient(#000, #000) top left / 30px 30px no-repeat,
+    linear-gradient(#000, #000) top right / 30px 30px no-repeat,
+    linear-gradient(#000, #000) bottom left / 30px 30px no-repeat,
+    linear-gradient(#000, #000) bottom right / 30px 30px no-repeat;
+}
+
+:is(.tile, .uc-card, .tip-card, .p-card, .tr-card):is(:focus-visible, :has(:focus-visible))::after { opacity: 1; transform: none; }
+
+@media (hover: hover) and (pointer: fine) {
+  :is(.tile, .uc-card, .tip-card, .p-card, .tr-card):hover::after { opacity: 1; transform: none; }
 }
 
 /* ---- Kaartenraster ---- */
@@ -678,12 +786,14 @@ main:focus { outline: none; }
   content: '';
   position: absolute;
   z-index: -1;
-  top: -4.5rem;
-  right: -4.5rem;
-  width: 10rem;
-  height: 10rem;
+  top: -5.5rem;
+  right: -5.5rem;
+  width: 12rem;
+  height: 12rem;
   border-radius: 50%;
-  background: var(--accent-wash);
+  background:
+    repeating-radial-gradient(circle, transparent 0 17px, color-mix(in srgb, var(--accent) 26%, transparent) 17px 18px),
+    radial-gradient(circle, color-mix(in srgb, var(--accent) 10%, transparent) 0 60%, transparent 61%);
   transition: transform var(--duration-slow) var(--ease-out);
 }
 
@@ -971,6 +1081,33 @@ main:focus { outline: none; }
 }
 
 .toggle[aria-pressed='true'] .toggle__count { background: rgba(255, 255, 255, 0.2); color: inherit; }
+
+/* De fasen als route (usecases, prompts): genummerde waypoints op een stippellijn */
+.toggles--route { column-gap: 1.1rem; }
+.toggles--route .toggle { position: relative; }
+
+.toggles--route .toggle::before {
+  content: '';
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.toggles--route .toggle[aria-pressed='true']::before { border-color: #ffffff; background: #2ee6c8; }
+
+.toggles--route .toggle:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 1px);
+  width: 1.1rem;
+  border-top: 2px dashed var(--color-border-strong);
+  pointer-events: none;
+}
+
+.toggle__step { font-family: var(--font-mono); font-size: 0.78em; font-weight: 500; letter-spacing: 0.06em; opacity: 0.7; }
 
 .results-count { margin-left: auto; color: var(--color-text-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 
@@ -1360,7 +1497,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   transition: transform var(--duration) var(--ease-out), box-shadow var(--duration) var(--ease-out);
 }
 
-/* 'Miniatuur': poster, of een vlak in de accentkleur met de luifelstrepen */
+/* 'Miniatuur': poster, of een vlak in de accentkleur met radarringen rond de afspeelknop */
 .tr-card__thumb {
   position: relative;
   aspect-ratio: 16 / 8;
@@ -1368,7 +1505,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   place-items: center;
   overflow: hidden;
   background-color: var(--accent);
-  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0) 0 28px, rgba(255, 255, 255, 0.08) 28px 56px);
+  background-image: repeating-radial-gradient(circle, rgba(255, 255, 255, 0) 0 27px, rgba(255, 255, 255, 0.12) 27px 28px);
   color: var(--accent-on);
 }
 
@@ -1422,8 +1559,6 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   gap: var(--space-4) var(--space-5);
   padding: var(--space-6);
   border-radius: var(--radius-lg);
-  background-color: var(--awning-a);
-  background-image: repeating-linear-gradient(90deg, var(--awning-a) 0 var(--awning-stripe), var(--awning-b) var(--awning-stripe) calc(var(--awning-stripe) * 2));
   color: var(--color-on-dark);
 }
 
@@ -1462,8 +1597,6 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background-color: var(--awning-a);
-  background-image: repeating-linear-gradient(90deg, var(--awning-a) 0 var(--awning-stripe), var(--awning-b) var(--awning-stripe) calc(var(--awning-stripe) * 2));
   box-shadow: var(--shadow-card);
 }
 
@@ -1996,7 +2129,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 
 /* ---- Bewerkbalk (alleen voor beheerders, op detailpagina's) ---- */
 .edit-bar { position: relative; z-index: 4; background: var(--color-warning-fill); border-bottom: 1px solid #f1d9a6; }
-.edit-bar__inner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-block: calc(var(--awning-stripe) / 2 + var(--space-2)) var(--space-2); }
+.edit-bar__inner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-block: var(--space-2); }
 .edit-bar__label { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-warning); font-size: var(--fs-sm); font-weight: var(--fw-bold); }
 .edit-bar .btn { margin-left: auto; }
 .edit-bar + .page { padding-top: var(--space-6); }
@@ -2495,7 +2628,8 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
    ('Tips', 'Training', 'Agents', 'Ideeën'; het langste is dan 'Usecases') */
 @media (max-width: 600px) {
   .nav__list { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.3rem; }
-  .nav__link { flex-direction: column; justify-content: center; gap: 0.15rem; width: 100%; min-height: 3.1rem; padding: 0.3rem 0.1rem; border-radius: 0.9rem; font-size: 0.72rem; }
+  .nav__link { position: relative; flex-direction: column; justify-content: center; gap: 0.15rem; width: 100%; min-height: 3.1rem; padding: 0.3rem 0.1rem; border-radius: 0.9rem; font-size: 0.72rem; }
+  .nav__link::before { position: absolute; top: 0.4rem; right: 0.45rem; width: 5px; height: 5px; }
   .nav__link .icon { display: block; width: 1.15rem; height: 1.15rem; }
   .nav__more, .nav__tail { display: none; }
 }

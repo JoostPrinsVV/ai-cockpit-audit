@@ -417,7 +417,8 @@
   }
 
   /**
-   * Groep schakelknoppen (aria-pressed). items: [{ value, label, count? }]
+   * Groep schakelknoppen (aria-pressed). items: [{ value, label, count?, icon?, step? }]
+   * (step: een nummer vóór het label, zoals '02' bij de fasen als route).
    * Klik je op het filter dat al aan staat, dan gaat het uit: terug naar het eerste
    * item (bijv. 'Alle fasen'), of naar options.resetValue.
    */
@@ -432,6 +433,7 @@
         dataset: { value: item.value }
       }, [
         item.icon ? icon(item.icon) : null,
+        item.step ? el('span', { className: 'toggle__step', text: item.step, attrs: { 'aria-hidden': 'true' } }) : null,
         el('span', { text: item.label }),
         item.count != null ? el('span', { className: 'toggle__count', text: String(item.count) }) : null
       ]);
