@@ -268,6 +268,19 @@
     if (message) toast(message, { tone: 'success' });
   }
 
+  /* ---- Werkversies (js/editor.js) ------------------------------------------------------ */
+  // Met stap 7 slaat Opslaan een werkversie op; Publiceren zet hem live. Zonder: direct live, zoals vroeger.
+  const drafting = () => ns.editor.available();
+  const may = (action, type) => !drafting() || ns.rights.can(action, scope.namespace, type);
+  /** De stand die je bewerkt: de opgeslagen werkversie als die er is, anders de gepubliceerde. */
+  const stateOf = (row) => (drafting() ? ns.editor.savedState(row) : { data: row.data || {}, position: row.position || 0, status: row.status });
+  const draftLabel = (row) => (!row.draft ? '' : row.draft.status === 'trash' ? 'Wordt verwijderd' : row.publish_at ? 'Gepland' : row.draft_kind === 'voorstel' ? 'Voorstel' : row.status === 'draft' ? 'Nieuw' : 'Gewijzigd');
+
+  /** Werkversie opslaan voor één item in deze omgeving. */
+  function stage(type, id, data, position, status) {
+    return ns.editor.saveOne({ namespace: scope.namespace, type, id, draft: { data, position: position || 0, status: status || 'published' } });
+  }
+
   function slugify(value) {
     return String(value || '')
       .toLowerCase()
@@ -525,8 +538,12 @@
         el('p', { text: `Er is geen ${schema.one} met het adres "${id}".` })
       ])]);
     }
-    const data = existing ? Object.assign({}, existing.data, schema.single ? {} : { id: existing.id }) : {};
+    const data = existing ? Object.assign({}, stateOf(existing).data, schema.single ? {} : { id: existing.id }) : {};
+    const canEdit = may('bewerken', type);
+    const canDelete = may('verwijderen', type);
+    const canPublish = drafting() && ns.rights.can('publiceren', scope.namespace, type);
     let saving = false;
+    let publishAfterSave = false;
 
     const ctx = {
       idTaken: (value) => {
@@ -583,21 +600,30 @@
     let initial = '';
 
     const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
-    const save = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('check'), el('span', { text: 'Opslaan' })]);
+    const save = el('button', { className: drafting() && canPublish ? 'btn btn--secondary' : 'btn btn--primary', attrs: { type: 'submit', disabled: !canEdit } }, [icon('check'), el('span', { text: drafting() ? (canPublish ? 'Opslaan' : 'Opslaan als voorstel') : 'Opslaan' })]);
+    const saveAndPublish = canPublish ? el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('send'), el('span', { text: 'Opslaan en publiceren' })]) : null;
     const cancel = el('a', { className: 'btn btn--secondary', attrs: { href: schema.single ? scope.base : `${scope.base}/${type}` } }, [el('span', { text: schema.single ? 'Terug' : 'Terug naar de lijst' })]);
     const viewLink = existing && schema.route && existing.status !== 'trash'
       ? el('a', { className: 'btn btn--quiet', attrs: { href: `#/${schema.route}/${existing.id}` } }, [icon('eye'), el('span', { text: 'Bekijk op de site' })])
       : null;
-    const trash = existing && !schema.single
-      ? el('button', { className: 'btn btn--danger', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Naar de prullenbak' })])
+    const trash = existing && !schema.single && canDelete && existing.status !== 'trash'
+      ? el('button', { className: 'btn btn--danger', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: drafting() ? 'Verwijderen' : 'Naar de prullenbak' })])
       : null;
 
     const form = el('form', { className: 'cms-form', attrs: { novalidate: true } }, [
       el('div', { className: 'form-grid' }, controls.map((c) => c.ctl.node)),
-      schema.single ? null : el('div', { className: 'field field--half' }, [el('label', { className: 'field__label', text: 'Status', attrs: { for: statusId } }), statusSelect]),
+      // Met werkversies regelt Publiceren wat live staat; zonder kies je hier de status
+      schema.single || drafting() ? null : el('div', { className: 'field field--half' }, [el('label', { className: 'field__label', text: 'Status', attrs: { for: statusId } }), statusSelect]),
       formError,
-      el('div', { className: 'cms-form__actions' }, [save, cancel, viewLink, el('span', { className: 'cms-form__spacer' }), trash])
+      el('div', { className: 'cms-form__actions' }, [saveAndPublish, save, cancel, viewLink, el('span', { className: 'cms-form__spacer' }), trash])
     ]);
+    if (saveAndPublish) {
+      saveAndPublish.addEventListener('click', () => {
+        publishAfterSave = true;
+        form.requestSubmit();
+      });
+    }
+    if (!canEdit) form.querySelectorAll('input, textarea, select, button[type="button"]').forEach((input) => { input.disabled = true; });
 
     async function onSubmit(event) {
       event.preventDefault();
@@ -616,22 +642,40 @@
         !(await confirm('De datum voor "Tip van de week" is geen vrijdag. Toch opslaan?', { title: 'Geen vrijdag', confirmLabel: 'Toch opslaan' }))) return;
       const renamed = existing && !schema.single && newId !== existing.id;
       if (renamed && !(await confirm(`Het adres verandert van "${existing.id}" naar "${newId}". Links naar het oude adres werken dan niet meer.`, { title: 'Adres wijzigen?', confirmLabel: 'Adres wijzigen' }))) return;
-      const position = existing ? existing.position : Math.max(0, ...rowsOf(type).map((row) => row.position || 0)) + 10;
+      const position = existing ? stateOf(existing).position : Math.max(0, ...rowsOf(type).map((row) => row.position || 0)) + 10;
+      const publishNow = publishAfterSave;
+      publishAfterSave = false;
+      if (drafting() && renamed && !canDelete) {
+        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Het adres wijzigen kan alleen iemand die ook mag verwijderen. Laat het adres staan.' })]));
+        formError.hidden = false;
+        return;
+      }
       saving = true;
       save.disabled = true;
       try {
-        await ns.central.saveContent([{ type, id: newId, data: record, position, status: schema.single ? 'published' : statusSelect.value }], scope.namespace);
-        if (renamed) await ns.central.deleteContent(type, existing.id, scope.namespace);
+        if (drafting()) {
+          // Werkversie: pas live na publiceren
+          if (!(await stage(type, newId, record, position, 'published'))) return;
+          if (renamed) await stage(type, existing.id, existing.data, existing.position, 'trash');
+          if (publishNow) {
+            const items = [{ namespace: scope.namespace, type, id: newId }].concat(renamed ? [{ namespace: scope.namespace, type, id: existing.id }] : []);
+            await ns.editor.publish(items);
+          }
+        } else {
+          await ns.central.saveContent([{ type, id: newId, data: record, position, status: schema.single ? 'published' : statusSelect.value }], scope.namespace);
+          if (renamed) await ns.central.deleteContent(type, existing.id, scope.namespace);
+        }
         initial = snapshot();
         const target = schema.single ? `${scope.base}/setting` : `${scope.base}/${type}/${newId}`;
         if (window.location.hash !== target) window.history.replaceState(window.history.state, '', target);
-        await afterChange(isNew ? 'Toegevoegd' : 'Opgeslagen');
+        if (drafting() && publishNow) await ns.app.reloadContent();
+        else await afterChange(drafting() ? (canPublish ? 'Opgeslagen. Nog niet live: publiceer via de bewerkbalk.' : 'Voorstel opgeslagen. Een beheerder publiceert het.') : isNew ? 'Toegevoegd' : 'Opgeslagen');
       } catch (error) {
         formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Opslaan mislukt: ' + error.message })]));
         formError.hidden = false;
       } finally {
         saving = false;
-        save.disabled = false;
+        save.disabled = !canEdit;
       }
     }
     form.addEventListener('submit', onSubmit);
@@ -642,27 +686,43 @@
           toast(`Deze fase wordt nog gebruikt door ${usageOfPhase(existing.id)} usecase(s), prompt(s) of agent(s). Kies daar eerst een andere fase.`, { tone: 'warning', duration: 6000 });
           return;
         }
-        if (!(await confirm(`"${data.title || data.label || existing.id}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return;
+        if (drafting()) {
+          if (!(await confirm(`"${data.title || data.label || existing.id}" wordt verwijderd zodra je publiceert. Tot die tijd zien collega's hem nog.`, { title: 'Verwijderen?', confirmLabel: 'Verwijderen', danger: true }))) return;
+        } else if (!(await confirm(`"${data.title || data.label || existing.id}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return;
         try {
-          await ns.central.patchContent(type, existing.id, { status: 'trash' }, scope.namespace);
+          if (drafting()) {
+            const current = stateOf(existing);
+            await stage(type, existing.id, current.data, current.position, 'trash');
+          } else await ns.central.patchContent(type, existing.id, { status: 'trash' }, scope.namespace);
           initial = snapshot();
           window.location.hash = `${scope.base}/${type}`;
-          await afterChange('In de prullenbak gezet');
+          await afterChange(drafting() ? 'Klaar om te verwijderen: publiceer via de bewerkbalk' : 'In de prullenbak gezet');
         } catch (error) {
           toast('Mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
         }
       });
     }
 
+    const stamp = (value) => new Date(value).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' });
+    const draftNotice = existing && existing.draft && drafting()
+      ? el('div', { className: 'notice' }, [icon('pencil-line'), el('div', {}, [
+        el('p', { className: 'notice__title', text: `${draftLabel(existing)}: opgeslagen, nog niet live` }),
+        el('p', { text: `Door ${existing.draft_by || 'onbekend'} op ${stamp(existing.draft_at)}${existing.publish_at ? `, gepland voor ${stamp(existing.publish_at)}` : ''}. Hieronder staat die versie; collega's zien nog de gepubliceerde. Publiceren of weggooien doe je via Publiceren in de bewerkbalk.` })
+      ])])
+      : null;
     const node = el('div', { className: 'cms-editor' }, [
       el('div', { className: 'cms-editor__head' }, [
         el('h2', { className: 'cms-editor__title', text: schema.single ? 'Teksten van de site' : isNew ? schema.add : `${schema.one.charAt(0).toUpperCase() + schema.one.slice(1)} bewerken` }),
-        existing && existing.updated_at ? el('p', { className: 'field__hint', text: 'Laatst opgeslagen: ' + new Date(existing.updated_at).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' }) }) : null,
+        existing && existing.updated_at ? el('p', { className: 'field__hint', text: 'Laatst gepubliceerd: ' + stamp(existing.updated_at) + (existing.updated_by ? ' door ' + existing.updated_by : '') }) : null,
         type === 'prompt' || schema.single ? el('p', { className: 'field__hint', text: schema.note }) : null
       ]),
+      !canEdit ? el('div', { className: 'notice notice--warning' }, [icon('lock'), el('div', {}, [el('p', { text: 'Je mag dit onderdeel bekijken, maar niet bewerken. Vraag een hoofdbeheerder om meer rechten.' })])]) : null,
+      draftNotice,
       warningNotice(schema),
       form
     ]);
+    // Melding als een andere beheerder dit item ook open heeft
+    if (existing && drafting()) ns.editor.watch(scope.namespace, type, existing.id, node);
     // Na opbouw: beginstand vastleggen (voor 'niet-opgeslagen wijzigingen')
     window.setTimeout(() => {
       initial = snapshot();
@@ -715,57 +775,81 @@
       const canMove = schema.ordered && view.status === 'live' && !query;
 
       listNode.replaceChildren(...(rows.length ? rows.map((row) => {
-        const data = row.data || {};
+        const data = stateOf(row).data || {};
         const index = live.indexOf(row);
         const actions = [];
-        if (canMove) {
+        if (canMove && may('bewerken', type)) {
           const up = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omhoog: ' + (data.title || data.label || row.id), disabled: index <= 0 } }, [icon('arrow-up')]);
           const down = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omlaag: ' + (data.title || data.label || row.id), disabled: index >= live.length - 1 } }, [icon('arrow-down')]);
           const swap = (other) => act(async () => {
             // Gelijke posities eerst uit elkaar trekken, dan wisselen
-            const a = row.position || 0;
-            let b = other.position || 0;
+            const a = stateOf(row).position || 0;
+            let b = stateOf(other).position || 0;
             if (a === b) b = a + (live.indexOf(other) > index ? 1 : -1);
-            await ns.central.patchContent(type, row.id, { position: b }, scope.namespace);
-            await ns.central.patchContent(type, other.id, { position: a }, scope.namespace);
+            if (drafting()) {
+              await stage(type, row.id, stateOf(row).data, b, stateOf(row).status);
+              await stage(type, other.id, stateOf(other).data, a, stateOf(other).status);
+            } else {
+              await ns.central.patchContent(type, row.id, { position: b }, scope.namespace);
+              await ns.central.patchContent(type, other.id, { position: a }, scope.namespace);
+            }
           });
           up.addEventListener('click', () => swap(live[index - 1]));
           down.addEventListener('click', () => swap(live[index + 1]));
           actions.push(up, down);
         }
         if (row.status === 'trash') {
-          const restore = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Terugzetten' })]);
-          restore.addEventListener('click', () => act(() => ns.central.patchContent(type, row.id, { status: 'draft' }, scope.namespace), 'Teruggezet als concept'));
-          const destroy = el('button', { className: 'btn btn--danger btn--sm', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Definitief verwijderen' })]);
-          destroy.addEventListener('click', async () => {
-            if (!(await confirm(`"${data.title || data.label || row.id}" wordt definitief verwijderd. Herstellen kan dan alleen nog via de geschiedenis in Supabase.`, { title: 'Definitief verwijderen?', confirmLabel: 'Definitief verwijderen', danger: true }))) return;
-            act(() => ns.central.deleteContent(type, row.id, scope.namespace), 'Definitief verwijderd');
-          });
-          actions.push(restore, destroy);
+          if (may('bewerken', type)) {
+            const restore = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Terugzetten' })]);
+            restore.addEventListener('click', () => act(
+              () => (drafting() ? stage(type, row.id, row.data, row.position, 'published') : ns.central.patchContent(type, row.id, { status: 'draft' }, scope.namespace)),
+              drafting() ? 'Teruggezet: publiceer om hem weer live te zetten' : 'Teruggezet als concept'
+            ));
+            actions.push(restore);
+          }
+          // Definitief verwijderen: alleen een hoofdbeheerder
+          if (!drafting() || ns.rights.isOwner()) {
+            const destroy = el('button', { className: 'btn btn--danger btn--sm', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Definitief verwijderen' })]);
+            destroy.addEventListener('click', async () => {
+              if (!(await confirm(`"${data.title || data.label || row.id}" wordt definitief verwijderd. Herstellen kan dan alleen nog via de geschiedenis in Supabase.`, { title: 'Definitief verwijderen?', confirmLabel: 'Definitief verwijderen', danger: true }))) return;
+              act(() => ns.central.deleteContent(type, row.id, scope.namespace), 'Definitief verwijderd');
+            });
+            actions.push(destroy);
+          }
         } else {
-          actions.push(el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: `${scope.base}/${type}/${row.id}` } }, [icon('pencil-line'), el('span', { text: 'Bewerken' })]));
+          actions.push(el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: `${scope.base}/${type}/${row.id}` } }, [icon('pencil-line'), el('span', { text: may('bewerken', type) ? 'Bewerken' : 'Bekijken' })]));
           if (schema.route) actions.push(el('a', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { href: `#/${schema.route}/${row.id}`, 'aria-label': 'Bekijk op de site: ' + (data.title || row.id), title: 'Bekijk op de site' } }, [icon('eye')]));
-          const toTrash = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Naar de prullenbak: ' + (data.title || data.label || row.id), title: 'Naar de prullenbak' } }, [icon('trash')]);
-          toTrash.addEventListener('click', async () => {
-            if (type === 'phase' && usageOfPhase(row.id)) {
-              toast(`Deze fase wordt nog gebruikt door ${usageOfPhase(row.id)} usecase(s), prompt(s) of agent(s). Kies daar eerst een andere fase.`, { tone: 'warning', duration: 6000 });
-              return;
-            }
-            if (!(await confirm(`"${data.title || data.label || row.id}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return;
-            act(() => ns.central.patchContent(type, row.id, { status: 'trash' }, scope.namespace), 'In de prullenbak gezet');
-          });
-          actions.push(toTrash);
+          if (may('verwijderen', type) && !(row.draft && row.draft.status === 'trash')) {
+            const toTrash = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Verwijderen: ' + (data.title || data.label || row.id), title: drafting() ? 'Verwijderen (na publiceren)' : 'Naar de prullenbak' } }, [icon('trash')]);
+            toTrash.addEventListener('click', async () => {
+              if (type === 'phase' && usageOfPhase(row.id)) {
+                toast(`Deze fase wordt nog gebruikt door ${usageOfPhase(row.id)} usecase(s), prompt(s) of agent(s). Kies daar eerst een andere fase.`, { tone: 'warning', duration: 6000 });
+                return;
+              }
+              if (drafting()) {
+                if (!(await confirm(`"${data.title || data.label || row.id}" wordt verwijderd zodra je publiceert.`, { title: 'Verwijderen?', confirmLabel: 'Verwijderen', danger: true }))) return;
+                act(() => stage(type, row.id, stateOf(row).data, stateOf(row).position, 'trash'), 'Klaar om te verwijderen: publiceer via de bewerkbalk');
+                return;
+              }
+              if (!(await confirm(`"${data.title || data.label || row.id}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return;
+              act(() => ns.central.patchContent(type, row.id, { status: 'trash' }, scope.namespace), 'In de prullenbak gezet');
+            });
+            actions.push(toTrash);
+          }
         }
+        const pendingLabel = drafting() ? draftLabel(row) : '';
         return el('div', { className: 'cms-row' + (row.status === 'draft' ? ' cms-row--draft' : '') }, [
           el('div', { className: 'cms-row__main' }, [
             el('a', { className: 'cms-row__title', attrs: { href: row.status === 'trash' ? null : `${scope.base}/${type}/${row.id}` }, text: data.title || data.label || row.id }),
             el('p', { className: 'cms-row__meta' }, [
               el('code', { text: row.id }),
               schema.meta && schema.meta(data) ? ' · ' + schema.meta(data) : '',
-              row.updated_at ? ' · ' + formatDate(row.updated_at) : ''
+              row.updated_at ? ' · ' + formatDate(row.updated_at) : '',
+              row.draft_by ? ' · wijziging van ' + row.draft_by.split('@')[0] : ''
             ])
           ]),
-          el('span', { className: 'status status--' + (row.status === 'published' ? 'success' : row.status === 'draft' ? 'info' : 'muted'), text: STATUS_LABEL[row.status] || row.status }),
+          pendingLabel ? el('span', { className: 'badge badge--change', text: pendingLabel }) : null,
+          el('span', { className: 'status status--' + (row.status === 'published' ? 'success' : row.status === 'draft' ? 'info' : 'muted'), text: row.status === 'draft' && row.draft ? 'Nog niet live' : STATUS_LABEL[row.status] || row.status }),
           el('div', { className: 'cms-row__actions' }, actions)
         ]);
       }) : [el('p', { className: 'section__lead', text: view.status === 'trash' ? 'De prullenbak is leeg.' : 'Niets gevonden.' })]));
@@ -789,7 +873,7 @@
       el('div', { className: 'cms-toolbar' }, [
         search,
         statusFilter,
-        el('a', { className: 'btn btn--primary btn--sm', attrs: { href: `${scope.base}/${type}/nieuw` } }, [icon('message-plus'), el('span', { text: schema.add })])
+        may('bewerken', type) ? el('a', { className: 'btn btn--primary btn--sm', attrs: { href: `${scope.base}/${type}/nieuw` } }, [icon('message-plus'), el('span', { text: schema.add })]) : null
       ]),
       schema.note ? el('p', { className: 'field__hint', text: schema.note }) : null,
       warningNotice(schema),
@@ -1088,9 +1172,15 @@
    */
   function render(params, state, where) {
     if (where) scope = where;
-    const type = SCHEMAS[params[0]] ? params[0] : 'usecase';
+    // Met een rol voor bepaalde onderdelen zie je alleen die onderdelen
+    const owner = !drafting() || ns.rights.isOwner();
+    const allowed = ORDER.filter((key) => owner || ns.rights.can('bewerken', scope.namespace, key));
+    if (!allowed.length) {
+      return { node: el('div', { className: 'notice notice--warning' }, [icon('lock'), el('div', {}, [el('p', { text: 'Je hebt hier geen bewerkrechten. Vraag een hoofdbeheerder om een rol voor deze discipline.' })])]), canLeave: null };
+    }
+    const type = SCHEMAS[params[0]] && allowed.includes(params[0]) ? params[0] : allowed[0];
     const seeded = isSeeded();
-    const tabs = el('nav', { className: 'toggles cms-tabs', attrs: { 'aria-label': 'Soort inhoud' } }, ORDER.map((key) => {
+    const tabs = el('nav', { className: 'toggles cms-tabs', attrs: { 'aria-label': 'Soort inhoud' } }, allowed.map((key) => {
       const count = SCHEMAS[key].single ? null : rowsOf(key).filter((row) => row.status !== 'trash').length;
       return el('a', { className: 'toggle', attrs: { href: `${scope.base}/${key}`, 'aria-current': key === type ? 'page' : null } }, [
         el('span', { text: SCHEMAS[key].label }),
@@ -1105,6 +1195,7 @@
     ]);
 
     if (!seeded) {
+      if (!owner) return { node: el('div', { className: 'cms' }, [intro, el('p', { className: 'section__lead', text: 'Deze omgeving is nog niet ingericht. Dat doet een hoofdbeheerder.' })]), canLeave: null };
       const status = state && state.status;
       const panel = status === 'missing' || scope.files ? seedPanel(status) : scope.kind === 'basis' ? basisPanel() : newDisciplinePanel();
       return { node: el('div', { className: 'cms' }, [intro, panel]), canLeave: null };
@@ -1123,8 +1214,8 @@
     return {
       node: el('div', { className: 'cms' }, [
         intro,
-        ...(editing || !scope.files ? [] : missingTypePanels()),
-        el('div', { className: 'cms__bar' }, [tabs, backupTools()]),
+        ...(editing || !scope.files || !owner ? [] : missingTypePanels()),
+        el('div', { className: 'cms__bar' }, [tabs, owner ? backupTools() : null]),
         body
       ]),
       canLeave

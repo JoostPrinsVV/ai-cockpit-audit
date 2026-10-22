@@ -155,6 +155,7 @@
         tip: text(item.tip),
         relatedTips: list(item.relatedTips),
         draft: item._draft === true,
+        change: item._change || '',
         shared: item._shared === true
       };
       usecase.hasDemo = Boolean(usecase.video || usecase.demo);
@@ -196,6 +197,7 @@
         author: text(item.author),
         usecase: null,
         draft: item._draft === true,
+        change: item._change || '',
         shared: item._shared === true
       };
       standalone.push(entry);
@@ -232,6 +234,7 @@
           step: n + 1,
           steps: usecase.prompts.length,
           draft: usecase.draft,
+          change: usecase.change,
           shared: usecase.shared
         };
         usecase.promptIds.push(id);
@@ -280,6 +283,7 @@
         release: '',
         usecases: list(item.usecases),
         draft: item._draft === true,
+        change: item._change || '',
         shared: item._shared === true
       };
       const release = text(item.release);
@@ -436,6 +440,7 @@
         tips: list(item.tips),
         added: text(item.added) || text(item.date),
         draft: item._draft === true,
+        change: item._change || '',
         shared: item._shared === true
       };
       Object.assign(training, loadNaslag(item, id));
@@ -505,6 +510,7 @@
         added: text(item.added),
         registerUrl: HTTPS_URL.test(registerUrl) ? registerUrl : '',
         draft: item._draft === true,
+        change: item._change || '',
         shared: item._shared === true
       };
       agent.stopped = agent.status === 'Gestopt';
@@ -678,6 +684,8 @@
         if (!TYPES.includes(row.type)) return;
         const item = Object.assign({}, row.data, { id: row.id });
         if (row.status === 'draft') item._draft = true;
+        // Bewerkmodus (js/editor.js): 'nieuw', 'gewijzigd' of 'niet opgeslagen'
+        if (row._change) item._change = row._change;
         if (shared) item._shared = true;
         source[row.type].push(item);
       });

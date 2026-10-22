@@ -88,7 +88,7 @@
       if (result === 'ok') onDone();
       else if (result === 'not-admin') {
         ns.central.signOut();
-        error.textContent = 'Je bent ingelogd, maar dit account is geen beheerder. Laat je e-mailadres toevoegen aan audit_admins in Supabase.';
+        error.textContent = 'Je bent ingelogd, maar dit account heeft geen beheerdersrol. Vraag een hoofdbeheerder om je toe te voegen (Beheer → Beheerders).';
       } else error.textContent = 'Inloggen mislukt. Controleer je gegevens of je verbinding.';
     });
     return form;
@@ -442,9 +442,20 @@
   }
 
   /* ---- Pagina ------------------------------------------------------------------------ */
+  /**
+   * Welke onderdelen zie je? Inhoud en Gedeelde basis met een rol voor die omgeving; de rest
+   * (disciplines, inzendingen, reviews, nieuwsbrief, gebruik, beheerders) alleen als hoofdbeheerder.
+   */
+  function visibleTabs() {
+    if (ns.rights.isOwner()) return TABS;
+    return TABS.filter((t) => (t.id === 'inhoud' && ns.rights.canEditSomething(ns.cockpit.namespace(ns.cockpit.activeId())))
+      || (t.id === 'basis' && ns.rights.canEditSomething(ns.cockpit.GENERAL_NAMESPACE)));
+  }
+
   /** params: [onderdeel, ...] uit het adres, bijv. ['inhoud', 'tip', 'facilitator']. */
   function render(params) {
-    const tab = TABS.some((t) => t.id === params[0]) ? params[0] : 'inhoud';
+    const allowedTabs = ns.central.signedIn() ? visibleTabs() : TABS;
+    const tab = allowedTabs.some((t) => t.id === params[0]) ? params[0] : (allowedTabs[0] || TABS[0]).id;
     const content = el('div', { className: 'admin' });
     const node = el('div', { className: 'page container' }, [
       pageHeader({ eyebrow: 'Beheer', title: 'Beheer van het platform', lead: 'Voor het AI-team: de inhoud per discipline en de gedeelde basis aanpassen, disciplines openzetten of op slot houden, inzendingen uit de ideeënhub beantwoorden en zien wat er gebruikt wordt.' }),
@@ -468,7 +479,7 @@
     const panel = el('div', { className: 'admin__panel' });
     panel.addEventListener('signedout', () => ns.app.reloadContent());
     const disciplineName = ns.cockpit.active().name;
-    const tabs = el('nav', { className: 'toggles', attrs: { 'aria-label': 'Onderdeel van beheer' } }, TABS.map((t) =>
+    const tabs = el('nav', { className: 'toggles', attrs: { 'aria-label': 'Onderdeel van beheer' } }, allowedTabs.map((t) =>
       el('a', { className: 'toggle', attrs: { href: '#/beheer/' + t.id, 'aria-current': t.id === tab ? 'page' : null } }, [
         icon(t.icon),
         el('span', { text: t.id === 'inhoud' ? 'Inhoud ' + disciplineName : t.label })
@@ -491,7 +502,9 @@
       ]),
       panel
     );
-    if (tab === 'gebruik') usageTab(panel);
+    if (!allowedTabs.length) {
+      panel.append(el('div', { className: 'notice notice--warning' }, [icon('lock'), el('div', {}, [el('p', { text: `Je hebt geen rol in ${disciplineName}. Kies een andere discipline of vraag een hoofdbeheerder om rechten.` })])]));
+    } else if (tab === 'gebruik') usageTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);
     else if (tab === 'reviews') reviewsTab(panel);
     else if (tab === 'nieuwsbrief') panel.append(ns.adminNewsletter.render().node);

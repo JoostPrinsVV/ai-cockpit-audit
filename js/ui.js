@@ -420,8 +420,19 @@
   }
 
   /** Alleen zichtbaar voor beheerders: inhoud die nog niet gepubliceerd is. */
+  /** Voor beheerders: concept, of een wijziging die nog niet live staat (zie js/editor.js). */
+  const CHANGE_BADGES = {
+    'niet opgeslagen': { text: 'Niet opgeslagen', title: 'Gewijzigd, nog niet opgeslagen' },
+    nieuw: { text: 'Nieuw', title: 'Nieuw item, nog niet gepubliceerd' },
+    gewijzigd: { text: 'Gewijzigd', title: 'Opgeslagen wijziging, nog niet gepubliceerd' },
+    voorstel: { text: 'Voorstel', title: 'Voorstel, wacht op publicatie door een beheerder' },
+    gepland: { text: 'Gepland', title: 'Gaat automatisch live op het geplande moment' }
+  };
   function draftBadge(item) {
-    return item && item.draft ? el('span', { className: 'badge badge--draft', attrs: { title: 'Concept: alleen zichtbaar voor beheerders' } }, [icon('pencil-line'), 'Concept']) : null;
+    if (!item) return null;
+    const change = CHANGE_BADGES[item.change];
+    if (change) return el('span', { className: 'badge badge--change', attrs: { title: change.title } }, [icon('pencil-line'), change.text]);
+    return item.draft ? el('span', { className: 'badge badge--draft', attrs: { title: 'Concept: alleen zichtbaar voor beheerders' } }, [icon('pencil-line'), 'Concept']) : null;
   }
 
   function chip(text, options) {

@@ -92,7 +92,8 @@
     agent: { type: 'agent', map: 'agentById', label: 'deze agent' }
   };
 
-  function editBar(parsed) {
+  /** Het item op deze pagina, voor 'Bewerk deze tip' in de bewerkbalk (js/editor.js). */
+  function pageItem(parsed) {
     if (!ns.central.signedIn() || ns.content.source === 'bestanden') return null;
     const info = EDITABLE[parsed.name];
     if (!info) return null;
@@ -107,14 +108,7 @@
       label = 'de usecase van deze prompt';
     }
     // Een item uit de gedeelde basis pas je aan bij Beheer → Gedeelde basis
-    const area = item.shared ? 'basis' : 'inhoud';
-    return el('div', { className: 'edit-bar' }, [
-      el('div', { className: 'container edit-bar__inner' }, [
-        el('span', { className: 'edit-bar__label' }, [icon('lock'), el('span', { text: 'Beheer' })]),
-        item.draft ? el('span', { className: 'badge badge--draft' }, [icon('pencil-line'), 'Concept: alleen zichtbaar voor beheerders']) : null,
-        el('a', { className: 'btn btn--primary btn--sm', attrs: { href: `#/beheer/${area}/${type}/${item.id}` } }, [icon('pencil-line'), el('span', { text: 'Bewerk ' + label + (item.shared ? ' (gedeelde basis)' : '') })])
-      ])
-    ]);
+    return { type, id: item.id, label: label + (item.shared ? ' (gedeelde basis)' : ''), shared: item.shared, namespace: item.shared ? ns.cockpit.GENERAL_NAMESPACE : ns.cockpit.namespace(ns.cockpit.activeId()) };
   }
 
   /** Detailpagina van een gedeeld item: een regel uitleg onder de titel. */
@@ -212,7 +206,8 @@
     const scrollY = window.scrollY;
     sharedNote(parsed, result.node);
     if (!opts.keepScroll) rememberViewed(parsed);
-    viewNode.replaceChildren(...[ns.cockpit.lockBar(), editBar(parsed), result.node].filter(Boolean));
+    viewNode.replaceChildren(...[ns.cockpit.lockBar(), result.node].filter(Boolean));
+    ns.editor.setPageItem(pageItem(parsed));
     document.body.dataset.view = parsed.name || 'home';
     // Tabbladtitel volgt de naam uit Beheer → Teksten (of js/config.js)
     const siteTitle = [config.applicationTitle, config.discipline].filter(Boolean).join(' ') || SITE_TITLE;
@@ -293,7 +288,8 @@
     // Deze cockpit: de eigen inhoud van de discipline plus de gedeelde basis
     const discipline = ns.cockpit.activeId();
     const space = { own: ns.cockpit.namespace(discipline), general: ns.cockpit.GENERAL_NAMESPACE, discipline };
-    const compose = (rows) => ns.content.fromCockpitRows(rows, space);
+    // Beheerders zien de site met hun werkversies erin (js/editor.js)
+    const compose = (rows) => ns.content.fromCockpitRows(asAdmin ? ns.editor.overlay(rows) : rows, space);
     const cacheKey = 'inhoud:' + discipline;
     let shownSignature = '';
 
@@ -324,6 +320,8 @@
     // Voor Beheer → Inhoud: alle rijen, ook concepten en prullenbak
     ns.content.adminRows = asAdmin && result.status === 'ok' ? result.rows : null;
     ns.content.adminStatus = result.status;
+    // Niet-opgeslagen werk van een vorige keer terug, vóór het samenstellen
+    ns.editor.contentLoaded();
 
     if (result.status === 'ok') {
       // Lijst met disciplines bijwerken; deze cockpit (inmiddels) op slot: naar de standaard
@@ -346,6 +344,16 @@
       route({ keepScroll: wasRendered });
     }
     return result.status === 'ok' ? 'bestanden' : result.status;
+  }
+
+  /** Opnieuw samenstellen na een niet-opgeslagen wijziging (js/editor.js), zonder de database te vragen. */
+  function recompose() {
+    if (!Array.isArray(ns.content.adminRows)) return;
+    const discipline = ns.cockpit.activeId();
+    const source = ns.content.fromCockpitRows(ns.editor.overlay(ns.content.adminRows), { own: ns.cockpit.namespace(discipline), general: ns.cockpit.GENERAL_NAMESPACE, discipline });
+    if (!source) return;
+    useSource(source, 'database');
+    route({ keepScroll: true });
   }
 
   /* ---- Thema (licht/donker), per collega onthouden ------------------------------------ */
@@ -407,6 +415,7 @@
       initTheme();
       fillChrome();
       ns.instruments.init();
+      ns.editor.init();
       // Scrollen bij terug en vooruit doen we zelf (zie Scrollpositie)
       if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
       loadScrollPositions();
@@ -441,6 +450,8 @@
     reloadContent: () => loadContent({ force: true }),
     /** Huidige pagina opnieuw opbouwen (zelfde scrollpositie). */
     refresh: () => route({ keepScroll: true }),
+    /** Opnieuw samenstellen met de werkversies erin (na een niet-opgeslagen wijziging). */
+    recompose,
     config: () => config
   };
 
