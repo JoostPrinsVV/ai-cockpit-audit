@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Veiligheid: alleen eigen bestanden. De enige verbinding naar buiten is de centrale opslag
        in Supabase (ideeënhub en anonieme tellers); demo's draaien in een afgeschermd iframe. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; font-src 'self'; connect-src https://*.supabase.co; object-src 'none'; frame-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://*.supabase.co; media-src 'self' https://*.supabase.co; font-src 'self'; connect-src https://*.supabase.co; object-src 'none'; frame-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#101d4f">
@@ -33,6 +33,7 @@
   <script defer src="js/instruments.js"></script>
   <script defer src="js/content.js"></script>
   <script defer src="js/central.js"></script>
+  <script defer src="js/rights.js"></script>
   <script defer src="js/prompt-box.js"></script>
   <script defer src="js/reviews.js"></script>
   <script defer src="js/player.js"></script>

@@ -426,6 +426,10 @@
           route();
         }
       });
+      // Gepland publiceren: is het moment van een geplande wijziging voorbij, dan gaat die nu live
+      ns.central.publishDue().then((count) => {
+        if (count > 0) loadContent({ force: true }).catch(() => null);
+      });
     } catch (error) {
       console.error('[AI Cockpit Audit] Opstarten mislukt', error);
       showFatal(error);

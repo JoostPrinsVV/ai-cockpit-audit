@@ -30,10 +30,13 @@
 (function (ns) {
   'use strict';
 
-  const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content', reviews: 'audit_reviews' };
+  const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content', reviews: 'audit_reviews', log: 'audit_log', history: 'audit_content_history' };
   // Kolommen die iedereen mag lezen (geen naam of e-mailadres).
   const PUBLIC_COLUMNS = 'id,ref,created_at,kind,title,body,phase,status,answer,answered_at,votes';
   const CONTENT_COLUMNS = 'namespace,type,id,data,position,status,updated_at';
+  // Voor beheerders ook de werkversie (stap 7 in setup/supabase-audit-bewerken.sql)
+  const DRAFT_COLUMNS = CONTENT_COLUMNS + ',updated_by,draft,draft_kind,draft_by,draft_at,publish_at,publish_by,version';
+  const MEDIA_BUCKET = 'cockpit-media';
   const PAGE_SIZE = 1000;
   const SESSION_KEY = 'ai-snackbar-audit:sessie';
 
@@ -42,7 +45,8 @@
   let key = '';
   let enabled = false;
   let trackingOff = false;
-  let admin = null; // { token, refresh, email, expiresAt, isAdmin }
+  let drafting = null; // true/false zodra bekend is of stap 7 (werkversies) is uitgevoerd
+  let admin = null; // { token, refresh, email, expiresAt, isAdmin, rights: { owner, roles } }
 
   function init(options) {
     config = options.config || {};
@@ -106,14 +110,43 @@
   async function fetchContent(options) {
     if (!enabled) return { status: 'off', rows: [] };
     const asAdmin = options && options.admin && signedIn();
-    const query = `?select=${CONTENT_COLUMNS}&${namespaceFilter(options && options.namespaces)}&order=type.asc,position.asc,id.asc&limit=5000`;
+    const query = (columns) => `?select=${columns}&${namespaceFilter(options && options.namespaces)}&order=type.asc,position.asc,id.asc&limit=5000`;
     try {
-      const response = await request('/rest/v1/' + TABLES.content + query, { headers: asAdmin ? await adminHeaders() : headers(null) });
+      let response;
+      if (asAdmin && drafting !== false) {
+        response = await request('/rest/v1/' + TABLES.content + query(DRAFT_COLUMNS), { headers: await adminHeaders() });
+        // 42703: de kolommen van de werkversie bestaan nog niet (stap 7 nog niet uitgevoerd)
+        if (!response.ok && response.status === 400 && (await errorCode(response)) === '42703') drafting = false;
+        else if (response.ok) drafting = true;
+      }
+      if (!response || drafting === false) {
+        response = await request('/rest/v1/' + TABLES.content + query(CONTENT_COLUMNS), { headers: asAdmin ? await adminHeaders() : headers(null) });
+      }
       if (response.ok) return { status: 'ok', rows: await response.json() };
       if (await isMissingTable(response)) return { status: 'missing', rows: [] };
       return { status: 'failed', rows: [] };
     } catch (error) {
       return { status: 'failed', rows: [] };
+    }
+  }
+
+  async function errorCode(response) {
+    try {
+      const data = await response.clone().json();
+      return data && data.code ? String(data.code) : '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  /** Geplande publicaties uitvoeren waarvan het moment voorbij is (doet niets als er niets klaarstaat). */
+  async function publishDue() {
+    if (!enabled) return 0;
+    try {
+      const response = await request('/rest/v1/rpc/audit_publish_due', { method: 'POST', headers: headers(null), body: '{}' });
+      return response.ok ? Number(await response.json()) || 0 : 0;
+    } catch (error) {
+      return 0;
     }
   }
 
@@ -279,7 +312,8 @@
       refresh: data.refresh_token,
       email: (data.user && data.user.email) || fallbackEmail || (admin && admin.email) || '',
       expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
-      isAdmin: admin ? admin.isAdmin : null
+      isAdmin: admin ? admin.isAdmin : null,
+      rights: admin ? admin.rights : null
     };
     writeSession();
   }
@@ -295,7 +329,26 @@
   }
 
   /**
-   * @returns {Promise<'ok'|'not-admin'|'failed'>} not-admin = ingelogd, maar niet in audit_admins
+   * Wat mag deze gebruiker? { owner: hoofdbeheerder, roles: [{ namespace, role, sections }] }.
+   * Zonder stap 7 (audit_me bestaat nog niet): alleen hoofdbeheerders, zoals vroeger.
+   */
+  async function loadRights() {
+    try {
+      const response = await request('/rest/v1/rpc/audit_me', { method: 'POST', headers: headers(admin.token), body: '{}' });
+      if (response.ok) {
+        const me = await response.json();
+        return { owner: me.owner === true, roles: Array.isArray(me.roles) ? me.roles : [] };
+      }
+      if (response.status !== 404) return { owner: false, roles: [] };
+    } catch (error) {
+      return null;
+    }
+    const owner = await checkAdmin();
+    return owner === null ? null : { owner, roles: [] };
+  }
+
+  /**
+   * @returns {Promise<'ok'|'not-admin'|'failed'>} not-admin = ingelogd, maar zonder beheerdersrol
    */
   async function signIn(email, password) {
     if (!enabled) return 'failed';
@@ -311,13 +364,33 @@
       }
       admin = null;
       setSession(await response.json(), email);
-      admin.isAdmin = await checkAdmin();
+      admin.rights = await loadRights();
+      // null: rechten nog onbekend (geen verbinding of SQL nog niet uitgevoerd): toelaten, de database bewaakt
+      admin.isAdmin = admin.rights ? admin.rights.owner || admin.rights.roles.length > 0 : null;
       writeSession();
       return admin.isAdmin === false ? 'not-admin' : 'ok';
     } catch (error) {
       signOut();
       return 'failed';
     }
+  }
+
+  /** Rechten opnieuw ophalen (na een wijziging in Beheer → Beheerders). */
+  async function refreshRights() {
+    if (!admin) return null;
+    await ensureSession();
+    const rights = await loadRights();
+    if (rights) {
+      admin.rights = rights;
+      admin.isAdmin = rights.owner || rights.roles.length > 0;
+      writeSession();
+    }
+    return admin.rights;
+  }
+
+  /** De rechten van de ingelogde gebruiker (of null als onbekend). */
+  function rights() {
+    return admin ? admin.rights || (admin.isAdmin ? { owner: true, roles: [] } : null) : null;
   }
 
   function signOut() {
@@ -361,11 +434,12 @@
       signOut();
       return new Error('je sessie is verlopen, log opnieuw in');
     }
-    if (response.status === 403) return new Error('geen beheerdersrechten (staat je e-mailadres in audit_admins?)');
-    if (await isMissingTable(response)) return new Error('de tabellen ontbreken nog: voer setup/supabase-audit.sql uit');
+    if (await isMissingTable(response)) return new Error('de tabellen of functies ontbreken nog: voer setup/supabase-audit.sql en setup/supabase-audit-bewerken.sql uit');
     let detail = '';
     try {
       const data = await response.json();
+      // Weigering uit de database (42501), met de reden erbij
+      if (response.status === 403 || (data && data.code === '42501')) return new Error(data && data.message && data.code === '42501' ? data.message : 'geen beheerdersrechten voor deze actie');
       // 23514: de controle in de database kent deze soort nog niet (bijv. agents)
       if (data && data.code === '23514') return new Error('de database kent deze soort inhoud nog niet: voer setup/supabase-audit.sql opnieuw uit');
       detail = data && data.message ? ': ' + data.message : '';
@@ -513,10 +587,142 @@
     return rows;
   }
 
+  /* ---- Beheer: werkversies, publiceren, logboek, beheerders, media (stap 7) ------------------ */
+  async function rpc(name, body, what) {
+    const response = await request('/rest/v1/rpc/' + name, {
+      method: 'POST',
+      headers: await adminHeaders(),
+      body: JSON.stringify(body || {})
+    });
+    if (!response.ok) throw await failure(response, what || 'opslaan');
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  /** Staan de werkversies in de database (stap 7 uitgevoerd)? null = nog onbekend. */
+  const draftingAvailable = () => drafting;
+
+  /**
+   * Werkversie opslaan: { namespace, type, id, draft: { data, position, status }, version?, title? }.
+   * @returns {Promise<{ ok, version, kind } | { conflict, version, draft_by, draft_at, updated_by, updated_at }>}
+   */
+  function saveDraft(item) {
+    return rpc('audit_save_draft', {
+      p_namespace: item.namespace || config.namespace,
+      p_type: item.type,
+      p_id: item.id,
+      p_draft: item.draft,
+      p_version: Number.isFinite(item.version) ? item.version : null,
+      p_title: item.title || null
+    });
+  }
+
+  function discardDraft(type, id, namespace) {
+    return rpc('audit_discard_draft', { p_namespace: namespace || config.namespace, p_type: type, p_id: id }, 'weggooien');
+  }
+
+  /** Publiceren (of plannen met at: Date in de toekomst). items: [{ namespace, type, id }] */
+  function publish(items, at) {
+    return rpc('audit_publish', { p_items: items, p_at: at ? new Date(at).toISOString() : null }, 'publiceren');
+  }
+
+  function unschedule(type, id, namespace) {
+    return rpc('audit_unschedule', { p_namespace: namespace || config.namespace, p_type: type, p_id: id }, 'planning aanpassen');
+  }
+
+  /** Meld dat je dit item open hebt; geeft [{ editor, since }] van anderen die het ook open hebben. */
+  async function ping(type, id, namespace) {
+    try {
+      return (await rpc('audit_ping', { p_namespace: namespace || config.namespace, p_type: type, p_id: id }, 'melden')) || [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function leave(type, id, namespace) {
+    return rpc('audit_leave', { p_namespace: namespace || config.namespace, p_type: type, p_id: id }, 'afmelden').catch(() => null);
+  }
+
+  /** Logboek: de laatste wijzigingen in deze naamruimtes (nieuwste eerst). */
+  async function listLog(namespaces, limit) {
+    const list = (namespaces && namespaces.length ? namespaces : [config.namespace]).map(encodeURIComponent).join(',');
+    const query = `?select=id,at,actor,namespace,type,item_id,title,action,detail&namespace=in.(${list},*)&order=at.desc&limit=${limit || 200}`;
+    const response = await request('/rest/v1/' + TABLES.log + query, { headers: await adminHeaders() });
+    if (!response.ok) throw await failure(response, 'logboek lezen');
+    return response.json();
+  }
+
+  /** Eerdere gepubliceerde versies van één item (nieuwste eerst). */
+  async function listHistory(type, id, namespace) {
+    const query = `?select=hist_id,data,status,action,changed_at,changed_by&namespace=eq.${encodeURIComponent(namespace || config.namespace)}&type=eq.${encodeURIComponent(type)}&id=eq.${encodeURIComponent(id)}&order=changed_at.desc&limit=50`;
+    const response = await request('/rest/v1/' + TABLES.history + query, { headers: await adminHeaders() });
+    if (!response.ok) throw await failure(response, 'geschiedenis lezen');
+    return response.json();
+  }
+
+  function listAdmins() {
+    return rpc('audit_list_admins', {}, 'beheerders lezen');
+  }
+
+  function setAdmin(email, namespace, role, sections) {
+    return rpc('audit_set_admin', { p_email: email, p_namespace: namespace, p_role: role, p_sections: sections || [] }, 'opslaan');
+  }
+
+  function removeAdmin(email, namespace, role) {
+    return rpc('audit_remove_admin', { p_email: email, p_namespace: namespace, p_role: role }, 'verwijderen');
+  }
+
+  /**
+   * Bestand uploaden naar de map cockpit-media (afbeelding, video of PDF).
+   * path: '<naamruimte>/<soort>/<bestandsnaam>'. Geeft het openbare adres.
+   */
+  async function upload(file, path) {
+    const clean = String(path).split('/').map((part) => encodeURIComponent(part)).join('/');
+    const response = await request(`/storage/v1/object/${MEDIA_BUCKET}/${clean}`, {
+      method: 'POST',
+      headers: await adminHeaders({ 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'false', 'cache-control': 'max-age=31536000' }),
+      body: file
+    });
+    if (!response.ok) {
+      if (response.status === 404) throw new Error('de map voor bestanden ontbreekt nog: voer setup/supabase-audit-bewerken.sql uit');
+      if (response.status === 413) throw new Error('het bestand is te groot (maximaal 50 MB)');
+      throw await failure(response, 'uploaden');
+    }
+    return mediaUrl(path);
+  }
+
+  /** Openbaar adres van een bestand in cockpit-media. */
+  function mediaUrl(path) {
+    return `${base}/storage/v1/object/public/${MEDIA_BUCKET}/${String(path).split('/').map((part) => encodeURIComponent(part)).join('/')}`;
+  }
+
+  /** Is dit een adres van een geüpload bestand (in dit Supabase-project)? */
+  function isMediaUrl(url) {
+    return Boolean(base) && String(url || '').startsWith(`${base}/storage/v1/object/public/${MEDIA_BUCKET}/`);
+  }
+
   ns.central = {
     init,
     isEnabled,
     fetchContent,
+    publishDue,
+    draftingAvailable,
+    rights,
+    refreshRights,
+    saveDraft,
+    discardDraft,
+    publish,
+    unschedule,
+    ping,
+    leave,
+    listLog,
+    listHistory,
+    listAdmins,
+    setAdmin,
+    removeAdmin,
+    upload,
+    mediaUrl,
+    isMediaUrl,
     submitIdea,
     listIdeas,
     vote,

@@ -18,6 +18,9 @@
 -- ook na een nieuwe soort inhoud of tellers (bijv. agents & tools), zodat de
 -- database die accepteert.
 --
+-- Daarna: setup/supabase-audit-bewerken.sql (stap 7: bewerken op de site,
+-- opslaan en publiceren, rollen, logboek, gepland publiceren en uploads).
+--
 -- Rechten in het kort (Row Level Security):
 --   - Iedereen mag gepubliceerde inhoud lezen (usecases, prompts, tips, ...).
 --   - Iedereen mag een inzending, stem, review of teller toevoegen, niets anders.
