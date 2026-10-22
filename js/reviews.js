@@ -18,8 +18,15 @@
   const { el, icon, storage, toast, formatDate } = ns.ui;
   const MAX_COMMENT = 500;
   let stats = null; // Promise<Map<'type:id', { reviews, average }> | null>
+  let loaded; // dezelfde Map zodra hij binnen is (undefined: nog niet opgehaald)
 
   const key = (type, id) => type + ':' + id;
+
+  /** Staan reviews aan (centrale opslag en enableReviews in js/config.js)? */
+  function enabled() {
+    const config = ns.app && ns.app.config ? ns.app.config() : {};
+    return ns.central.isEnabled() && config.enableReviews !== false;
+  }
 
   function voterId() {
     let id = storage.get('voterId', '');
@@ -37,13 +44,42 @@
 
   /** Gemiddelden van deze discipline (één keer per bezoek opgehaald). null = geen reviews mogelijk. */
   function loadStats(fresh) {
+    if (!enabled()) return Promise.resolve(null);
     if (!stats || fresh) {
       stats = ns.central.reviewStats().then((result) => {
-        if (result.status !== 'ok') return null;
-        return new Map(result.items.map((item) => [key(item.item_type, item.item_id), { reviews: item.reviews, average: Number(item.average) }]));
+        loaded = result.status === 'ok'
+          ? new Map(result.items.map((item) => [key(item.item_type, item.item_id), { reviews: Number(item.reviews), average: Number(item.average) }]))
+          : null;
+        return loaded;
       });
     }
     return stats;
+  }
+
+  /** De gemiddelden als ze al binnen zijn (anders undefined: dan eerst stats() afwachten). */
+  const cached = () => loaded;
+
+  const averageText = (value) => value.toFixed(1).replace('.', ',');
+
+  /** Klein label met het gemiddelde voor op een kaart: ★ 4,6 (5). Zonder beoordelingen: null. */
+  function ratingChip(type, id) {
+    const entry = loaded && loaded.get(key(type, id));
+    if (!entry || !entry.reviews) return null;
+    const label = `${averageText(entry.average)} gemiddeld uit ${entry.reviews} ${entry.reviews === 1 ? 'beoordeling' : 'beoordelingen'}`;
+    return el('span', { className: 'chip chip--rating', attrs: { title: label } }, [
+      icon('star-filled'),
+      el('span', { text: averageText(entry.average), attrs: { 'aria-hidden': 'true' } }),
+      el('span', { className: 'chip--rating__count', text: `(${entry.reviews})`, attrs: { 'aria-hidden': 'true' } }),
+      el('span', { className: 'sr-only', text: label })
+    ]);
+  }
+
+  /** Best beoordeeld eerst (gemiddelde, dan het aantal); zonder beoordelingen achteraan, in de vaste volgorde. */
+  function rank(items, type) {
+    const entryOf = (item) => (loaded && loaded.get(key(type, item.id))) || null;
+    const rated = items.filter((item) => entryOf(item) && entryOf(item).reviews);
+    rated.sort((a, b) => entryOf(b).average - entryOf(a).average || entryOf(b).reviews - entryOf(a).reviews);
+    return rated.concat(items.filter((item) => !rated.includes(item)));
   }
 
   /** Sterren als tekst en icoontjes, bijv. 4,3 → ★★★★☆ (met schermlezertekst). */
@@ -64,8 +100,7 @@
    * @param {object} item  usecase of prompt (met id en title)
    */
   function block(type, item) {
-    const config = ns.app && ns.app.config ? ns.app.config() : {};
-    if (!ns.central.isEnabled() || config.enableReviews === false) return null;
+    if (!enabled()) return null;
     const itemKey = key(type, item.id);
     const headingId = 'rv-' + type;
     const summary = el('p', { className: 'review__summary' }, [el('span', { text: 'Beoordelingen laden…' })]);
@@ -180,5 +215,5 @@
     return loadStats(true);
   }
 
-  ns.reviews = { block, refresh, starRow };
+  ns.reviews = { block, refresh, starRow, enabled, stats: loadStats, cached, ratingChip, rank, averageText };
 })(window.AIAudit);

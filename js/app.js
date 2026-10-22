@@ -127,6 +127,13 @@
     if (heading) heading.insertAdjacentElement('afterend', note);
   }
 
+  /** 'Recent bekeken' op de startpagina: een geopende usecase, prompt, tip, training of agent (alleen in deze browser). */
+  function rememberViewed(parsed) {
+    const info = EDITABLE[parsed.name];
+    const item = info ? ns.content[info.map].get(parsed.params[0]) : null;
+    if (item && !item.locked) ns.ui.viewed.add(info.type, item.id);
+  }
+
   /* ---- Scrollpositie ------------------------------------------------------------------
      Terug (of vooruit) in de browser brengt je naar de plek waar je op die pagina was.
      Elke stap in de geschiedenis krijgt een sleutel (history.state.scroll); bij vertrek
@@ -204,6 +211,7 @@
     const viewNode = document.getElementById('view');
     const scrollY = window.scrollY;
     sharedNote(parsed, result.node);
+    if (!opts.keepScroll) rememberViewed(parsed);
     viewNode.replaceChildren(...[ns.cockpit.lockBar(), editBar(parsed), result.node].filter(Boolean));
     document.body.dataset.view = parsed.name || 'home';
     // Tabbladtitel volgt de naam uit Beheer → Teksten (of js/config.js)

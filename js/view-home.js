@@ -100,25 +100,95 @@
     ]);
   }
 
+  /* ---- Lijstjes: één regel per item (bewaard, recent bekeken, favoriet, toegevoegd) ---- */
+  const KIND = {
+    usecase: { label: 'Usecase', href: '#/usecase/', icon: 'play-circle', map: 'usecaseById' },
+    prompt: { label: 'Prompt', href: '#/prompt/', icon: 'chat', map: 'promptById' },
+    tip: { label: 'Tip', href: '#/tip/', icon: 'bulb', map: 'tipById' },
+    training: { label: 'Training', href: '#/training/', icon: 'cap', map: 'trainingById' },
+    agent: { label: 'Agent', href: '#/agent/', icon: 'robot', map: 'agentById' }
+  };
+  const MIN_REVIEWS = 3; // 'Favoriet bij collega's' vanaf zoveel beoordelingen
+
+  /** 'prompt:notulen' → { kind, item }; null als het item er niet (meer) is of op slot zit. */
+  function resolve(key) {
+    const split = key.indexOf(':');
+    const kind = key.slice(0, split);
+    const info = KIND[kind];
+    const item = info ? ns.content[info.map].get(key.slice(split + 1)) : null;
+    return item && !item.locked ? { kind, item } : null;
+  }
+
+  /** Eén regel: icoon, soort (eventueel met extra's), titel en pijltje. */
+  function itemRow(kind, item, kicker) {
+    const info = KIND[kind];
+    return el('li', {}, [
+      el('a', { className: 'recent__item ' + ns.ui.accentClass(item.accent), attrs: { href: info.href + item.id } }, [
+        el('span', { className: 'recent__icon', attrs: { 'aria-hidden': 'true' } }, [icon(info.icon)]),
+        el('span', { className: 'recent__body' }, [
+          el('span', { className: 'recent__kind' }, kicker || [info.label]),
+          el('span', { className: 'recent__title', text: item.title })
+        ]),
+        icon('arrow-right', { className: 'recent__go' })
+      ])
+    ]);
+  }
+
+  /** Voor jou: wat je bewaard hebt en wat je laatst bekeek (alleen in deze browser). */
+  function personal() {
+    const saved = ns.ui.saved.list().map(resolve).filter(Boolean).slice(0, 6);
+    const viewed = ns.ui.viewed.list().map(resolve).filter(Boolean).slice(0, 4);
+    if (!saved.length && !viewed.length) return null;
+    const block = (title, id, iconName, entries, hint) => el('div', { className: 'personal__block', attrs: { role: 'group', 'aria-labelledby': id } }, [
+      el('h2', { className: 'personal__title', attrs: { id } }, [icon(iconName), el('span', { text: title })]),
+      entries.length
+        ? el('ul', { className: 'recent recent--stack', attrs: { role: 'list' } }, entries.map((entry) => itemRow(entry.kind, entry.item)))
+        : el('p', { className: 'personal__hint', text: hint })
+    ]);
+    return el('section', { className: 'section container personal', attrs: { 'aria-label': 'Voor jou' } }, [
+      block('Jouw bewaarde items', 'home-saved', 'bookmark', saved, 'Zie je een prompt, usecase of tip die je vaker nodig hebt? Bewaar hem met de bladwijzer, dan staat hij hier.'),
+      viewed.length ? block('Recent bekeken', 'home-viewed', 'clock', viewed) : null
+    ]);
+  }
+
+  /** Favoriet bij collega's: de best beoordeelde prompts en usecases (verschijnt zodra er genoeg beoordelingen zijn). */
+  function colleagues() {
+    if (!ns.reviews.enabled()) return null;
+    const list = el('ul', { className: 'recent', attrs: { role: 'list' } });
+    const node = el('section', { className: 'section container', attrs: { 'aria-labelledby': 'home-rated', hidden: true } }, [
+      sectionHead('Favoriet bij collega\'s', 'home-rated'),
+      el('p', { className: 'section__lead', text: `Het best beoordeeld door collega's, vanaf ${MIN_REVIEWS} beoordelingen.` }),
+      list
+    ]);
+    ns.reviews.stats().then((map) => {
+      if (!map) return;
+      const entries = ns.content.prompts.map((item) => ({ kind: 'prompt', item }))
+        .concat(ns.content.usecases.map((item) => ({ kind: 'usecase', item })))
+        .map((entry) => Object.assign(entry, { stats: map.get(entry.kind + ':' + entry.item.id) }))
+        .filter((entry) => entry.stats && entry.stats.reviews >= MIN_REVIEWS)
+        .sort((a, b) => b.stats.average - a.stats.average || b.stats.reviews - a.stats.reviews)
+        .slice(0, 4);
+      if (!entries.length) return;
+      list.replaceChildren(...entries.map((entry) => itemRow(entry.kind, entry.item, [
+        KIND[entry.kind].label + ' · ',
+        el('span', { className: 'recent__stars', attrs: { 'aria-hidden': 'true' } }, [
+          ns.reviews.starRow(entry.stats.average),
+          ` ${ns.reviews.averageText(entry.stats.average)} (${entry.stats.reviews})`
+        ]),
+        el('span', { className: 'sr-only', text: `${ns.reviews.averageText(entry.stats.average)} gemiddeld uit ${entry.stats.reviews} beoordelingen` })
+      ])));
+      node.hidden = false;
+    });
+    return node;
+  }
+
   function recent() {
     const entries = ns.content.recent(6);
     if (!entries.length) return null;
-    const kindLabel = { usecase: 'Usecase', prompt: 'Prompt', tip: 'Tip', training: 'Training', agent: 'Agent' };
-    const hrefFor = { usecase: '#/usecase/', prompt: '#/prompt/', tip: '#/tip/', training: '#/training/', agent: '#/agent/' };
-    const iconFor = { usecase: 'play-circle', prompt: 'chat', tip: 'bulb', training: 'cap', agent: 'robot' };
     return el('section', { className: 'section container', attrs: { 'aria-labelledby': 'home-recent' } }, [
       sectionHead('Recent toegevoegd', 'home-recent'),
       el('ul', { className: 'recent', attrs: { role: 'list' } }, entries.map((entry) =>
-        el('li', {}, [
-          el('a', { className: 'recent__item ' + ns.ui.accentClass(entry.item.accent), attrs: { href: hrefFor[entry.kind] + entry.item.id } }, [
-            el('span', { className: 'recent__icon', attrs: { 'aria-hidden': 'true' } }, [icon(iconFor[entry.kind])]),
-            el('span', { className: 'recent__body' }, [
-              el('span', { className: 'recent__kind', text: kindLabel[entry.kind] + ' · ' + ns.ui.formatDate(entry.added) }),
-              el('span', { className: 'recent__title', text: entry.item.title })
-            ]),
-            icon('arrow-right', { className: 'recent__go' })
-          ])
-        ])
+        itemRow(entry.kind, entry.item, [KIND[entry.kind].label + ' · ' + ns.ui.formatDate(entry.added)])
       ))
     ]);
   }
@@ -142,7 +212,7 @@
   }
 
   function render(params, config) {
-    const node = el('div', { className: 'home' }, [hero(config), tiles(), featuredUsecases(), featuredTips(), recent(), ideasCta()]);
+    const node = el('div', { className: 'home' }, [hero(config), tiles(), personal(), featuredUsecases(), colleagues(), featuredTips(), recent(), ideasCta()]);
     return { node, title: '' };
   }
 

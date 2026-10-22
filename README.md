@@ -269,6 +269,19 @@ Onderaan iedere usecase en prompt staat **Wat vond je ervan?**: 1 tot 5 sterren,
   verwijderen, en per usecase en prompt het gemiddelde en het aantal reviews.
 - Zolang de tabel `audit_reviews` nog niet bestaat (stap 6 in `setup/supabase-audit.sql`), verschijnt het blok niet.
   Uitzetten kan met `enableReviews: false` in `js/config.js`.
+- **Op de kaarten** staat het gemiddelde (★ 4,6 (5)), en bij prompts en usecases kun je de **volgorde** zetten op
+  **Best beoordeeld**: hoogste gemiddelde eerst, bij gelijk gemiddelde het grootste aantal; zonder beoordelingen achteraan.
+- **Favoriet bij collega's** op de startpagina: de vier best beoordeelde prompts en usecases met minstens drie
+  beoordelingen (`MIN_REVIEWS` in `js/view-home.js`). Zolang er niets aan die drempel voldoet, staat het blok er niet.
+
+## Bewaren en recent bekeken
+
+- Met de **bladwijzer** bewaar je een prompt, usecase of tip (op de kaart en op de pagina zelf). Bij prompts, usecases
+  en tips filter je met **Bewaard** op wat je bewaard hebt. De sterren zijn alleen voor beoordelingen.
+- Op de startpagina staan **Jouw bewaarde items** (de laatste zes) en **Recent bekeken** (de laatste vier usecases,
+  prompts, tips, trainingen of agents die je opende).
+- Beide staan **alleen in je eigen browser** (`ai-snackbar-audit:favorites` en `ai-snackbar-audit:viewed`): niemand
+  anders ziet ze en er gaat niets naar de database. De oude favorieten (alleen prompts) tellen gewoon mee als bewaard.
 
 ## Nieuwsbrief (Beheer → Nieuwsbrief)
 
@@ -315,8 +328,9 @@ storing de inzending ook per mail sturen.
 ## Privacy en veiligheid
 
 - Geen klantgegevens op het platform: alle demo's zijn fictief, en wat je in 'Invullen' typt wordt nergens bewaard.
-- In de browser bewaren we alleen favorieten, het thema, een willekeurige stem-code, de titels van je eigen inzendingen,
-  welke usecases en prompts je hebt beoordeeld, de gekozen discipline en de afgevinkte acties uit een naslagwerk.
+- In de browser bewaren we alleen wat je bewaard en recent bekeken hebt, het thema, een willekeurige stem-code, de titels
+  van je eigen inzendingen, welke usecases en prompts je hebt beoordeeld, de gekozen discipline, de scrollpositie per
+  pagina (alleen in dit tabblad) en de afgevinkte acties uit een naslagwerk.
 - De site en de repository zijn openbaar bereikbaar. Alles op het platform is informatie voor gebruikers; zet er nooit
   configuratie, systeemprompts, goedkeuringsdocumenten, interne opnames of klantinformatie op.
 - De tellers in Beheer zijn anoniem (welke usecase, demo, prompt, tip, training of agent), zonder apparaat- of

@@ -127,41 +127,64 @@
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   }
 
-  /* ---- Favorieten (prompts) ---------------------------------------------------- */
-  const favorites = {
+  /* ---- Bewaren en recent bekeken (alleen in deze browser) -------------------------
+     Items heten 'type:id' (bijv. 'prompt:notulen'), want een tip en een agent kunnen
+     hetzelfde id hebben. Bewaren gebruikt de oude opslag van de favorieten
+     ('favorites'): die bevatte alleen prompt-id's en die tellen gewoon mee. */
+  const itemKey = (type, id) => type + ':' + id;
+
+  function keyList(name) {
+    const value = storage.get(name, []);
+    return Array.isArray(value) ? value.filter((entry) => typeof entry === 'string') : [];
+  }
+
+  const saved = {
+    /** Alles wat je bewaard hebt, het laatst bewaarde eerst. */
     list() {
-      const value = storage.get('favorites', []);
-      return Array.isArray(value) ? value : [];
+      return keyList('favorites').map((entry) => (entry.includes(':') ? entry : itemKey('prompt', entry))).reverse();
     },
-    has(id) {
-      return favorites.list().includes(id);
+    has(type, id) {
+      return saved.list().includes(itemKey(type, id));
     },
-    toggle(id) {
-      const list = favorites.list();
-      const index = list.indexOf(id);
-      if (index === -1) list.push(id);
+    toggle(type, id) {
+      const list = saved.list().reverse();
+      const key = itemKey(type, id);
+      const index = list.indexOf(key);
+      if (index === -1) list.push(key);
       else list.splice(index, 1);
       storage.set('favorites', list);
       return index === -1;
     }
   };
 
-  /** Stervormige favorietknop. */
-  function favoriteButton(id, title, onChange) {
-    const btn = el('button', { className: 'fav', attrs: { type: 'button' } }, [icon('star')]);
+  const VIEWED_MAX = 12;
+  const viewed = {
+    /** Laatst bekeken eerst. */
+    list() {
+      return keyList('viewed');
+    },
+    add(type, id) {
+      const key = itemKey(type, id);
+      storage.set('viewed', [key].concat(viewed.list().filter((entry) => entry !== key)).slice(0, VIEWED_MAX));
+    }
+  };
+
+  /** Bladwijzerknop: bewaar een prompt, usecase of tip om later terug te vinden. */
+  function saveButton(type, id, title, onChange) {
+    const btn = el('button', { className: 'fav', attrs: { type: 'button' } }, [icon('bookmark')]);
     function sync() {
-      const on = favorites.has(id);
+      const on = saved.has(type, id);
       btn.setAttribute('aria-pressed', String(on));
-      btn.setAttribute('aria-label', (on ? 'Verwijder uit favorieten: ' : 'Bewaar als favoriet: ') + title);
-      btn.title = on ? 'Uit je favorieten halen' : 'Bewaren als favoriet';
-      setIcon(btn.querySelector('svg'), on ? 'star-filled' : 'star');
+      btn.setAttribute('aria-label', (on ? 'Niet meer bewaren: ' : 'Bewaren: ') + title);
+      btn.title = on ? 'Niet meer bewaren' : 'Bewaren';
+      setIcon(btn.querySelector('svg'), on ? 'bookmark-filled' : 'bookmark');
     }
     btn.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      const on = favorites.toggle(id);
+      const on = saved.toggle(type, id);
       sync();
-      toast(on ? 'Bewaard bij je favorieten' : 'Uit je favorieten gehaald', { icon: on ? 'star-filled' : 'star' });
+      toast(on ? 'Bewaard: je vindt het terug op de startpagina' : 'Niet meer bewaard', { icon: on ? 'bookmark-filled' : 'bookmark' });
       if (onChange) onChange(on);
     });
     sync();
@@ -453,6 +476,17 @@
     return group;
   }
 
+  /** Losse aan/uit-knop in een filterbalk (bijv. 'Met demo', 'Bewaard'). onToggle krijgt de nieuwe stand. */
+  function switchButton(label, iconName, pressed, onToggle, extra) {
+    const btn = el('button', { className: 'toggle toggle--switch', attrs: { type: 'button', 'aria-pressed': String(Boolean(pressed)) } }, [icon(iconName), el('span', { text: label }), extra || null]);
+    btn.addEventListener('click', () => {
+      const on = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', String(on));
+      onToggle(on);
+    });
+    return btn;
+  }
+
   function emptyState(title, text, action) {
     return el('div', { className: 'empty' }, [
       el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('search')]),
@@ -471,8 +505,9 @@
     button,
     storage,
     randomId,
-    favorites,
-    favoriteButton,
+    saved,
+    viewed,
+    saveButton,
     toast,
     confirmDialog,
     announce,
@@ -493,6 +528,7 @@
     chip,
     pageHeader,
     toggleGroup,
+    switchButton,
     emptyState
   };
 })(window.AIAudit);

@@ -4,10 +4,13 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, emptyState, copyButton, favoriteButton, matches } = ns.ui;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, switchButton, emptyState, copyButton, saveButton, matches } = ns.ui;
 
-  // Zoekterm en filters blijven staan zolang de pagina open is
-  const filters = { query: '', phase: 'all', license: 'all', demo: false, favorites: false };
+  // Zoekterm, filters en volgorde blijven staan zolang de pagina open is
+  const filters = { query: '', phase: 'all', license: 'all', demo: false, saved: false, sort: 'phase' };
+
+  /** Id's van de bewaarde prompts */
+  const savedIds = () => ns.ui.saved.list().filter((key) => key.startsWith('prompt:')).map((key) => key.slice(7)).filter((id) => ns.content.promptById.has(id));
 
   /** withTask: false als de taak al bovenaan de kaart staat. */
   function chipsFor(prompt, withTask) {
@@ -18,6 +21,7 @@
       prompt.task && withTask !== false ? chip(prompt.task) : null,
       licenseBadge(prompt.license, { short: true }),
       prompt.usecase && prompt.usecase.hasDemo ? el('span', { className: 'badge badge--demo' }, [icon('play-circle'), 'Met demo']) : null,
+      ns.reviews.ratingChip('prompt', prompt.id),
       newBadge(prompt.added)
     ].filter(Boolean);
   }
@@ -29,8 +33,8 @@
     return [el('span', { text: prompt.phase.short }), usecaseLabel ? el('span', { className: 'p-card__step', text: usecaseLabel }) : null];
   }
 
-  /** Kaart in de lijst: titel, omschrijving, direct kopiëren, prompt uitklappen. */
-  function card(prompt, headingTag, onFavoriteChange, grouped) {
+  /** Kaart in de lijst: titel, omschrijving, direct kopiëren, prompt uitklappen, bewaren. */
+  function card(prompt, headingTag, onSaveChange, grouped) {
     const previewId = 'prev-' + prompt.id;
     const preview = el('div', { className: 'p-card__preview', attrs: { id: previewId, hidden: true } });
     const toggle = el('button', { className: 'btn btn--quiet btn--sm p-card__toggle', attrs: { type: 'button', 'aria-expanded': 'false', 'aria-controls': previewId } }, [
@@ -50,7 +54,7 @@
     return el('article', { className: 'p-card ' + accentClass(prompt.accent) }, [
       el('div', { className: 'p-card__head' }, [
         el('p', { className: 'p-card__phase' }, eyebrow(prompt, grouped)),
-        favoriteButton(prompt.id, prompt.title, onFavoriteChange)
+        saveButton('prompt', prompt.id, prompt.title, onSaveChange)
       ]),
       el(headingTag || 'h2', { className: 'p-card__title' }, [el('a', { attrs: { href: '#/prompt/' + prompt.id }, text: prompt.title })]),
       prompt.description ? el('p', { className: 'p-card__desc', text: prompt.description }) : null,
@@ -70,40 +74,47 @@
     const list = el('div', { className: 'p-list' });
     const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
     const empty = emptyState('Geen prompts gevonden', 'Probeer een ander zoekwoord of zet de filters terug op Alle.');
-    const favCount = el('span', { className: 'toggle__count' });
+    const savedCount = el('span', { className: 'toggle__count' });
 
     function update() {
-      const favs = ns.ui.favorites.list();
-      favCount.textContent = String(favs.filter((id) => ns.content.promptById.has(id)).length);
-      const items = all.filter((p) =>
+      const saved = savedIds();
+      savedCount.textContent = String(saved.length);
+      const onSaveChange = () => {
+        if (filters.saved) update();
+        else savedCount.textContent = String(savedIds().length);
+      };
+      let items = all.filter((p) =>
         (filters.phase === 'all' || p.phase.id === filters.phase) &&
         (filters.license === 'all' || (filters.license === 'yes' ? p.license === true : p.license === false)) &&
         (!filters.demo || (p.usecase && p.usecase.hasDemo)) &&
-        (!filters.favorites || favs.includes(p.id)) &&
+        (!filters.saved || saved.includes(p.id)) &&
         matches(p.haystack, filters.query)
       );
-      // Per fase gegroepeerd, met een kop per fase
-      const groups = [];
-      items.forEach((p) => {
-        let group = groups[groups.length - 1];
-        if (!group || group.phase !== p.phase) {
-          group = { phase: p.phase, items: [] };
-          groups.push(group);
-        }
-        group.items.push(p);
-      });
-      list.replaceChildren(...groups.map((group) =>
-        el('section', { className: 'p-group ' + accentClass(group.phase.accent), attrs: { 'aria-labelledby': 'pg-' + group.phase.id } }, [
-          el('h2', { className: 'p-group__title', attrs: { id: 'pg-' + group.phase.id } }, [
-            el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase.icon)]),
-            el('span', {}, [group.phase.label + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
-          ]),
-          el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => el('li', {}, [card(p, 'h3', () => {
-            if (filters.favorites) update();
-            else favCount.textContent = String(ns.ui.favorites.list().filter((id) => ns.content.promptById.has(id)).length);
-          }, true)])))
-        ])
-      ));
+      if (filters.sort === 'rating') {
+        // Best beoordeeld: één lijst, zonder kopjes per fase
+        items = ns.reviews.rank(items, 'prompt');
+        list.replaceChildren(el('ul', { className: 'p-grid', attrs: { role: 'list' } }, items.map((p) => el('li', {}, [card(p, 'h2', onSaveChange, false)]))));
+      } else {
+        // Per fase gegroepeerd, met een kop per fase
+        const groups = [];
+        items.forEach((p) => {
+          let group = groups[groups.length - 1];
+          if (!group || group.phase !== p.phase) {
+            group = { phase: p.phase, items: [] };
+            groups.push(group);
+          }
+          group.items.push(p);
+        });
+        list.replaceChildren(...groups.map((group) =>
+          el('section', { className: 'p-group ' + accentClass(group.phase.accent), attrs: { 'aria-labelledby': 'pg-' + group.phase.id } }, [
+            el('h2', { className: 'p-group__title', attrs: { id: 'pg-' + group.phase.id } }, [
+              el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase.icon)]),
+              el('span', {}, [group.phase.label + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
+            ]),
+            el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => el('li', {}, [card(p, 'h3', onSaveChange, true)])))
+          ])
+        ));
+      }
       count.textContent = items.length === 1 ? '1 prompt' : items.length + ' prompts';
       empty.hidden = items.length > 0;
     }
@@ -146,15 +157,20 @@
       update();
     }, { className: 'toggles--compact' });
 
-    function switchButton(label, iconName, key, extra) {
-      const btn = el('button', { className: 'toggle toggle--switch', attrs: { type: 'button', 'aria-pressed': String(filters[key]) } }, [icon(iconName), el('span', { text: label }), extra || null]);
-      btn.addEventListener('click', () => {
-        filters[key] = !filters[key];
-        btn.setAttribute('aria-pressed', String(filters[key]));
-        update();
-      });
-      return btn;
-    }
+    const toggleFilter = (key) => (on) => {
+      filters[key] = on;
+      update();
+    };
+
+    // Volgorde: per fase, of best beoordeeld door collega's (de gemiddelden komen uit de database)
+    const sortGroup = ns.reviews.enabled() ? toggleGroup('Volgorde', [
+      { value: 'phase', label: 'Per fase' },
+      { value: 'rating', label: 'Best beoordeeld', icon: 'star' }
+    ], filters.sort, (value) => {
+      filters.sort = value;
+      update();
+    }, { className: 'toggles--compact' }) : null;
+    if (ns.reviews.enabled() && ns.reviews.cached() === undefined) ns.reviews.stats().then(update);
 
     const node = el('div', { className: 'page container' }, [
       pageHeader({
@@ -169,11 +185,12 @@
           el('span', { className: 'filters__label', text: 'Toon' }),
           licenseGroup,
           el('div', { className: 'toggles toggles--compact', attrs: { role: 'group', 'aria-label': 'Extra filters' } }, [
-            switchButton('Met demo', 'play-circle', 'demo'),
-            switchButton('Mijn favorieten', 'star', 'favorites', favCount)
+            switchButton('Met demo', 'play-circle', filters.demo, toggleFilter('demo')),
+            switchButton('Bewaard', 'bookmark', filters.saved, toggleFilter('saved'), savedCount)
           ]),
           count
-        ])
+        ]),
+        sortGroup ? el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Volgorde' }), sortGroup]) : null
       ]),
       list,
       empty
@@ -197,7 +214,7 @@
         el('p', { className: 'detail__eyebrow' }, [icon(prompt.phase.icon), el('span', { text: prompt.phase.label })]),
         el('div', { className: 'detail__title-row' }, [
           el('h1', { className: 'detail__title', text: prompt.title, attrs: { tabindex: '-1' } }),
-          favoriteButton(prompt.id, prompt.title)
+          saveButton('prompt', prompt.id, prompt.title)
         ]),
         prompt.description ? el('p', { className: 'detail__subtitle', text: prompt.description }) : null,
         el('div', { className: 'chips' }, chipsFor(prompt))

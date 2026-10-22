@@ -4,26 +4,35 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, emptyState } = ns.ui;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, switchButton, emptyState, saveButton } = ns.ui;
 
-  // Filters blijven staan zolang de pagina open is
-  const filters = { phase: 'all', license: 'all' };
+  // Filters en volgorde blijven staan zolang de pagina open is
+  const filters = { phase: 'all', license: 'all', saved: false, sort: 'default' };
 
-  /** Kaart voor een usecase (ook gebruikt op de startpagina en bij zoeken). */
-  function card(usecase, headingTag) {
+  /** Id's van de bewaarde usecases */
+  const savedIds = () => ns.ui.saved.list().filter((key) => key.startsWith('usecase:')).map((key) => key.slice(8)).filter((id) => ns.content.usecaseById.has(id));
+
+  /**
+   * Kaart voor een usecase (ook op de startpagina en bij zoeken). De hele kaart is klikbaar
+   * via de titel; de bewaarknop ligt erboven. onSaveChange: na bewaren of niet meer bewaren.
+   */
+  function card(usecase, headingTag, onSaveChange) {
     const meta = [];
     if (usecase.hasDemo) meta.push(el('span', { className: 'meta' }, [icon(usecase.video ? 'film' : 'play-circle'), el('span', { text: (usecase.duration ? usecase.duration + ' ' : '') + 'demo' })]));
     else meta.push(el('span', { className: 'meta meta--muted' }, [icon('clock'), el('span', { text: 'Demo volgt' })]));
     if (usecase.level) meta.push(el('span', { className: 'meta' }, [icon('sparkle'), el('span', { text: usecase.level })]));
+    const rating = ns.reviews.ratingChip('usecase', usecase.id);
+    if (rating) meta.push(rating);
 
-    return el('a', { className: 'uc-card ' + accentClass(usecase.accent), attrs: { href: '#/usecase/' + usecase.id } }, [
+    return el('article', { className: 'uc-card ' + accentClass(usecase.accent) }, [
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(usecase.icon)]),
-        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), ns.cockpit.sharedBadge(usecase), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })])
+        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), ns.cockpit.sharedBadge(usecase), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })]),
+        saveButton('usecase', usecase.id, usecase.title, onSaveChange)
       ]),
       el('div', { className: 'uc-card__body' }, [
         el('p', { className: 'uc-card__phase', text: usecase.phase.label }),
-        el(headingTag || 'h2', { className: 'uc-card__title', text: usecase.title }),
+        el(headingTag || 'h2', { className: 'uc-card__title' }, [el('a', { className: 'uc-card__link', attrs: { href: '#/usecase/' + usecase.id }, text: usecase.title })]),
         usecase.subtitle ? el('p', { className: 'uc-card__subtitle', text: usecase.subtitle }) : null
       ]),
       el('div', { className: 'uc-card__footer' }, [
@@ -38,14 +47,23 @@
     const all = ns.content.usecases;
     const grid = el('ul', { className: 'card-grid', attrs: { role: 'list' } });
     const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
-    const empty = emptyState('Geen usecases met deze filters', 'Kies een andere fase of zet het licentiefilter op Alle.');
+    const empty = emptyState('Geen usecases met deze filters', 'Kies een andere fase of zet de filters terug op Alle.');
+    const savedCount = el('span', { className: 'toggle__count' });
 
     function update() {
-      const items = all.filter((u) =>
+      const saved = savedIds();
+      savedCount.textContent = String(saved.length);
+      const onSaveChange = () => {
+        if (filters.saved) update();
+        else savedCount.textContent = String(savedIds().length);
+      };
+      let items = all.filter((u) =>
         (filters.phase === 'all' || u.phase.id === filters.phase) &&
-        (filters.license === 'all' || (filters.license === 'yes' ? u.license === true : u.license === false))
+        (filters.license === 'all' || (filters.license === 'yes' ? u.license === true : u.license === false)) &&
+        (!filters.saved || saved.includes(u.id))
       );
-      grid.replaceChildren(...items.map((u) => el('li', {}, [card(u)])));
+      if (filters.sort === 'rating') items = ns.reviews.rank(items, 'usecase');
+      grid.replaceChildren(...items.map((u) => el('li', {}, [card(u, 'h2', onSaveChange)])));
       count.textContent = items.length === 1 ? '1 usecase' : items.length + ' usecases';
       empty.hidden = items.length > 0;
       grid.hidden = items.length === 0;
@@ -68,6 +86,16 @@
       update();
     }, { className: 'toggles--compact' });
 
+    // Volgorde: standaard, of best beoordeeld door collega's (de gemiddelden komen uit de database)
+    const sortGroup = ns.reviews.enabled() ? toggleGroup('Volgorde', [
+      { value: 'default', label: 'Standaard' },
+      { value: 'rating', label: 'Best beoordeeld', icon: 'star' }
+    ], filters.sort, (value) => {
+      filters.sort = value;
+      update();
+    }, { className: 'toggles--compact' }) : null;
+    if (ns.reviews.enabled() && ns.reviews.cached() === undefined) ns.reviews.stats().then(update);
+
     const node = el('div', { className: 'page container' }, [
       pageHeader({
         eyebrow: 'Usecases',
@@ -76,7 +104,18 @@
       }),
       el('div', { className: 'filters' }, [
         el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Fase' }), phaseGroup]),
-        el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Licentie' }), licenseGroup, count])
+        el('div', { className: 'filters__row' }, [
+          el('span', { className: 'filters__label', text: 'Toon' }),
+          licenseGroup,
+          el('div', { className: 'toggles toggles--compact', attrs: { role: 'group', 'aria-label': 'Extra filters' } }, [
+            switchButton('Bewaard', 'bookmark', filters.saved, (on) => {
+              filters.saved = on;
+              update();
+            }, savedCount)
+          ]),
+          count
+        ]),
+        sortGroup ? el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Volgorde' }), sortGroup]) : null
       ]),
       grid,
       empty
@@ -154,7 +193,10 @@
       el('header', { className: 'detail__header' }, [
         el('a', { className: 'btn btn--back btn--sm', attrs: { href: '#/usecases' } }, [icon('arrow-left'), el('span', { text: 'Alle usecases' })]),
         el('p', { className: 'detail__eyebrow' }, [icon(usecase.phase.icon), el('span', { text: usecase.phase.label })]),
-        el('h1', { className: 'detail__title', text: usecase.title, attrs: { tabindex: '-1' } }),
+        el('div', { className: 'detail__title-row' }, [
+          el('h1', { className: 'detail__title', text: usecase.title, attrs: { tabindex: '-1' } }),
+          saveButton('usecase', usecase.id, usecase.title)
+        ]),
         usecase.subtitle ? el('p', { className: 'detail__subtitle', text: usecase.subtitle }) : null,
         el('div', { className: 'chips' }, chips)
       ]),
