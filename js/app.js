@@ -208,6 +208,7 @@
     if (!opts.keepScroll) rememberViewed(parsed);
     viewNode.replaceChildren(...[ns.cockpit.lockBar(), result.node].filter(Boolean));
     ns.editor.setPageItem(pageItem(parsed));
+    ns.editmode.decorate(parsed); // bewerkmodus: gereedschap op de kaarten en teksten
     document.body.dataset.view = parsed.name || 'home';
     // Tabbladtitel volgt de naam uit Beheer → Teksten (of js/config.js)
     const siteTitle = [config.applicationTitle, config.discipline].filter(Boolean).join(' ') || SITE_TITLE;

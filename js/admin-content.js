@@ -730,6 +730,88 @@
     return { node, canLeave: () => saving || !initial || snapshot() === initial };
   }
 
+  /* ---- Zijpaneel in de bewerkmodus (js/editmode.js) ------------------------------------------ */
+  /**
+   * Hetzelfde formulier als in Beheer, maar Toepassen zet de wijziging klaar (niet opgeslagen):
+   * je ziet hem meteen op de pagina en slaat op met Opslaan in de bewerkbalk.
+   * id leeg = nieuw item. onClose(): het paneel sluiten.
+   */
+  function quickForm(type, namespace, id, onClose) {
+    const schema = SCHEMAS[type];
+    const general = namespace === ns.cockpit.GENERAL_NAMESPACE;
+    const discipline = ns.cockpit.active();
+    scope = general
+      ? { kind: 'basis', namespace, base: '#/beheer/basis', name: 'de gedeelde basis', id: 'algemeen', files: false }
+      : { kind: 'discipline', namespace, base: '#/beheer/inhoud', name: discipline.name, id: discipline.id, files: false };
+    const isNew = !id;
+    const current = isNew ? null : ns.editor.effective(namespace, type, id);
+    const data = current ? Object.assign({}, current.data, schema.single ? {} : { id }) : {};
+    const ctx = {
+      idTaken: (value) => {
+        if (!isNew && value === id) return false;
+        if (ns.editor.effective(namespace, type, value)) return true;
+        if (everywhere().some((row) => row.type === type && row.id === value)) return true;
+        if (type === 'prompt' && ns.content.usecaseById.has(value.replace(/-\d+$/, ''))) return true;
+        return false;
+      }
+    };
+    const controls = schema.fields.map((field) => ({ field, ctl: control(field, data[field.key], ctx) }));
+    const byKey = (key) => (controls.find((c) => c.field.key === key) || {}).ctl;
+    const idCtl = byKey('id');
+    if (idCtl && isNew) {
+      const titleCtl = byKey(schema.fields.find((f) => f.key === 'id').titleKey || 'title');
+      let touched = false;
+      idCtl.input.addEventListener('input', () => {
+        touched = true;
+      });
+      if (titleCtl && titleCtl.input) titleCtl.input.addEventListener('input', () => {
+        if (!touched) idCtl.input.value = slugify(titleCtl.input.value);
+      });
+    }
+    const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
+    const apply = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('check'), el('span', { text: 'Toepassen' })]);
+    const cancel = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [el('span', { text: 'Annuleren' })]);
+    cancel.addEventListener('click', onClose);
+    const form = el('form', { className: 'cms-form cms-form--panel', attrs: { novalidate: true } }, [
+      el('p', { className: 'field__hint', text: 'Toepassen zet je wijziging klaar op de pagina. Sla daarna op met Opslaan in de bewerkbalk; collega\'s zien het pas na Publiceren.' }),
+      el('div', { className: 'form-grid' }, controls.map((c) => c.ctl.node)),
+      formError,
+      el('div', { className: 'cms-form__actions' }, [apply, cancel])
+    ]);
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      formError.hidden = true;
+      const firstError = controls.map(({ ctl }) => ctl.validate()).find(Boolean);
+      if (firstError) {
+        const invalid = form.querySelector('[aria-invalid="true"]');
+        if (invalid) invalid.focus();
+        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Controleer de gemarkeerde velden.' })]));
+        formError.hidden = false;
+        return;
+      }
+      const record = {};
+      controls.forEach(({ field, ctl }) => {
+        const v = ctl.get();
+        if (field.key !== 'id' && !isEmpty(v)) record[field.key] = v;
+      });
+      const newId = schema.single ? schema.single : idCtl.get();
+      const renamed = !isNew && !schema.single && newId !== id;
+      if (renamed && !ns.rights.can('verwijderen', namespace, type)) {
+        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Het adres wijzigen kan alleen iemand die ook mag verwijderen. Laat het adres staan.' })]));
+        formError.hidden = false;
+        return;
+      }
+      const position = current ? current.position : Math.max(0, ...rowsOf(type).map((row) => ns.editor.savedState(row).position || 0)) + 10;
+      if (renamed) ns.editor.change(namespace, type, id, { status: 'trash' });
+      ns.editor.change(namespace, type, newId, { data: record, position, status: 'published' });
+      onClose();
+      toast(isNew ? 'Toegevoegd op de pagina. Vergeet niet op te slaan.' : 'Toegepast. Vergeet niet op te slaan.', { duration: 5000 });
+    });
+    const node = el('div', { className: 'cms-editor cms-editor--panel' }, [warningNotice(schema), form]);
+    if (!isNew) ns.editor.watch(namespace, type, id, node);
+    return node;
+  }
+
   /* ---- Lijst per soort ---------------------------------------------------------------- */
   const STATUS_LABEL = { published: 'Gepubliceerd', draft: 'Concept', trash: 'Prullenbak' };
 
@@ -1222,5 +1304,5 @@
     };
   }
 
-  ns.adminContent = { render, SCHEMAS };
+  ns.adminContent = { render, quickForm, SCHEMAS };
 })(window.AIAudit);

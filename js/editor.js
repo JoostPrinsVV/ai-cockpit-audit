@@ -42,7 +42,7 @@
   const rows = () => (Array.isArray(ns.content.adminRows) ? ns.content.adminRows : []);
   const rowOf = (namespace, type, id) => rows().find((row) => row.namespace === namespace && row.type === type && row.id === id) || null;
   const storeKey = () => 'bewerken:' + (ns.central.signedIn() || '').toLowerCase();
-  const titleOf = (data, id) => (data && (data.title || data.label)) || id;
+  const titleOf = (data, id) => (data && (data.title || data.label)) || (id === 'site' ? 'Teksten van de site' : id);
 
   /** De opgeslagen stand van een rij: de werkversie als die er is, anders de gepubliceerde. */
   function savedState(row) {
@@ -112,6 +112,56 @@
     persist();
     afterLocalChange();
     return true;
+  }
+
+  /**
+   * Volgorde aanpassen: zet item id vóór (of na) targetId, binnen dezelfde soort en naamruimte.
+   * Eén wijziging als er ruimte is tussen de buren, anders worden de posities opnieuw genummerd.
+   */
+  function move(namespace, type, id, targetId, after) {
+    if (id === targetId) return false;
+    const ids = new Set(rows().filter((row) => row.namespace === namespace && row.type === type).map((row) => row.id));
+    pending.forEach((entry) => {
+      if (entry.namespace === namespace && entry.type === type) ids.add(entry.id);
+    });
+    const list = Array.from(ids)
+      .map((itemId) => ({ id: itemId, state: effective(namespace, type, itemId) }))
+      .filter((item) => item.state && item.state.status !== 'trash')
+      .sort((a, b) => (a.state.position || 0) - (b.state.position || 0) || (a.id < b.id ? -1 : 1));
+    const moving = list.find((item) => item.id === id);
+    if (!moving || !list.some((item) => item.id === targetId)) return false;
+    list.splice(list.indexOf(moving), 1);
+    const at = list.findIndex((item) => item.id === targetId) + (after ? 1 : 0);
+    list.splice(at, 0, moving);
+    const prev = list[at - 1];
+    const next = list[at + 1];
+    const prevPos = prev ? prev.state.position || 0 : null;
+    const nextPos = next ? next.state.position || 0 : null;
+    let position = null;
+    if (prevPos === null && nextPos !== null) position = nextPos - 10;
+    else if (nextPos === null && prevPos !== null) position = prevPos + 10;
+    else if (prevPos !== null && nextPos - prevPos >= 2) position = Math.floor((prevPos + nextPos) / 2);
+    if (position !== null) return change(namespace, type, id, { position });
+    // Geen ruimte: alles in stappen van 10, in één stap ongedaan te maken
+    const before = snapshot();
+    list.forEach((item, index) => {
+      const wanted = (index + 1) * 10;
+      if (item.state.position !== wanted) stageQuiet(namespace, type, item.id, Object.assign(item.state, { position: wanted }));
+    });
+    undoStack.push(before);
+    redoStack = [];
+    persist();
+    afterLocalChange();
+    return true;
+  }
+
+  /** Zoals change(), maar zonder eigen stap voor ongedaan maken en zonder opnieuw opbouwen. */
+  function stageQuiet(namespace, type, id, next) {
+    const row = rowOf(namespace, type, id);
+    const draft = { data: next.data || {}, position: Number.isFinite(next.position) ? next.position : 0, status: next.status === 'trash' ? 'trash' : 'published' };
+    const key = keyOf(namespace, type, id);
+    if (row && JSON.stringify(draft) === JSON.stringify(savedState(row))) pending.delete(key);
+    else pending.set(key, { namespace, type, id, draft, version: row ? row.version : null, title: titleOf(draft.data, id) });
   }
 
   /** Niet-opgeslagen wijziging van één item laten vallen. */
@@ -603,6 +653,12 @@
     } else {
       const waitingCount = waiting().length;
       const status = busy ? 'Bezig…' : pending.size ? `${pending.size === 1 ? '1 wijziging' : pending.size + ' wijzigingen'} niet opgeslagen` : waitingCount ? `${waitingCount} klaar om te publiceren` : 'Alles is gepubliceerd';
+      // Bewerken op de pagina zelf (js/editmode.js)
+      if (ns.editmode) {
+        const editToggle = el('button', { className: 'admin-bar__btn admin-bar__btn--mode', attrs: { type: 'button', 'aria-pressed': String(ns.editmode.isOn()), title: 'Pas de pagina zelf aan: teksten, volgorde, toevoegen en verwijderen' } }, [icon('pencil-line'), el('span', { text: ns.editmode.isOn() ? 'Bewerken aan' : 'Bewerken' })]);
+        editToggle.addEventListener('click', () => ns.editmode.toggle());
+        items.push(editToggle);
+      }
       items.push(el('span', { className: 'admin-bar__status' + (pending.size ? ' admin-bar__status--dirty' : ''), attrs: { role: 'status' }, text: status }));
       const undoButton = el('button', { className: 'admin-bar__btn', attrs: { type: 'button', disabled: !undoStack.length || busy, title: 'Ongedaan maken (Ctrl+Z)', 'aria-label': 'Ongedaan maken' } }, [icon('arrow-left')]);
       const redoButton = el('button', { className: 'admin-bar__btn', attrs: { type: 'button', disabled: !redoStack.length || busy, title: 'Opnieuw (Ctrl+Y)', 'aria-label': 'Opnieuw' } }, [icon('arrow-right')]);
@@ -619,7 +675,11 @@
       viewButton.addEventListener('click', () => setVisitorView(!visitorView));
       items.push(el('span', { className: 'admin-bar__group' }, [undoButton, redoButton]), saveButton, publishButton, logButton, viewButton);
     }
-    if (barItem) {
+    if (barItem && ns.editmode && ns.editmode.isOn() && available()) {
+      const open = el('button', { className: 'admin-bar__btn admin-bar__btn--item', attrs: { type: 'button' } }, [icon('pencil-line'), el('span', { text: 'Bewerk ' + barItem.label })]);
+      open.addEventListener('click', () => ns.editmode.openPanel(barItem.type, barItem.namespace, barItem.id));
+      items.push(open);
+    } else if (barItem) {
       items.push(el('a', { className: 'admin-bar__btn admin-bar__btn--item', attrs: { href: `#/beheer/${barItem.shared ? 'basis' : 'inhoud'}/${barItem.type}/${barItem.id}` } }, [icon('pencil-line'), el('span', { text: 'Bewerk ' + barItem.label })]));
     }
     bar.replaceChildren(el('div', { className: 'container admin-bar__inner' }, items));
@@ -678,7 +738,9 @@
     overlay,
     effective,
     change,
+    move,
     forget,
+    drawer,
     undo,
     redo,
     save,

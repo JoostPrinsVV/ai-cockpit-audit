@@ -2228,6 +2228,11 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 
 .admin-bar__inner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-height: 2.75rem; padding-block: 0.35rem; }
 
+/* Voor beheerders blijft de kopbalk (met Opslaan en Publiceren) altijd in beeld */
+@media (min-width: 601px) {
+  .has-admin-bar .topbar { position: sticky; top: 0; }
+}
+
 .admin-bar__brand {
   display: inline-flex;
   align-items: center;
@@ -2334,6 +2339,83 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .log-item__type { color: var(--color-text-muted); }
 
 .presence { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4); }
+
+/* ---- Bewerkmodus op de pagina (js/editmode.js) ---- */
+.admin-bar__btn--mode[aria-pressed='true'] { border-color: #ffd98a; background: rgba(255, 217, 138, 0.18); color: #ffd98a; }
+
+/* De kaartlink niet over de hele kaart: dan kun je in de tekst klikken */
+.is-editing .uc-card__link::after,
+.is-editing .tip-card__link::after,
+.is-editing .p-card__title a::after { display: none; }
+.is-editing .tile::after, .is-editing .uc-card::after, .is-editing .tip-card::after, .is-editing .p-card::after, .is-editing .tr-card::after { display: none; }
+
+.edit-slot { position: relative; }
+.is-editing .edit-slot > :first-child { outline: 2px dashed rgba(0, 180, 156, 0.4); outline-offset: 3px; }
+.edit-slot.is-dragging { opacity: 0.45; }
+.edit-slot.drop-before > :first-child { box-shadow: -8px 0 0 -3px var(--vv-teal), var(--shadow-card); }
+.edit-slot.drop-after > :first-child { box-shadow: 8px 0 0 -3px var(--vv-teal), var(--shadow-card); }
+
+.edit-tools {
+  position: absolute;
+  z-index: 6;
+  top: -0.9rem;
+  left: 0.9rem;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--vv-navy);
+  box-shadow: 0 4px 14px rgba(7, 13, 38, 0.3);
+}
+
+.edit-tools__btn {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.edit-tools__btn .icon { width: 1rem; height: 1rem; }
+.edit-tools__btn:hover, .edit-tools__btn:focus-visible { background: rgba(255, 255, 255, 0.16); }
+.edit-tools__btn--danger:hover { background: var(--vv-crimson); }
+.edit-tools__grip { cursor: grab; }
+.edit-tools__grip:active { cursor: grabbing; }
+
+/* Tekst die je direct kunt aanpassen */
+[data-inline] { border-radius: 4px; cursor: text; transition: background-color var(--duration-fast) var(--ease-out); }
+[data-inline]:hover { background: rgba(255, 217, 138, 0.28); box-shadow: 0 0 0 2px rgba(255, 217, 138, 0.28); }
+[data-inline]:focus { outline: 2px solid var(--vv-teal); outline-offset: 2px; background: var(--color-surface); color: var(--color-text); }
+.on-dark [data-inline]:hover, .hero [data-inline]:hover { background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18); }
+.hero [data-inline]:focus { background: rgba(255, 255, 255, 0.08); color: inherit; }
+
+/* Plusknop aan het eind van een lijst */
+.edit-add { display: flex; min-height: 8rem; }
+.edit-add__btn {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 2px dashed rgba(0, 180, 156, 0.55);
+  border-radius: var(--radius-lg);
+  background: rgba(0, 180, 156, 0.05);
+  color: var(--accent-teal-ink);
+  font: inherit;
+  font-weight: var(--fw-bold);
+  cursor: pointer;
+}
+
+.edit-add__btn .icon { width: 1.6rem; height: 1.6rem; }
+.edit-add__btn:hover { border-style: solid; background: rgba(0, 180, 156, 0.1); }
+
+.cms-form--panel { gap: var(--space-4); }
 .badge--shared { background: var(--accent-steel-wash, var(--accent-steel-tint)); color: var(--accent-steel-ink); }
 
 .shared-note {
