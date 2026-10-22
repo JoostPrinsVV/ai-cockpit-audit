@@ -30,7 +30,8 @@
     { id: 'inzendingen', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true },
     { id: 'reviews', label: 'Reviews', icon: 'star', perDiscipline: true },
     { id: 'nieuwsbrief', label: 'Nieuwsbrief', icon: 'mail', perDiscipline: true },
-    { id: 'gebruik', label: 'Gebruik', icon: 'chart', perDiscipline: true }
+    { id: 'gebruik', label: 'Gebruik', icon: 'chart', perDiscipline: true },
+    { id: 'beheerders', label: 'Beheerders', icon: 'users' }
   ];
 
   /** Wisselen van discipline in Beheer: naar hetzelfde onderdeel in de cockpit van die discipline. */
@@ -441,6 +442,144 @@
     load();
   }
 
+  /* ---- Beheerders (alleen hoofdbeheerders) ------------------------------------------------ */
+  function placeLabel(namespace) {
+    if (namespace === '*') return 'Alle disciplines';
+    if (namespace === ns.cockpit.GENERAL_NAMESPACE) return 'Gedeelde basis';
+    const found = ns.cockpit.registry().find((d) => ns.cockpit.namespace(d.id) === namespace);
+    return found ? found.name : namespace;
+  }
+
+  function adminsTab(container) {
+    const list = el('div', { className: 'admin-list' });
+    const me = (ns.central.signedIn() || '').toLowerCase();
+
+    // Formulier: iemand toevoegen of een rol aanpassen
+    const email = el('input', { className: 'field__input', attrs: { id: 'adm-new-email', type: 'email', autocomplete: 'off', placeholder: 'naam@visser-visser.nl' } });
+    const role = el('select', { className: 'field__input', attrs: { id: 'adm-new-role' } }, Object.entries(ns.rights.ROLES).map(([value, info]) => el('option', { attrs: { value }, text: `${info.label}: ${info.text}` })));
+    role.value = 'redacteur';
+    const place = el('select', { className: 'field__input', attrs: { id: 'adm-new-place' } }, [
+      el('option', { attrs: { value: '*' }, text: 'Alle disciplines (en de gedeelde basis)' }),
+      ...ns.cockpit.registry().map((d) => el('option', { attrs: { value: ns.cockpit.namespace(d.id) }, text: d.name })),
+      el('option', { attrs: { value: ns.cockpit.GENERAL_NAMESPACE }, text: 'Gedeelde basis' })
+    ]);
+    place.value = ns.cockpit.namespace(ns.cockpit.activeId());
+    const sectionBoxes = ns.rights.SECTIONS.map((section) => {
+      const id = 'adm-sec-' + section.id;
+      return el('label', { className: 'check check--compact', attrs: { for: id } }, [el('input', { attrs: { id, type: 'checkbox', value: section.id } }), el('span', { text: section.label })]);
+    });
+    const sections = el('fieldset', { className: 'field field--wide refs' }, [
+      el('legend', { className: 'field__label', text: 'Alleen deze onderdelen (niets aangevinkt = alles)' }),
+      el('div', { className: 'refs__list' }, sectionBoxes)
+    ]);
+    const placeField = el('div', { className: 'field field--half' }, [el('label', { className: 'field__label', text: 'Waar', attrs: { for: 'adm-new-place' } }), place]);
+    const syncRole = () => {
+      const owner = role.value === 'hoofdbeheerder';
+      placeField.hidden = owner;
+      sections.hidden = owner;
+    };
+    role.addEventListener('change', syncRole);
+    syncRole();
+    const error = el('p', { className: 'field__error', attrs: { role: 'alert' } });
+    const submit = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('users'), el('span', { text: 'Rol geven' })]);
+    const form = el('form', { className: 'form-card', attrs: { novalidate: true } }, [
+      el('h2', { className: 'form-card__title', text: 'Beheerder toevoegen of rol aanpassen' }),
+      el('p', { className: 'field__hint', text: 'Iemand heeft ook een account nodig met hetzelfde e-mailadres: maak dat aan in Supabase (Authentication → Users → Add user) en stuur het wachtwoord veilig door. Hieronder zie je of het account er al is.' }),
+      el('div', { className: 'form-grid' }, [
+        el('div', { className: 'field field--half' }, [el('label', { className: 'field__label', text: 'E-mailadres', attrs: { for: 'adm-new-email' } }), email]),
+        el('div', { className: 'field field--half' }, [el('label', { className: 'field__label', text: 'Rol', attrs: { for: 'adm-new-role' } }), role]),
+        placeField,
+        sections
+      ]),
+      error,
+      el('div', { className: 'cms-form__actions' }, [submit])
+    ]);
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      error.textContent = '';
+      const address = email.value.trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address)) {
+        error.textContent = 'Vul een geldig e-mailadres in.';
+        return;
+      }
+      const chosen = sectionBoxes.map((label) => label.querySelector('input')).filter((box) => box.checked).map((box) => box.value);
+      submit.disabled = true;
+      try {
+        await ns.central.setAdmin(address, role.value === 'hoofdbeheerder' ? '*' : place.value, role.value, role.value === 'hoofdbeheerder' ? [] : chosen);
+        toast(`${address} is ${ns.rights.ROLES[role.value].label.toLowerCase()}`, { tone: 'success' });
+        email.value = '';
+        sectionBoxes.forEach((label) => { label.querySelector('input').checked = false; });
+        if (address === me) await ns.central.refreshRights();
+        load();
+      } catch (err) {
+        error.textContent = 'Niet gelukt: ' + err.message;
+      } finally {
+        submit.disabled = false;
+      }
+    });
+
+    function personCard(address, roles) {
+      const info = roles[0];
+      const account = info.has_account
+        ? el('span', { className: 'badge badge--free' }, [icon('check'), info.last_sign_in ? 'Laatst ingelogd ' + formatDate(info.last_sign_in) : 'Account actief, nog niet ingelogd'])
+        : el('span', { className: 'badge badge--license', attrs: { title: 'Maak in Supabase een gebruiker aan met dit e-mailadres' } }, [icon('alert'), 'Nog geen account']);
+      return el('div', { className: 'admin-person' }, [
+        el('div', { className: 'admin-person__head' }, [
+          el('p', { className: 'admin-person__email', text: address + (address === me ? ' (jij)' : '') }),
+          account
+        ]),
+        el('ul', { className: 'admin-person__roles', attrs: { role: 'list' } }, roles.map((r) => {
+          const sectionsText = (r.sections || []).map((id) => (ns.rights.SECTIONS.find((s) => s.id === id) || { label: id }).label).join(', ');
+          const remove = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button', disabled: r.role === 'hoofdbeheerder' && address === me } }, [icon('trash'), el('span', { text: 'Intrekken' })]);
+          remove.addEventListener('click', async () => {
+            if (!(await ns.ui.confirmDialog(`${address} is dan geen ${ns.rights.ROLES[r.role].label.toLowerCase()} meer voor ${placeLabel(r.namespace).toLowerCase()}.`, { title: 'Rol intrekken?', confirmLabel: 'Intrekken', danger: true }))) return;
+            try {
+              await ns.central.removeAdmin(address, r.namespace, r.role);
+              toast('Rol ingetrokken');
+              load();
+            } catch (err) {
+              toast('Niet gelukt: ' + err.message, { tone: 'warning', duration: 7000 });
+            }
+          });
+          return el('li', { className: 'admin-person__role' }, [
+            el('span', { className: 'badge' + (r.role === 'hoofdbeheerder' ? ' badge--new' : ''), text: ns.rights.ROLES[r.role] ? ns.rights.ROLES[r.role].label : r.role }),
+            el('span', { text: placeLabel(r.namespace) + (sectionsText ? ' · alleen ' + sectionsText : '') }),
+            remove
+          ]);
+        }))
+      ]);
+    }
+
+    async function load() {
+      list.replaceChildren(el('p', { className: 'loading', text: 'Beheerders laden…' }));
+      try {
+        const rows = (await ns.central.listAdmins()) || [];
+        const people = new Map();
+        rows.forEach((row) => {
+          const key = String(row.email).toLowerCase();
+          if (!people.has(key)) people.set(key, []);
+          people.get(key).push(row);
+        });
+        const sorted = Array.from(people.entries()).sort((a, b) => ns.rights.ROLES[a[1][0].role].rank - ns.rights.ROLES[b[1][0].role].rank || a[0].localeCompare(b[0]));
+        list.replaceChildren(
+          el('h2', { className: 'section__title', text: `${people.size} ${people.size === 1 ? 'beheerder' : 'beheerders'}` }),
+          ...sorted.map(([address, roles]) => personCard(address, roles))
+        );
+      } catch (err) {
+        list.replaceChildren(el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [
+          el('p', { className: 'notice__title', text: 'Beheerders zijn niet te lezen' }),
+          el('p', { text: err.message + '. Is setup/supabase-audit-bewerken.sql (stap 7) al uitgevoerd?' })
+        ])]));
+      }
+    }
+
+    const rolesInfo = el('ul', { className: 'admin-roles', attrs: { role: 'list' } }, Object.values(ns.rights.ROLES).map((info) =>
+      el('li', {}, [el('strong', { text: info.label }), el('span', { text: ' · ' + info.text })])
+    ));
+    container.append(rolesInfo, form, list);
+    load();
+  }
+
   /* ---- Pagina ------------------------------------------------------------------------ */
   /**
    * Welke onderdelen zie je? Inhoud en Gedeelde basis met een rol voor die omgeving; de rest
@@ -505,6 +644,7 @@
     if (!allowedTabs.length) {
       panel.append(el('div', { className: 'notice notice--warning' }, [icon('lock'), el('div', {}, [el('p', { text: `Je hebt geen rol in ${disciplineName}. Kies een andere discipline of vraag een hoofdbeheerder om rechten.` })])]));
     } else if (tab === 'gebruik') usageTab(panel);
+    else if (tab === 'beheerders') adminsTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);
     else if (tab === 'reviews') reviewsTab(panel);
     else if (tab === 'nieuwsbrief') panel.append(ns.adminNewsletter.render().node);

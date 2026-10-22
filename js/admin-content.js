@@ -76,7 +76,7 @@
         { key: 'featured', label: 'Uitlichten op de startpagina', type: 'bool' },
         { key: 'tools', label: 'Waar gebruik je het', type: 'list', hint: 'Eén per regel, bijv. Copilot Chat' },
         { key: 'intro', label: 'Introductie', type: 'textarea', required: true },
-        { key: 'video', label: 'Opgenomen video (MP4)', type: 'path', suggestions: KNOWN_MEDIA.filter((m) => /\.mp4$/.test(m)), hint: 'Pad naar een bestand op de site, bijv. assets/videos/snack-02.mp4. Heeft voorrang op een demo.' },
+        { key: 'video', label: 'Opgenomen video (MP4)', type: 'path', suggestions: KNOWN_MEDIA.filter((m) => /\.mp4$/.test(m)), hint: 'Upload een MP4 (maximaal 50 MB) of geef een pad op de site, bijv. assets/videos/snack-02.mp4. Heeft voorrang op een demo.' },
         { key: 'demo', label: 'HTML-demo', type: 'path', suggestions: KNOWN_MEDIA.filter((m) => /\.html/.test(m)), hint: 'Bijv. demos/player.html#risicoanalyse. Leeg en geen video: "Demo volgt".' },
         { key: 'steps', label: 'Zo pak je het aan', type: 'list', hint: 'Eén stap per regel' },
         { key: 'prompts', label: 'Prompts', type: 'group', min: 1, itemLabel: 'Prompt', fields: [
@@ -155,13 +155,13 @@
         ] },
         { key: 'materials', label: 'Materiaal', type: 'group', itemLabel: 'Bijlage', fields: [
           { key: 'label', label: 'Naam', type: 'text', placeholder: 'Slides (PDF)', half: true },
-          { key: 'href', label: 'Link of bestand', type: 'text', placeholder: 'https://…', half: true }
+          { key: 'href', label: 'Link of bestand', type: 'text', placeholder: 'https://…', half: true, upload: 'application/pdf,image/png,image/jpeg' }
         ] },
         { key: 'usecases', label: 'Usecases uit de training', type: 'refs', ref: 'usecase' },
         { key: 'tips', label: 'Tips uit de training', type: 'refs', ref: 'tip' },
         { key: 'added', label: 'Toegevoegd op', type: 'date', hint: 'Leeg = de datum van de training.' },
         // Naslagwerk (allemaal optioneel; uitleg per veld in data/trainings.js)
-        { key: '_naslag', label: 'Naslagwerk', type: 'heading', hint: 'Alles hieronder is optioneel. Afbeeldingen van slides kun je hier niet uploaden: zet ze via de repository in assets/trainingen/<adres van de training>/ (zie README.md) en vul hier het pad in. De site is openbaar bereikbaar: geen interne of klantinformatie, geen namen van deelnemers.' },
+        { key: '_naslag', label: 'Naslagwerk', type: 'heading', hint: 'Alles hieronder is optioneel. Afbeeldingen van slides upload je met de knop bij ieder veld, of je zet ze via de repository in assets/trainingen/<adres van de training>/ (zie README.md). De site is openbaar bereikbaar: geen interne of klantinformatie, geen namen van deelnemers.' },
         { key: 'slides', label: 'Slides', type: 'group', itemLabel: 'Slide', fields: [
           { key: 'image', label: 'Afbeelding', type: 'path', placeholder: 'assets/trainingen/…/slide-01.jpg', half: true },
           { key: 'title', label: 'Titel', type: 'text', half: true }
@@ -306,6 +306,49 @@
   // Leeg veld (ook een lege lijst): niet bewaren
   const isEmpty = (value) => value === '' || value == null || (Array.isArray(value) && !value.length);
 
+  /* ---- Uploaden (Supabase Storage, na stap 7) ---------------------------------------------- */
+  const UPLOAD_ACCEPT = {
+    video: 'video/mp4,video/webm',
+    poster: 'image/png,image/jpeg,image/webp,image/gif',
+    image: 'image/png,image/jpeg,image/webp,image/gif'
+  };
+  const UPLOAD_MAX = 50 * 1024 * 1024;
+  const canUpload = () => drafting() && ns.central.isEnabled();
+  const safeName = (name) => String(name || 'bestand').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '').slice(-80) || 'bestand';
+
+  /** Knop 'Uploaden' naast een padveld: het adres van het geüploade bestand komt in input. */
+  function uploadButton(input, accept) {
+    const file = el('input', { className: 'sr-only', attrs: { type: 'file', accept, tabindex: '-1' } });
+    const button = el('button', { className: 'btn btn--secondary btn--sm field__upload', attrs: { type: 'button' } }, [icon('upload'), el('span', { text: 'Uploaden' })]);
+    button.addEventListener('click', () => file.click());
+    file.addEventListener('change', async () => {
+      const chosen = file.files && file.files[0];
+      file.value = '';
+      if (!chosen) return;
+      if (chosen.size > UPLOAD_MAX) {
+        toast('Dit bestand is groter dan 50 MB. Maak het kleiner of zet een link naar Stream of SharePoint.', { tone: 'warning', duration: 7000 });
+        return;
+      }
+      if (!(await confirm(`"${chosen.name}" wordt openbaar: iedereen met de link kan het zien. Alleen materiaal zonder klant- of interne informatie.`, { title: 'Openbaar uploaden?', confirmLabel: 'Uploaden' }))) return;
+      const label = button.querySelector('span');
+      button.disabled = true;
+      label.textContent = 'Bezig…';
+      try {
+        const month = new Date().toISOString().slice(0, 7);
+        const url = await ns.central.upload(chosen, `${scope.namespace}/${month}/${Date.now().toString(36)}-${safeName(chosen.name)}`);
+        input.value = url;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        toast('Geüpload', { tone: 'success' });
+      } catch (error) {
+        toast('Uploaden mislukt: ' + error.message, { tone: 'warning', duration: 8000 });
+      } finally {
+        button.disabled = false;
+        label.textContent = 'Uploaden';
+      }
+    });
+    return el('span', { className: 'field__upload-wrap' }, [button, file]);
+  }
+
   /** Bouwt één veld. Geeft { node, get(), validate() } terug. */
   function control(field, value, ctx) {
     const id = nextId();
@@ -337,7 +380,11 @@
           }
         });
         input.value = value == null ? '' : field.type === 'path' ? String(value).replace(LEGACY_ASSETS, 'assets/') : String(value);
-        const node = wrap(input, suggestions && suggestions.length ? datalist(id + '-list', suggestions) : null);
+        // Bij een video, afbeelding of bijlage: ook uploaden
+        const accept = field.upload || (field.type === 'path' ? UPLOAD_ACCEPT[field.key] : null);
+        const upload = accept && canUpload() ? uploadButton(input, accept) : null;
+        const choices = suggestions && suggestions.length ? datalist(id + '-list', suggestions) : null;
+        const node = wrap(upload ? el('div', { className: 'field__with-upload' }, [input, upload]) : input, choices);
         return {
           node,
           input,
@@ -347,7 +394,7 @@
             if (field.required && !v) return setError(field.label + ' is verplicht.');
             if (field.type === 'id' && !ID_PATTERN.test(v)) return setError('Alleen kleine letters, cijfers en streepjes, bijv. notulen-review.');
             if (field.type === 'id' && ctx.idTaken(v)) return setError('Dit adres bestaat al. Kies een ander.');
-            if (field.type === 'path' && v && !LOCAL_PATH.test(v)) return setError('Gebruik een pad naar een bestand op de site (zonder http:// of https://).');
+            if (field.type === 'path' && v && !LOCAL_PATH.test(v) && !ns.central.isMediaUrl(v)) return setError('Gebruik een pad naar een bestand op de site (zonder http:// of https://), of upload een bestand.');
             if (field.type === 'url' && v && !HTTPS_URL.test(v)) return setError('Een link moet met https:// beginnen.');
             if (field.type === 'date' && v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return setError('Kies een datum.');
             return setError('');

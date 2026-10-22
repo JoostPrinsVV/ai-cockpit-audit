@@ -239,15 +239,21 @@
   async function saveOne(entry) {
     const row = rowOf(entry.namespace, entry.type, entry.id);
     const item = Object.assign({ version: row ? row.version : null, title: titleOf(entry.draft.data, entry.id) }, entry);
-    const result = await ns.central.saveDraft(item);
+    let result = await ns.central.saveDraft(item);
     if (result && result.conflict) {
       const overwrite = await askConflict(item, result);
-      if (!overwrite) return false;
-      await ns.central.saveDraft(Object.assign({}, item, { version: result.version }));
+      if (!overwrite) {
+        // Hun versie houden: jouw niet-opgeslagen wijziging vervalt
+        pending.delete(keyOf(item.namespace, item.type, item.id));
+        persist();
+        return false;
+      }
+      result = await ns.central.saveDraft(Object.assign({}, item, { version: result.version }));
     }
     pending.delete(keyOf(item.namespace, item.type, item.id));
     persist();
-    return true;
+    // 'voorstel' als je niet mag publiceren (een ander zet het live), anders 'wijziging'
+    return (result && result.kind) || 'wijziging';
   }
 
   function askConflict(item, result) {
@@ -266,10 +272,11 @@
     busy = true;
     emit();
     const failed = [];
+    const kinds = [];
     try {
       for (const entry of Array.from(pending.values())) {
         try {
-          await saveOne(entry);
+          kinds.push(await saveOne(entry));
         } catch (error) {
           failed.push(`${entry.title || entry.id}: ${error.message}`);
         }
@@ -283,7 +290,9 @@
       toast('Niet alles is opgeslagen. ' + failed.join(' · '), { tone: 'warning', duration: 9000 });
       return false;
     }
-    toast('Opgeslagen. Nog niet live: publiceer om het voor iedereen te tonen.', { tone: 'success' });
+    const proposals = kinds.filter((kind) => kind === 'voorstel').length;
+    if (proposals && proposals === kinds.filter(Boolean).length) toast('Voorstel opgeslagen. Een beheerder of redacteur bekijkt het en publiceert het.', { tone: 'success', duration: 6000 });
+    else toast('Opgeslagen. Nog niet live: publiceer om het voor iedereen te tonen.', { tone: 'success' });
     return true;
   }
 
@@ -643,7 +652,8 @@
     bar.hidden = false;
     document.body.classList.add('has-admin-bar');
     const own = ns.cockpit.namespace(ns.cockpit.activeId());
-    const role = ns.rights.describe(own) || (ns.rights.isOwner() ? 'Hoofdbeheerder' : 'Beheer');
+    const general = ns.rights.describe(ns.cockpit.GENERAL_NAMESPACE);
+    const role = ns.rights.describe(own) || (general ? general + ' (gedeelde basis)' : ns.rights.isOwner() ? 'Hoofdbeheerder' : 'Beheer');
     const items = [];
 
     items.push(el('a', { className: 'admin-bar__brand', attrs: { href: '#/beheer', title: 'Naar Beheer' } }, [icon('lock'), el('span', { className: 'admin-bar__role', text: role })]));
@@ -651,8 +661,10 @@
     if (!available()) {
       items.push(el('span', { className: 'admin-bar__status', text: ns.central.draftingAvailable() === false ? 'Opslaan en publiceren werkt na stap 7 (setup/supabase-audit-bewerken.sql). Tot dan gaan wijzigingen in Beheer direct live.' : 'Beheer' }));
     } else {
-      const waitingCount = waiting().length;
-      const status = busy ? 'Bezig…' : pending.size ? `${pending.size === 1 ? '1 wijziging' : pending.size + ' wijzigingen'} niet opgeslagen` : waitingCount ? `${waitingCount} klaar om te publiceren` : 'Alles is gepubliceerd';
+      const waitingItems = waiting();
+      const waitingCount = waitingItems.length;
+      const proposals = waitingItems.filter((item) => item.proposal).length;
+      const status = busy ? 'Bezig…' : pending.size ? `${pending.size === 1 ? '1 wijziging' : pending.size + ' wijzigingen'} niet opgeslagen` : waitingCount ? `${waitingCount} klaar om te publiceren${proposals ? ` (${proposals === 1 ? '1 voorstel' : proposals + ' voorstellen'})` : ''}` : 'Alles is gepubliceerd';
       // Bewerken op de pagina zelf (js/editmode.js)
       if (ns.editmode) {
         const editToggle = el('button', { className: 'admin-bar__btn admin-bar__btn--mode', attrs: { type: 'button', 'aria-pressed': String(ns.editmode.isOn()), title: 'Pas de pagina zelf aan: teksten, volgorde, toevoegen en verwijderen' } }, [icon('pencil-line'), el('span', { text: ns.editmode.isOn() ? 'Bewerken aan' : 'Bewerken' })]);

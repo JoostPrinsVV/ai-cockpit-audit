@@ -19,6 +19,9 @@ css/audit.css         De opmaak van dit platform
 js/config.js          Instellingen: titel, gouden regels, Supabase
 js/disciplines.js     Disciplines: welke cockpit je ziet, wat op slot staat, de wisselaar in de kopbalk
 js/instruments.js     Cockpitstijl: de koersband (onder kopbalk en hero) en de kompasroos in de hero
+js/rights.js          Rollen: wat de ingelogde beheerder mag (zelfde regels als de database)
+js/editor.js          Werkversies, bewerkbalk, opslaan, publiceren (ook gepland), logboek, ongedaan maken
+js/editmode.js        Bewerken op de pagina zelf: teksten, verslepen, toevoegen, verwijderen, zijpaneel
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
 data/*.js             Startinhoud van Audit en terugval als de database niet bereikbaar is
@@ -114,6 +117,46 @@ Goed om te weten:
 - Oude paden uit de tijd in de snackbar (`../assets/…`) die nog in de database staan, worden automatisch gelezen als
   `assets/…`. Open je zo'n item in Beheer en sla je het op, dan wordt het nieuwe pad bewaard.
 - De nagespeelde demo-gesprekken (`demos/scripts.js`) pas je nog in het bestand aan.
+
+## Bewerken op de site, publiceren en rollen (stap 7)
+
+Na het uitvoeren van `setup/supabase-audit-bewerken.sql` werkt beheer in drie lagen:
+
+1. **Niet opgeslagen:** wat je net hebt aangepast. Staat alleen in je browser en wordt automatisch bewaard (ook als het
+   tabblad dichtgaat). **Ongedaan maken** en **Opnieuw** werken hierop (ook Ctrl+Z en Ctrl+Y).
+2. **Opgeslagen werkversie:** met **Opslaan** (licht op bij een wijziging, ook Ctrl+S). Alleen beheerders zien hem,
+   met een label (Gewijzigd, Nieuw, Voorstel, Gepland).
+3. **Gepubliceerd:** met **Publiceren** zie je wat klaarstaat, met aandachtspunten (bijv. een verwijzing naar iets
+   dat niet bestaat of een usecase zonder demo). Dat is een hulp, geen blokkade. Publiceer nu, of **plan** een
+   moment: de wijziging gaat live bij het eerstvolgende bezoek na dat moment.
+
+**De bewerkbalk** staat bovenin zodra je bent ingelogd: je rol, **Bewerken**, de status, Ongedaan maken, Opnieuw,
+Opslaan, Publiceren, **Logboek** (wie wat wanneer deed, met per item de eerdere versies om terug te zetten) en
+**Als collega** (de site zoals collega's hem zien). Iemand anders hetzelfde item open? Dan zie je een melding.
+Sloeg iemand het intussen op, dan kies je of jouw versie of die van de ander blijft.
+
+**Bewerken** zet de pagina zelf in de bewerkmodus: klik op een titel of korte tekst om hem aan te passen, versleep
+kaarten (of gebruik de pijltjes), open met het potlood alle velden in een zijpaneel, verwijder met de prullenbak en
+voeg toe met de plusknop aan het eind van een lijst. Op de startpagina pas je ook naam, slogan en uitleg aan.
+
+**Rollen** (Beheer → Beheerders, alleen voor hoofdbeheerders), per discipline, voor de gedeelde basis of voor alle
+disciplines, en eventueel alleen voor bepaalde onderdelen (bijv. alleen tips):
+
+| Rol | Mag |
+| --- | --- |
+| Hoofdbeheerder | Alles, ook beheerders, disciplines, inzendingen, reviews, nieuwsbrief en gebruik |
+| Beheerder | Bewerken, verwijderen en publiceren |
+| Redacteur | Bewerken en publiceren, niet verwijderen |
+| Bijdrager | Alleen voorstellen; een beheerder of redacteur publiceert (vier ogen) |
+
+Een nieuwe beheerder heeft ook een account nodig met hetzelfde e-mailadres: maak dat aan in Supabase
+(Authentication → Users → Add user). Het tabblad Beheerders laat zien of het account er al is.
+
+**Uploaden:** bij video's, afbeeldingen (poster, slides) en bijlagen staat een knop **Uploaden**. Bestanden gaan
+naar Supabase Storage (map `cockpit-media`, maximaal 50 MB) en zijn openbaar: alleen materiaal zonder klant- of
+interne informatie. Langere opnames blijven via een link naar Stream of SharePoint.
+
+Zolang stap 7 niet is uitgevoerd, werkt Beheer zoals voorheen: opslaan in een formulier zet het direct live.
 
 ## Inhoud in de bestanden (startinhoud en terugval)
 

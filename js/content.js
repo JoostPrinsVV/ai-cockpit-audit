@@ -63,6 +63,8 @@
     const path = text(value).replace(LEGACY_ASSETS, 'assets/');
     if (!path) return '';
     if (LOCAL_PATH.test(path)) return path;
+    // Geüpload via Beheer (Supabase Storage, map cockpit-media)
+    if (ns.central && ns.central.isMediaUrl && ns.central.isMediaUrl(path)) return path;
     warn(`${where}: '${path}' is geen eigen bestand (relatief pad) en wordt genegeerd.`);
     return '';
   }
