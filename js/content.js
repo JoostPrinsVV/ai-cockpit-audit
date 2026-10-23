@@ -2,7 +2,8 @@
    Inhoud inlezen en controleren
    --------------------------------------------------------------------------
    De inhoud komt uit de database (Beheer → Inhoud) of, zolang die nog niet
-   is ingericht of even niet bereikbaar is, uit de bestanden in data/.
+   is ingericht of even niet bereikbaar is, uit de bestanden in data/ (die
+   worden pas dan geladen, zie ensureFiles).
    Een cockpit toont de gedeelde basis (naamruimte 'ai-algemeen') plus de
    eigen inhoud van de discipline; items uit de basis krijgen 'shared'.
    Beide hebben dezelfde velden. Hier vullen we ontbrekende velden aan en
@@ -641,6 +642,30 @@
 
   const emptySource = () => ({ phase: [], usecase: [], prompt: [], tip: [], training: [], agent: [], setting: {}, updatedAt: '' });
 
+  /* De bestanden in data/ zijn startinhoud en terugval: zodra de database leidend is, laadt een
+     bezoeker ze niet (ruim 100 KB). ensureFiles() haalt ze op als ze toch nodig zijn. */
+  const FILES = ['data/phases.js', 'data/usecases.js', 'data/prompts.js', 'data/tips.js', 'data/trainings.js', 'data/agents.js'];
+  let files = null;
+  function ensureFiles() {
+    if (!files) {
+      files = ns.ui.loadScripts(FILES).catch((error) => {
+        files = null;
+        throw error;
+      });
+    }
+    return files;
+  }
+
+  /**
+   * Zijn de bestanden nodig voor deze rijen? Als de eigen inhoud van de discipline van de bestanden
+   * (Audit) nog niet in de database staat (geen rij meta/bron). Staat er helemaal niets, dan zijn
+   * het sowieso de bestanden (load() zonder bron).
+   */
+  function needsFiles(rows, options) {
+    const seeded = (namespace) => rows.some((row) => row.namespace === namespace && row.type === 'meta' && row.id === 'bron');
+    return options.discipline === filesId() && !seeded(options.own);
+  }
+
   /**
    * De inhoud uit de bestanden in data/ (startinhoud, en terugval als de database niet bereikbaar is).
    * Die bestanden zijn van Audit. Voor een andere discipline: alleen de gedeelde basis daaruit
@@ -756,5 +781,5 @@
     return state;
   }
 
-  ns.content = Object.assign(state, { load, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES });
+  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES });
 })(window.AIAudit);

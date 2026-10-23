@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl" class="no-js" data-theme="licht">
+<html lang="nl" data-theme="licht">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -12,49 +12,49 @@
   <meta name="theme-color" content="#101d4f">
   <title>AI Cockpit Audit</title>
   <link rel="icon" href="assets/branding/favicon.svg" type="image/svg+xml">
+  <!-- Alvast verbinding maken met de centrale opslag, en de lettertypes ophalen terwijl de rest laadt -->
+  <link rel="preconnect" href="https://czxyhgthbpexxqmudgdu.supabase.co" crossorigin>
+  <link rel="preload" href="assets/fonts/ibm-plex-sans-latin-variable.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/ibm-plex-mono-latin-500.woff2" as="font" type="font/woff2" crossorigin>
 
-  <!-- Huisstijl en lettertypes (overgenomen van de AI Snackbar), daarna de opmaak van dit platform -->
-  <link rel="stylesheet" href="css/variables.css">
-  <link rel="stylesheet" href="css/base.css">
-  <link rel="stylesheet" href="css/audit.css">
-  <link rel="stylesheet" href="css/motion.css">
+  <!-- ?v=… achter de eigen bestanden: na een nieuwe versie haalt iedere browser alles opnieuw op
+       (nooit een oud bestand naast een nieuw). Ophogen: tools/versie.ps1 (zie README.md). -->
 
-  <!-- Inhoud en instellingen (deze bestanden mag je aanpassen, zie README.md) -->
-  <script defer src="js/config.js"></script>
-  <script defer src="data/disciplines.js"></script>
-  <script defer src="data/phases.js"></script>
-  <script defer src="data/usecases.js"></script>
-  <script defer src="data/prompts.js"></script>
-  <script defer src="data/tips.js"></script>
-  <script defer src="data/trainings.js"></script>
-  <script defer src="data/agents.js"></script>
+  <!-- Huisstijl en lettertypes (overgenomen van de AI Snackbar), daarna de opmaak van dit platform.
+       De opmaak van Beheer (css/admin.css) laadt js/app.js pas als iemand beheert. -->
+  <link rel="stylesheet" href="css/variables.css?v=202610231235">
+  <link rel="stylesheet" href="css/base.css?v=202610231235">
+  <link rel="stylesheet" href="css/audit.css?v=202610231235">
+  <link rel="stylesheet" href="css/motion.css?v=202610231235">
 
-  <!-- Applicatie (volgorde is belangrijk) -->
-  <script defer src="js/ui.js"></script>
-  <script defer src="js/disciplines.js"></script>
-  <script defer src="js/instruments.js"></script>
-  <script defer src="js/content.js"></script>
-  <script defer src="js/central.js"></script>
-  <script defer src="js/rights.js"></script>
-  <script defer src="js/editor.js"></script>
-  <script defer src="js/prompt-box.js"></script>
-  <script defer src="js/reviews.js"></script>
-  <script defer src="js/player.js"></script>
-  <script defer src="js/view-home.js"></script>
-  <script defer src="js/view-usecases.js"></script>
-  <script defer src="js/view-prompts.js"></script>
-  <script defer src="js/view-tips.js"></script>
-  <script defer src="js/view-trainings.js"></script>
-  <script defer src="js/view-agents.js"></script>
-  <script defer src="js/view-ideas.js"></script>
-  <script defer src="js/view-search.js"></script>
-  <script defer src="js/admin-content.js"></script>
-  <script defer src="js/admin-disciplines.js"></script>
-  <script defer src="js/admin-newsletter.js"></script>
-  <script defer src="js/view-admin.js"></script>
-  <script defer src="js/editmode.js"></script>
-  <script defer src="js/motion.js"></script>
-  <script defer src="js/app.js"></script>
+  <!-- Vóór de eerste weergave: het gekozen thema (geen witte flits) en een vangnet bij fouten -->
+  <script src="js/vroeg.js?v=202610231235"></script>
+
+  <!-- Instellingen en de lijst met disciplines (deze bestanden mag je aanpassen, zie README.md).
+       De inhoud in data/ (usecases, prompts, …) laadt js/content.js alleen als de database die niet levert. -->
+  <script defer src="js/config.js?v=202610231235"></script>
+  <script defer src="data/disciplines.js?v=202610231235"></script>
+
+  <!-- Applicatie (volgorde is belangrijk). De beheercode (js/rights.js, js/editor.js, js/admin-*.js,
+       js/view-admin.js, js/editmode.js) laadt js/app.js pas bij inloggen of op #/beheer. -->
+  <script defer src="js/ui.js?v=202610231235"></script>
+  <script defer src="js/disciplines.js?v=202610231235"></script>
+  <script defer src="js/instruments.js?v=202610231235"></script>
+  <script defer src="js/content.js?v=202610231235"></script>
+  <script defer src="js/central.js?v=202610231235"></script>
+  <script defer src="js/prompt-box.js?v=202610231235"></script>
+  <script defer src="js/reviews.js?v=202610231235"></script>
+  <script defer src="js/player.js?v=202610231235"></script>
+  <script defer src="js/view-home.js?v=202610231235"></script>
+  <script defer src="js/view-usecases.js?v=202610231235"></script>
+  <script defer src="js/view-prompts.js?v=202610231235"></script>
+  <script defer src="js/view-tips.js?v=202610231235"></script>
+  <script defer src="js/view-trainings.js?v=202610231235"></script>
+  <script defer src="js/view-agents.js?v=202610231235"></script>
+  <script defer src="js/view-ideas.js?v=202610231235"></script>
+  <script defer src="js/view-search.js?v=202610231235"></script>
+  <script defer src="js/motion.js?v=202610231235"></script>
+  <script defer src="js/app.js?v=202610231235"></script>
 </head>
 <body data-view="home">
   <a class="skip-link" href="#main" id="skip-link">Direct naar de inhoud</a>

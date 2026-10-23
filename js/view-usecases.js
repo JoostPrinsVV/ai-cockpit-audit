@@ -52,6 +52,12 @@
       ? emptyState('Geen usecases met deze filters', 'Kies een andere fase of zet de filters terug op Alle.')
       : emptyState('De eerste usecases komen eraan', `Hier verschijnen de usecases voor Copilot in ${ns.cockpit.active().label}, met een demo en de prompts erbij.`, null, 'play-circle');
     const savedCount = el('span', { className: 'toggle__count' });
+    // Iedere kaart één keer bouwen; filteren zet alleen de bestaande kaarten op hun plek
+    const cards = new Map();
+    const cardFor = (u) => {
+      if (!cards.has(u.id)) cards.set(u.id, el('li', {}, [card(u, 'h2')]));
+      return cards.get(u.id);
+    };
 
     function update() {
       const saved = savedIds();
@@ -62,7 +68,7 @@
         (!filters.saved || saved.includes(u.id))
       );
       if (filters.sort === 'rating') items = ns.reviews.rank(items, 'usecase');
-      grid.replaceChildren(...items.map((u) => el('li', {}, [card(u, 'h2')])));
+      grid.replaceChildren(...items.map(cardFor));
       count.textContent = items.length === 1 ? '1 usecase' : items.length + ' usecases';
       empty.hidden = items.length > 0;
       grid.hidden = items.length === 0;
@@ -100,7 +106,14 @@
       filters.sort = value;
       update();
     }, { className: 'toggles--compact' }) : null;
-    if (ns.reviews.enabled() && ns.reviews.cached() === undefined) ns.reviews.stats().then(update);
+    // De gemiddelden komen later binnen: dan de kaarten opnieuw bouwen (met de sterren erop)
+    if (ns.reviews.enabled() && ns.reviews.cached() === undefined) {
+      ns.reviews.stats().then(() => {
+        if (!grid.isConnected) return;
+        cards.clear();
+        update();
+      });
+    }
 
     const node = el('div', { className: 'page container' }, [
       pageHeader({

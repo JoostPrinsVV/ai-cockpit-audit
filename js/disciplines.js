@@ -169,6 +169,7 @@
   let switcher = null;
   let button = null;
   let panel = null;
+  let fittedName = null; // de naam waarvoor de kopbalk passend is gemaakt
 
   function item(discipline) {
     const current = discipline.id === activeId;
@@ -223,7 +224,12 @@
     if (label) label.textContent = name;
     button.setAttribute('aria-label', `Discipline: ${name}. Wissel van discipline`);
     if (!panel.hidden) build();
-    fit();
+    // Passend maken meet de kopbalk (dat dwingt de browser tot rekenen): alleen als de naam anders
+    // is; een andere breedte of een geladen lettertype regelt setupFit
+    if (name !== fittedName) {
+      fittedName = name;
+      fit();
+    }
   }
 
   function open() {

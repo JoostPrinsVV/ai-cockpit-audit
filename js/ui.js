@@ -13,6 +13,58 @@
     config = options.config || {};
   }
 
+  /* ---- Later laden (beheer, de bestanden in data/) -------------------------------------------
+     Met dezelfde versie (?v=…) als de rest van de pagina in index.html, zodat een browser nooit
+     een oud bestand naast een nieuw gebruikt. */
+  const VERSION = (() => {
+    try {
+      return new URL(document.currentScript.src).search;
+    } catch (error) {
+      return '';
+    }
+  })();
+  const loading = new Map(); // adres → Promise (elk bestand één keer)
+
+  /** Scripts toevoegen; ze worden in deze volgorde uitgevoerd. */
+  function loadScripts(sources) {
+    return Promise.all(sources.map((src) => {
+      if (!loading.has(src)) {
+        loading.set(src, new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = src + VERSION;
+          script.async = false;
+          script.onload = resolve;
+          script.onerror = () => {
+            loading.delete(src); // de volgende keer opnieuw proberen
+            script.remove();
+            reject(new Error('kon ' + src + ' niet laden'));
+          };
+          document.head.append(script);
+        }));
+      }
+      return loading.get(src);
+    }));
+  }
+
+  /** Stylesheet toevoegen (na de andere, dus met voorrang bij gelijke specificiteit). */
+  function loadStyle(href) {
+    if (!loading.has(href)) {
+      loading.set(href, new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href + VERSION;
+        link.onload = resolve;
+        link.onerror = () => {
+          loading.delete(href);
+          link.remove();
+          reject(new Error('kon ' + href + ' niet laden'));
+        };
+        document.head.append(link);
+      }));
+    }
+    return loading.get(href);
+  }
+
   /* ---- DOM ----------------------------------------------------------------- */
   /**
    * Maakt een element. Opties: className, text, attrs, dataset, on.
@@ -138,13 +190,25 @@
     return Array.isArray(value) ? value.filter((entry) => typeof entry === 'string') : [];
   }
 
+  // In het geheugen (een lijst met kaarten vraagt het voor iedere kaart); opnieuw lezen na een
+  // wijziging, hier of in een ander tabblad
+  let savedCache = null;
+  window.addEventListener('storage', (event) => {
+    if (event.key === storageKey('favorites')) savedCache = null;
+  });
+
   const saved = {
     /** Alles wat je bewaard hebt, het laatst bewaarde eerst. */
     list() {
-      return keyList('favorites').map((entry) => (entry.includes(':') ? entry : itemKey('prompt', entry))).reverse();
+      if (!savedCache) {
+        const list = keyList('favorites').map((entry) => (entry.includes(':') ? entry : itemKey('prompt', entry))).reverse();
+        savedCache = { list, set: new Set(list) };
+      }
+      return savedCache.list.slice();
     },
     has(type, id) {
-      return saved.list().includes(itemKey(type, id));
+      saved.list();
+      return savedCache.set.has(itemKey(type, id));
     },
     toggle(type, id) {
       const list = saved.list().reverse();
@@ -153,6 +217,7 @@
       if (index === -1) list.push(key);
       else list.splice(index, 1);
       storage.set('favorites', list);
+      savedCache = null;
       return index === -1;
     }
   };
@@ -410,11 +475,17 @@
       .trim();
   }
 
+  // De zoekwoorden van de laatste zoekopdracht (die wordt voor iedere kaart opnieuw getoetst)
+  let lastQuery = null;
+  let lastTerms = [];
+
   /** Alle zoekwoorden moeten voorkomen. */
   function matches(haystack, query) {
-    const terms = normalize(query).split(' ').filter(Boolean);
-    if (!terms.length) return true;
-    return terms.every((term) => haystack.includes(term));
+    if (query !== lastQuery) {
+      lastQuery = query;
+      lastTerms = normalize(query).split(' ').filter(Boolean);
+    }
+    return lastTerms.every((term) => haystack.includes(term));
   }
 
   const MONTHS = ['jan.', 'feb.', 'mrt.', 'apr.', 'mei', 'jun.', 'jul.', 'aug.', 'sep.', 'okt.', 'nov.', 'dec.'];
@@ -561,8 +632,9 @@
         value = resetValue;
       }
       group.querySelectorAll('.toggle').forEach((node) => node.setAttribute('aria-pressed', String(node.dataset.value === value)));
-      // Kaarten schuiven naar hun nieuwe plek (js/motion.js)
-      ns.motion.filter(() => onChange(value));
+      // Kaarten schuiven naar hun nieuwe plek (js/motion.js); options.animate: false voor een lijst zonder kaarten
+      if (opts.animate === false) onChange(value);
+      else ns.motion.filter(() => onChange(value));
     });
     return group;
   }
@@ -590,6 +662,8 @@
 
   ns.ui = {
     init,
+    loadScripts,
+    loadStyle,
     el,
     append,
     icon,

@@ -104,11 +104,18 @@
       ? emptyState('Geen tips met deze filters', 'Kies een ander thema of zet Bewaard uit.')
       : emptyState('De eerste tips komen eraan', 'Iedere vrijdag komt er een nieuwe tip bij.', null, 'bulb');
 
+    // Iedere kaart één keer bouwen; filteren zet alleen de bestaande kaarten op hun plek
+    const cards = new Map();
+    const cardFor = (tip) => {
+      if (!cards.has(tip.id)) cards.set(tip.id, el('li', {}, [card(tip, 'h3', false, null)]));
+      return cards.get(tip.id);
+    };
+
     function update() {
       const saved = savedIds();
       savedCount.textContent = String(saved.length);
       const items = all.filter((tip) => (filters.category === 'all' || tip.category.label === filters.category) && (!filters.saved || saved.includes(tip.id)));
-      grid.replaceChildren(...items.map((tip) => el('li', {}, [card(tip, 'h3', false, null)])));
+      grid.replaceChildren(...items.map(cardFor));
       count.textContent = items.length === 1 ? '1 tip' : items.length + ' tips';
       empty.hidden = items.length > 0;
       grid.hidden = items.length === 0;

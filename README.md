@@ -16,6 +16,8 @@ index.html            De pagina (kopbalk, voet, iconen) en de beveiligingsregels
 css/variables.css     Huisstijl: kleuren, maten, lettertypes (eigen kopie, overgenomen van de snackbar)
 css/base.css          Lettertypes, reset en hulpklassen (eigen kopie)
 css/audit.css         De opmaak van dit platform
+css/admin.css         De opmaak van Beheer, de bewerkbalk en de bewerkmodus (alleen geladen voor wie beheert)
+js/vroeg.js           Vóór de eerste weergave: het gekozen thema (geen witte flits) en een vangnet bij fouten
 js/config.js          Instellingen: titel, gouden regels, Supabase
 js/disciplines.js     Disciplines: welke cockpit je ziet, wat op slot staat, de wisselaar in de kopbalk
 js/instruments.js     Cockpitstijl: de koersband (onder kopbalk en hero) en de kompasroos in de hero
@@ -26,7 +28,8 @@ js/motion.js          Beweging: paginaovergangen, opstarten van de instrumenten,
 css/motion.css        Beweging in CSS: overgangen, uitklappers, panelen, scrolleffecten (uit bij 'minder beweging')
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
-data/*.js             Startinhoud van Audit en terugval als de database niet bereikbaar is
+data/*.js             Startinhoud van Audit en terugval als de database niet bereikbaar is (alleen dan geladen)
+tools/versie.ps1      Nieuwe versie van de site: ?v=… in index.html ophogen (zie 'Snel laden')
 data/voorbeelden/     Voorbeeldinhoud om een nieuwe discipline mee te beginnen (alleen via Beheer)
 demos/                Nagespeelde Copilot-demo's (player.html + scripts.js)
 assets/fonts/         IBM Plex (SIL Open Font License, zie OFL.txt)
@@ -434,6 +437,17 @@ Bewust zo gelaten: de inhoud van een discipline die op slot staat, is technisch 
 - De namen in de browseropslag (`ai-snackbar-audit:…`, ook de inlogsessie `ai-snackbar-audit:sessie`) zijn bij de
   verhuizing bewust gelijk gebleven. Het adres valt onder hetzelfde domein (`joostprinsvv.github.io`), dus favorieten,
   thema, stemmen en een lopende inlog gaan gewoon mee. Verander deze namen niet, anders raakt iedereen dat kwijt.
+
+## Snel laden
+
+- Een bezoeker laadt alleen wat de site nodig heeft. De beheercode (`js/rights.js`, `js/editor.js`, `js/admin-*.js`,
+  `js/view-admin.js`, `js/editmode.js`, `css/admin.css`) laadt pas bij inloggen of op `#/beheer`; de inhoud in
+  `data/*.js` alleen als de database die niet levert. Een nieuw beheerbestand? Zet het in `ADMIN_SCRIPTS` in `js/app.js`.
+- De lettertypes worden vooraf geladen en de verbinding met Supabase wordt alvast opgezet (`index.html`).
+- **Nieuwe versie van de code:** draai daarna `powershell -ExecutionPolicy Bypass -File tools/versie.ps1` en commit
+  `index.html` mee. Dat zet een nieuw `?v=…` achter alle eigen bestanden, zodat iedere browser alles opnieuw ophaalt
+  (GitHub Pages laat browsers bestanden 10 minuten bewaren; zonder nieuwe versie kan een oud bestand naast een nieuw
+  belanden). Alleen inhoud aanpassen in Beheer hoeft dit niet.
 
 ## Lokaal testen
 

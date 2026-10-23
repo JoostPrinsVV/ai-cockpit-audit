@@ -112,12 +112,19 @@
     const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
     const empty = emptyState('Geen agents of tools met deze filters', 'Kies een andere soort of status.');
 
+    // Iedere kaart één keer bouwen; filteren zet alleen de bestaande kaarten op hun plek
+    const cards = new Map();
+    const cardFor = (agent) => {
+      if (!cards.has(agent.id)) cards.set(agent.id, el('li', {}, [card(agent)]));
+      return cards.get(agent.id);
+    };
+
     function update() {
       const items = all.filter((agent) =>
         (filters.kind === 'all' || agent.kind === filters.kind) &&
         (filters.status === 'all' || agent.status === filters.status)
       );
-      grid.replaceChildren(...items.map((agent) => el('li', {}, [card(agent)])));
+      grid.replaceChildren(...items.map(cardFor));
       count.textContent = items.length === 1 ? '1 agent of tool' : items.length + ' agents en tools';
       empty.hidden = items.length > 0;
       grid.hidden = items.length === 0;

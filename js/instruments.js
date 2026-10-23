@@ -6,7 +6,8 @@
    - Dun onder de kopbalk op de andere pagina's: het pijltje staat onder de
      pagina waar je bent en de band schuift mee naar de koers van dat onderdeel.
    Kompasroos: licht, rechts in de hero, met het logo in het midden.
-   Alles is versiering (aria-hidden) en werkt zonder deze module ook prima.
+   De banden en de wijzerplaat zijn versiering (aria-hidden); de koerspunten op de
+   roos zijn gewone links. Zonder deze module werkt de site ook prima.
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -32,8 +33,10 @@
   ];
   const HEADINGS = Object.fromEntries(WAYPOINTS.map((w) => [w.id, w.heading]));
 
-  const tapes = new Set();
   let observer = null;
+  // Eén keer tekenen, daarna kopiëren (honderden streepjes bij ieder bezoek aan de startpagina)
+  const drawn = {};
+  const once = (key, draw) => (drawn[key] || (drawn[key] = draw())).cloneNode(true);
 
   function svg(tag, attrs) {
     const node = document.createElementNS(SVG, tag);
@@ -43,7 +46,9 @@
 
   const normalize = (deg) => ((deg % 360) + 360) % 360;
 
-  function band(size) {
+  const band = (size) => once('band-' + size, () => drawBand(size));
+
+  function drawBand(size) {
     const { perDeg, height } = SIZES[size];
     const large = size === 'large';
     const width = (LAST - FIRST) * perDeg;
@@ -69,7 +74,6 @@
     node.replaceChildren(band(size), Object.assign(document.createElement('span'), { className: 'heading-tape__bug' }));
     node.dataset.size = size;
     node.placeTape = place;
-    tapes.add(node);
     if (observer) observer.observe(node);
     // Eerst op zijn plek zetten, pas daarna mag hij (bij een volgende koers) schuiven
     window.requestAnimationFrame(() => {
@@ -131,25 +135,7 @@
    */
   function rose() {
     const root = svg('svg', { class: 'hero__rose', viewBox: '-280 -280 560 560', role: 'group', 'aria-label': 'Kompas: kies een onderdeel', focusable: 'false' });
-    const decor = svg('g', { 'aria-hidden': 'true' });
-    [95, 175, 250].forEach((r) => decor.append(svg('circle', { class: 'rose__ring', r })));
-    decor.append(svg('line', { class: 'rose__cross', x1: -250, x2: 250, y1: 0, y2: 0 }));
-    decor.append(svg('line', { class: 'rose__cross', x1: 0, x2: 0, y1: -250, y2: 250 }));
-    const taken = new Set(WAYPOINTS.map((w) => w.heading));
-    for (let deg = 0; deg < 360; deg += 5) {
-      const major = deg % 30 === 0;
-      const a = point(deg, 250);
-      const b = point(deg, major ? 266 : deg % 10 === 0 ? 260 : 256);
-      decor.append(svg('line', { class: major ? 'rose__tick rose__tick--major' : 'rose__tick', x1: a.x, y1: a.y, x2: b.x, y2: b.y }));
-      // Cijfers alleen waar geen onderdeel staat
-      if (major && !taken.has(deg)) {
-        const at = point(deg, 230);
-        const label = svg('text', { class: deg === 0 ? 'rose__label rose__label--north' : 'rose__label', x: at.x, y: at.y + 4.5, 'text-anchor': 'middle' });
-        label.textContent = LABELS[deg];
-        decor.append(label);
-      }
-    }
-    root.append(decor);
+    root.append(once('rose', drawRoseDecor));
 
     // De naald: koerslijn en logo, draaien samen naar het aangewezen onderdeel
     const needle = svg('g', { class: 'rose__needle', 'aria-hidden': 'true' });
@@ -189,18 +175,43 @@
     return root;
   }
 
+  /** Ringen, kruis, streepjes en cijfers van de roos (versiering). */
+  function drawRoseDecor() {
+    const decor = svg('g', { 'aria-hidden': 'true' });
+    [95, 175, 250].forEach((r) => decor.append(svg('circle', { class: 'rose__ring', r })));
+    decor.append(svg('line', { class: 'rose__cross', x1: -250, x2: 250, y1: 0, y2: 0 }));
+    decor.append(svg('line', { class: 'rose__cross', x1: 0, x2: 0, y1: -250, y2: 250 }));
+    const taken = new Set(WAYPOINTS.map((w) => w.heading));
+    for (let deg = 0; deg < 360; deg += 5) {
+      const major = deg % 30 === 0;
+      const a = point(deg, 250);
+      const b = point(deg, major ? 266 : deg % 10 === 0 ? 260 : 256);
+      decor.append(svg('line', { class: major ? 'rose__tick rose__tick--major' : 'rose__tick', x1: a.x, y1: a.y, x2: b.x, y2: b.y }));
+      // Cijfers alleen waar geen onderdeel staat
+      if (major && !taken.has(deg)) {
+        const at = point(deg, 230);
+        const label = svg('text', { class: deg === 0 ? 'rose__label rose__label--north' : 'rose__label', x: at.x, y: at.y + 4.5, 'text-anchor': 'middle' });
+        label.textContent = LABELS[deg];
+        decor.append(label);
+      }
+    }
+    return decor;
+  }
+
   function init() {
+    // Een band die van breedte verandert (ook bij een ander venster) zet zijn pijltje opnieuw
     if ('ResizeObserver' in window) {
       observer = new window.ResizeObserver((entries) => entries.forEach((entry) => {
         if (entry.target.isConnected && entry.target.placeTape) entry.target.placeTape(entry.target);
-        else { observer.unobserve(entry.target); tapes.delete(entry.target); }
+        else observer.unobserve(entry.target);
       }));
+    } else {
+      window.addEventListener('resize', update);
     }
     const tape = document.getElementById('topbar-tape');
     if (tape) fillTape(tape, 'thin', placeTopbar);
     // Het menu verschuift als de kopbalk zich aanpast (js/disciplines.js) of het lettertype laadt
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(update);
-    window.addEventListener('resize', update);
   }
 
   ns.instruments = { init, update, heroTape, rose, steerHero };

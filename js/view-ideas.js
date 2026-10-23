@@ -359,7 +359,7 @@
       listState.kind = value;
       update();
       announceCount();
-    }, { className: 'toggles--compact' });
+    }, { className: 'toggles--compact', animate: false });
     const sort = el('select', { className: 'field__input field__input--sm', attrs: { id: 'hub-sort', 'aria-label': 'Sorteren' } }, [
       el('option', { attrs: { value: 'new' }, text: 'Nieuwste eerst' }),
       el('option', { attrs: { value: 'votes' }, text: 'Meeste stemmen' })

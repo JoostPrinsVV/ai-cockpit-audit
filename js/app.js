@@ -242,6 +242,12 @@
     // Hoe ver de pagina die je verlaat gescrold was (voor als je straks terugkomt)
     if (!opts.keepScroll) rememberScroll();
 
+    // Beheer: eerst de beheercode erbij laden (bezoekers hebben die nooit nodig)
+    if (parsed.name === 'beheer' && !ns.views.admin) {
+      openAdmin(opts);
+      return;
+    }
+
     const handler = own(ROUTES || (ROUTES = routes()), parsed.name);
     let result = null;
     try {
@@ -270,8 +276,10 @@
       sharedNote(parsed, result.node);
       if (!opts.keepScroll) rememberViewed(parsed);
       viewNode.replaceChildren(...[ns.cockpit.lockBar(), result.node].filter(Boolean));
-      ns.editor.setPageItem(pageItem(parsed));
-      ns.editmode.decorate(parsed); // bewerkmodus: gereedschap op de kaarten en teksten
+      document.documentElement.dataset.gestart = 'ja'; // het vangnet in js/vroeg.js hoeft niet meer
+      // Beheerders (de beheercode is dan geladen): de bewerkbalk en de bewerkmodus
+      if (ns.editor) ns.editor.setPageItem(pageItem(parsed));
+      if (ns.editmode) ns.editmode.decorate(parsed);
       document.body.dataset.view = parsed.name || 'home';
       // Tabbladtitel volgt de naam uit Beheer → Teksten (of js/config.js)
       const siteTitle = [config.applicationTitle, config.discipline].filter(Boolean).join(' ') || SITE_TITLE;
@@ -343,6 +351,53 @@
     if (config.debugMode && ns.content.issues.length) ns.ui.toast(ns.content.issues.length + ' melding(en) over de inhoud: zie de console', { tone: 'warning' });
   }
 
+  /** De bestanden in data/ tonen (eerst laden; lukt dat niet, dan liever een lege site dan eeuwig 'laden'). */
+  async function useFiles() {
+    try {
+      await ns.content.ensureFiles();
+    } catch (error) {
+      console.error('[AI Cockpit Audit]', error);
+    }
+    useSource(null);
+  }
+
+  /* ---- Beheer: pas laden als het nodig is ----------------------------------------------------
+     Bezoekers laden de beheercode niet (ruim een derde van alle JavaScript, plus css/admin.css).
+     Wie ingelogd is of naar #/beheer gaat, krijgt hem erbij, met de bestanden in data/ (voor
+     Overzetten en inrichten). De volgorde van de scripts is belangrijk. */
+  const ADMIN_SCRIPTS = ['js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/view-admin.js', 'js/editmode.js'];
+  let adminLoading = null;
+
+  function loadAdmin() {
+    if (!adminLoading) {
+      adminLoading = Promise.all([ns.ui.loadScripts(ADMIN_SCRIPTS), ns.ui.loadStyle('css/admin.css'), ns.content.ensureFiles()])
+        .then(() => ns.editor.init())
+        .catch((error) => {
+          adminLoading = null; // de volgende keer opnieuw proberen
+          throw error;
+        });
+    }
+    return adminLoading;
+  }
+
+  /** Naar #/beheer terwijl de beheercode er nog niet is: even laden, dan de pagina alsnog tonen. */
+  function openAdmin(opts) {
+    const hash = window.location.hash;
+    const view = document.getElementById('view');
+    if (current && current.destroy) current.destroy();
+    current = null;
+    view.replaceChildren(el('div', { className: 'page container' }, [el('p', { className: 'loading', text: 'Beheer laden…' })]));
+    loadAdmin().then(() => {
+      if (window.location.hash === hash) route(opts);
+    }, (error) => {
+      console.error('[AI Cockpit Audit]', error);
+      view.replaceChildren(el('div', { className: 'page container' }, [el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [
+        el('p', { className: 'notice__title', text: 'Beheer kon niet worden geladen' }),
+        el('p', { text: 'Controleer je verbinding en ververs de pagina.' })
+      ])])]));
+    });
+  }
+
   const signature = (rows) => rows.length + '|' + rows.reduce((max, row) => (row.updated_at > max ? row.updated_at : max), '');
 
   /**
@@ -364,16 +419,24 @@
     ns.cockpit.setAdmin(asAdmin && ns.central.isAdmin());
     // Deze cockpit: de eigen inhoud van de discipline plus de gedeelde basis
     const space = cockpitSpace();
-    // Beheerders zien de site met hun werkversies erin (js/editor.js)
-    const compose = (rows) => ns.content.fromCockpitRows(asAdmin ? ns.editor.overlay(rows) : rows, space);
     const cacheKey = 'inhoud:' + space.discipline;
     let shownSignature = '';
+
+    // Meteen de database vragen; een beheerder krijgt tegelijk de beheercode erbij
+    const fetching = ns.central.fetchContent({ admin: asAdmin, namespaces: [space.own, space.general] });
+    const adminReady = asAdmin ? loadAdmin().then(() => true, () => false) : Promise.resolve(false);
+    // Rijen → bron: voor beheerders met hun werkversies erin (js/editor.js), met de bestanden erbij
+    // als de eigen inhoud nog niet in de database staat
+    const compose = async (rows, drafts) => {
+      if (ns.content.needsFiles(rows, space)) await ns.content.ensureFiles().catch(() => null);
+      return ns.content.fromCockpitRows(drafts ? ns.editor.overlay(rows) : rows, space);
+    };
 
     // 1. Snel: de laatst bekende versie uit deze browser (alleen voor bezoekers)
     if (!contentReady && !asAdmin) {
       const cached = storage.get(cacheKey, null);
-      const source = cached && Array.isArray(cached.rows) ? compose(cached.rows) : null;
-      if (source) {
+      const source = cached && Array.isArray(cached.rows) ? await compose(cached.rows, false) : null;
+      if (source && !contentReady && !superseded()) {
         useSource(source, 'cache');
         shownSignature = signature(cached.rows);
         route();
@@ -381,15 +444,16 @@
     }
 
     // 2. Actueel: de database (met een maximale wachttijd voor de eerste weergave)
-    const fetching = ns.central.fetchContent({ admin: asAdmin, namespaces: [space.own, space.general] });
     const timer = new Promise((resolve) => window.setTimeout(() => resolve(null), FETCH_TIMEOUT));
     let result = await Promise.race([fetching, timer]);
     if (superseded()) return latestLoad;
     if (!result && !contentReady) {
-      useSource(null);
+      await useFiles();
+      if (superseded()) return latestLoad;
       route();
     }
     if (!result) result = await fetching;
+    const drafts = await adminReady;
     if (superseded()) return latestLoad;
     const failed = result.status === 'failed';
 
@@ -400,12 +464,13 @@
       ns.content.adminStatus = result.status;
     }
     // Niet-opgeslagen werk van een vorige keer terug, vóór het samenstellen
-    ns.editor.contentLoaded();
+    if (ns.editor) ns.editor.contentLoaded();
 
     if (result.status === 'ok') {
       // Lijst met disciplines bijwerken; deze cockpit (inmiddels) op slot: naar de standaard
       if (!ns.cockpit.updateRegistry(result.rows)) return 'op slot';
-      const source = compose(result.rows);
+      const source = await compose(result.rows, drafts);
+      if (superseded()) return latestLoad;
       const sig = signature(result.rows);
       // Alleen bewaren als er iets veranderd is (scheelt bij elk bezoek een grote schrijfactie)
       if (!asAdmin && (sig !== shownSignature || !source)) storage.set(cacheKey, source ? { rows: result.rows } : null);
@@ -422,7 +487,8 @@
     // ophalen terwijl er al inhoud staat, dan blijft die staan (bijv. even geen netwerk).
     if (!contentReady || (!failed && (opts.force || ns.content.source !== 'bestanden'))) {
       const wasShown = contentReady;
-      useSource(null);
+      await useFiles();
+      if (superseded()) return latestLoad;
       route({ keepScroll: wasShown });
     } else if (failed && opts.force && asAdmin) {
       ns.ui.toast('De inhoud kon niet opnieuw worden opgehaald. Controleer je verbinding en ververs de pagina.', { tone: 'warning', duration: 8000 });
@@ -529,7 +595,6 @@
       initTheme();
       fillChrome();
       ns.instruments.init();
-      ns.editor.init();
       // Scrollen bij terug en vooruit doen we zelf (zie Scrollpositie)
       if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
       loadScrollPositions();
@@ -547,13 +612,9 @@
         event.preventDefault();
         document.getElementById('main').focus();
       });
-      document.documentElement.classList.remove('no-js');
       loadContent().catch((error) => {
         console.error('[AI Cockpit Audit] Inhoud laden mislukt', error);
-        if (!contentReady) {
-          useSource(null);
-          route();
-        }
+        if (!contentReady) useFiles().then(() => route());
       });
       // Gepland publiceren: is het moment van een geplande wijziging voorbij, dan gaat die nu live
       ns.central.publishDue().then((count) => {

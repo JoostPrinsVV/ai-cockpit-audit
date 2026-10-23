@@ -79,6 +79,13 @@
       ? emptyState('Geen prompts gevonden', 'Probeer een ander zoekwoord of zet de filters terug op Alle.')
       : emptyState('De eerste prompts komen eraan', `Hier verschijnen prompts voor Copilot in ${ns.cockpit.active().label} die je direct kunt kopiëren.`, null, 'chat');
     const savedCount = el('span', { className: 'toggle__count' });
+    // Iedere kaart één keer bouwen; filteren en zoeken zetten alleen de bestaande kaarten op hun plek
+    const cards = new Map();
+    const cardFor = (p, grouped) => {
+      const key = p.id + (grouped ? '|groep' : '|lijst');
+      if (!cards.has(key)) cards.set(key, el('li', {}, [card(p, grouped ? 'h3' : 'h2', grouped)]));
+      return cards.get(key);
+    };
 
     function update() {
       const saved = savedIds();
@@ -93,7 +100,7 @@
       if (filters.sort === 'rating') {
         // Best beoordeeld: één lijst, zonder kopjes per fase
         items = ns.reviews.rank(items, 'prompt');
-        list.replaceChildren(el('ul', { className: 'p-grid', attrs: { role: 'list' } }, items.map((p) => el('li', {}, [card(p, 'h2', false)]))));
+        list.replaceChildren(el('ul', { className: 'p-grid', attrs: { role: 'list' } }, items.map((p) => cardFor(p, false))));
       } else {
         // Per fase gegroepeerd, met een kop per fase
         const groups = [];
@@ -111,7 +118,7 @@
               el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase.icon)]),
               el('span', {}, [group.phase.label + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
             ]),
-            el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => el('li', {}, [card(p, 'h3', true)])))
+            el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => cardFor(p, true)))
           ])
         ));
       }
@@ -177,7 +184,14 @@
       filters.sort = value;
       update();
     }, { className: 'toggles--compact' }) : null;
-    if (ns.reviews.enabled() && ns.reviews.cached() === undefined) ns.reviews.stats().then(update);
+    // De gemiddelden komen later binnen: dan de kaarten opnieuw bouwen (met de sterren erop)
+    if (ns.reviews.enabled() && ns.reviews.cached() === undefined) {
+      ns.reviews.stats().then(() => {
+        if (!list.isConnected) return;
+        cards.clear();
+        update();
+      });
+    }
 
     const node = el('div', { className: 'page container' }, [
       pageHeader({
