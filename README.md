@@ -326,8 +326,9 @@ bij 'Invullen' hebt ingevuld, en opent Copilot Chat met je zakelijke account (`c
 nieuw tabblad. Daar plak je hem met Ctrl+V.
 
 Microsoft heeft geen officiële manier om een prompt al in het typveld van Microsoft 365 Copilot te zetten. Getest op
-23 oktober 2026: `https://m365.cloud.microsoft/chat/?prompt=…` laat het typveld in onze omgeving leeg, dus het blijft
-bij kopiëren en openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromptParam` in
+23 oktober 2026: `?prompt=…` en `?q=…` (de parameter die ChatGPT gebruikt) laten het typveld in onze omgeving leeg,
+zowel op `https://m365.cloud.microsoft/chat/` als op `https://copilot.cloud.microsoft/`, dus het blijft bij kopiëren en
+openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromptParam` in
 `js/config.js`; het kopiëren blijft dan als reserve werken. Gebruik nooit de gratis consumentenversie
 (copilot.microsoft.com): die heeft niet de bescherming van je zakelijke account.
 
