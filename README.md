@@ -227,7 +227,7 @@ Iedere usecase heeft een `video` of een `demo`:
 - **HTML-demo van de snackbar:** `demo: 'assets/demos/snack-01.html'` werkt ook (zelfde bediening).
 
 Nu: zes nagespeelde demo's, de HTML-demo van snack 1 en de video's van snack 2 en 3, overgenomen uit de snackbar
-(`assets/demos/` en `assets/videos/`; de video van snack 1 staat er ook, als keuze in Beheer).
+(`assets/demos/` en `assets/videos/`).
 Vervang een nagespeelde demo later gerust door een echte opname; de rest van de usecase blijft hetzelfde.
 
 ## Trainingen

@@ -39,7 +39,7 @@
   const KNOWN_MEDIA = [
     'demos/player.html#risicoanalyse', 'demos/player.html#walkthrough', 'demos/player.html#cijferanalyse',
     'demos/player.html#journaalposten', 'demos/player.html#notulen', 'demos/player.html#managementletter',
-    'assets/demos/snack-01.html', 'assets/videos/snack-01.mp4', 'assets/videos/snack-02.mp4', 'assets/videos/snack-03.mp4'
+    'assets/demos/snack-01.html', 'assets/videos/snack-02.mp4', 'assets/videos/snack-03.mp4'
   ];
 
   // De omgeving waarin je in Beheer werkt (zie render): { kind: 'discipline'|'basis', namespace, base, name, id, files }.
