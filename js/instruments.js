@@ -124,6 +124,10 @@
     if (tape) steer(tape, heading, tape.clientWidth / 2);
   }
 
+  // Breedte van één letter van een koerspunt (IBM Plex Mono 15px: 0,6em plus 0,06em letterafstand)
+  const LABEL_CHAR = 9.9;
+  const HIT_PAD = 12;
+
   const point = (deg, r) => {
     const angle = (deg - 90) * Math.PI / 180;
     return { x: r * Math.cos(angle), y: r * Math.sin(angle) };
@@ -151,6 +155,12 @@
       const text = point(w.heading, 222);
       const side = text.x > 20 ? 'end' : text.x < -20 ? 'start' : 'middle';
       const link = svg('a', { class: 'rose__waypoint', href: '#/' + w.id, tabindex: '-1' });
+      // Onzichtbaar klikvlak, ruimer dan het stipje en het woord: een cirkel om de stip en een vlak om
+      // het woord. Het woord staat in een mono-letter, dus de breedte is te berekenen.
+      const width = w.short.length * LABEL_CHAR + 2 * HIT_PAD;
+      const left = side === 'end' ? text.x - width + HIT_PAD : side === 'start' ? text.x - HIT_PAD : text.x - width / 2;
+      link.append(svg('circle', { class: 'rose__hit', cx: marker.x, cy: marker.y, r: 26 }));
+      link.append(svg('rect', { class: 'rose__hit', x: left, y: text.y - 15, width, height: 30, rx: 10 }));
       link.append(svg('circle', { class: 'rose__marker', cx: marker.x, cy: marker.y, r: 7 }));
       const label = svg('text', { class: 'rose__waypoint-label', x: text.x, y: text.y + 5, 'text-anchor': side });
       label.textContent = w.short;

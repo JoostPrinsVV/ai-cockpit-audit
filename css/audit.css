@@ -540,6 +540,7 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 
 /* Koerspunten: de zes onderdelen op de roos (de focus zie je aan het punt en het label) */
 .rose__waypoint { pointer-events: auto; cursor: pointer; outline: none; }
+.rose__hit { fill: transparent; } /* het ruime klikvlak (doorzichtig, maar wel aan te wijzen) */
 .rose__marker { fill: var(--color-chrome); stroke: color-mix(in srgb, var(--color-glow) 70%, transparent); stroke-width: 2.5; transform-box: fill-box; transform-origin: center; transition: transform var(--duration) var(--ease-out), fill var(--duration) var(--ease-out); }
 .rose__waypoint-label { fill: rgba(255, 255, 255, 0.62); font-family: var(--font-mono); font-size: 15px; font-weight: var(--fw-medium); letter-spacing: 0.06em; text-transform: uppercase; transition: fill var(--duration) var(--ease-out); }
 .rose__waypoint:hover .rose__marker, .rose__waypoint.is-active .rose__marker, .rose__waypoint:focus-visible .rose__marker { fill: var(--color-glow); stroke: var(--vv-white); transform: scale(1.45); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-glow) 90%, transparent)); }
