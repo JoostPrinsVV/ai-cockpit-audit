@@ -22,6 +22,8 @@ js/instruments.js     Cockpitstijl: de koersband (onder kopbalk en hero) en de k
 js/rights.js          Rollen: wat de ingelogde beheerder mag (zelfde regels als de database)
 js/editor.js          Werkversies, bewerkbalk, opslaan, publiceren (ook gepland), logboek, ongedaan maken
 js/editmode.js        Bewerken op de pagina zelf: teksten, verslepen, toevoegen, verwijderen, zijpaneel
+js/motion.js          Beweging: paginaovergangen, opstarten van de instrumenten, soepel filteren, thema-overgang
+css/motion.css        Beweging in CSS: overgangen, uitklappers, panelen, scrolleffecten (uit bij 'minder beweging')
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
 data/*.js             Startinhoud van Audit en terugval als de database niet bereikbaar is

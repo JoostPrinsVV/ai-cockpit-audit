@@ -482,7 +482,8 @@
         value = resetValue;
       }
       group.querySelectorAll('.toggle').forEach((node) => node.setAttribute('aria-pressed', String(node.dataset.value === value)));
-      onChange(value);
+      // Kaarten schuiven naar hun nieuwe plek (js/motion.js)
+      ns.motion.filter(() => onChange(value));
     });
     return group;
   }
@@ -493,7 +494,7 @@
     btn.addEventListener('click', () => {
       const on = btn.getAttribute('aria-pressed') !== 'true';
       btn.setAttribute('aria-pressed', String(on));
-      onToggle(on);
+      ns.motion.filter(() => onToggle(on));
     });
     return btn;
   }

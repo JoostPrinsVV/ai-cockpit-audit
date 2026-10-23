@@ -202,49 +202,53 @@
     currentHash = window.location.hash || '#/';
     rendered = true;
 
-    const viewNode = document.getElementById('view');
-    const scrollY = window.scrollY;
-    sharedNote(parsed, result.node);
-    if (!opts.keepScroll) rememberViewed(parsed);
-    viewNode.replaceChildren(...[ns.cockpit.lockBar(), result.node].filter(Boolean));
-    ns.editor.setPageItem(pageItem(parsed));
-    ns.editmode.decorate(parsed); // bewerkmodus: gereedschap op de kaarten en teksten
-    document.body.dataset.view = parsed.name || 'home';
-    // Tabbladtitel volgt de naam uit Beheer → Teksten (of js/config.js)
-    const siteTitle = [config.applicationTitle, config.discipline].filter(Boolean).join(' ') || SITE_TITLE;
-    document.title = result.title ? `${result.title} · ${siteTitle}` : siteTitle;
+    // Nieuwe pagina tonen, met een overgang (js/motion.js); niet bij verversen van dezelfde pagina
+    const mode = opts.keepScroll ? 'refresh' : firstRoute ? 'first' : 'page';
+    ns.motion.swap(() => {
+      const viewNode = document.getElementById('view');
+      const scrollY = window.scrollY;
+      sharedNote(parsed, result.node);
+      if (!opts.keepScroll) rememberViewed(parsed);
+      viewNode.replaceChildren(...[ns.cockpit.lockBar(), result.node].filter(Boolean));
+      ns.editor.setPageItem(pageItem(parsed));
+      ns.editmode.decorate(parsed); // bewerkmodus: gereedschap op de kaarten en teksten
+      document.body.dataset.view = parsed.name || 'home';
+      // Tabbladtitel volgt de naam uit Beheer → Teksten (of js/config.js)
+      const siteTitle = [config.applicationTitle, config.discipline].filter(Boolean).join(' ') || SITE_TITLE;
+      document.title = result.title ? `${result.title} · ${siteTitle}` : siteTitle;
 
-    // Menu: huidige pagina markeren
-    const navKey = NAV_FOR[parsed.name] || '';
-    document.querySelectorAll('[data-nav]').forEach((link) => {
-      if (link.dataset.nav === navKey) link.setAttribute('aria-current', 'page');
-      else link.removeAttribute('aria-current');
-    });
-    ns.instruments.update(); // koersband: het pijltje naar deze pagina
+      // Menu: huidige pagina markeren
+      const navKey = NAV_FOR[parsed.name] || '';
+      document.querySelectorAll('[data-nav]').forEach((link) => {
+        if (link.dataset.nav === navKey) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+      });
+      ns.instruments.update(); // koersband: het pijltje naar deze pagina
 
-    if (opts.keepScroll) {
-      // Was de vorige plek nog niet te halen (eerst alleen 'Inhoud laden…')? Dan nu alsnog
-      window.scrollTo(0, pendingScroll !== null ? pendingScroll : scrollY);
-      pendingScroll = null;
-      return;
-    }
-    const entry = historyKey();
-    currentScrollKey = entry.key;
-    const saved = entry.known ? scrollPositions[entry.key] : undefined;
-    const heading = viewNode.querySelector('h1');
-    if (typeof saved === 'number') {
-      // Terug (of vooruit, of ververst): naar de plek waar je was, de focus blijft op die pagina
-      window.scrollTo(0, saved);
-      pendingScroll = window.scrollY < saved - 1 ? saved : null;
-      if (heading) heading.focus({ preventScroll: true });
-    } else {
-      // Nieuwe pagina: naar boven en focus op de kop (schermlezers horen de nieuwe pagina)
-      pendingScroll = null;
-      if (!firstRoute) window.scrollTo(0, 0);
-      if (result.focus) result.focus();
-      else if (!firstRoute && heading) heading.focus({ preventScroll: true });
-    }
-    firstRoute = false;
+      if (opts.keepScroll) {
+        // Was de vorige plek nog niet te halen (eerst alleen 'Inhoud laden…')? Dan nu alsnog
+        window.scrollTo(0, pendingScroll !== null ? pendingScroll : scrollY);
+        pendingScroll = null;
+        return;
+      }
+      const entry = historyKey();
+      currentScrollKey = entry.key;
+      const saved = entry.known ? scrollPositions[entry.key] : undefined;
+      const heading = viewNode.querySelector('h1');
+      if (typeof saved === 'number') {
+        // Terug (of vooruit, of ververst): naar de plek waar je was, de focus blijft op die pagina
+        window.scrollTo(0, saved);
+        pendingScroll = window.scrollY < saved - 1 ? saved : null;
+        if (heading) heading.focus({ preventScroll: true });
+      } else {
+        // Nieuwe pagina: naar boven en focus op de kop (schermlezers horen de nieuwe pagina)
+        pendingScroll = null;
+        if (!firstRoute) window.scrollTo(0, 0);
+        if (result.focus) result.focus();
+        else if (!firstRoute && heading) heading.focus({ preventScroll: true });
+      }
+      firstRoute = false;
+    }, parsed, mode);
   }
 
   /* ---- Inhoud laden ------------------------------------------------------------------- */
