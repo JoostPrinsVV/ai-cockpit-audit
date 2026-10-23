@@ -29,7 +29,7 @@
   const { el, icon, toast, formatDate } = ns.ui;
   const confirm = (message, options) => ns.ui.confirmDialog(message, options);
   const ID_PATTERN = /^[a-z0-9-]{1,80}$/;
-  const LOCAL_PATH = /^(?![a-z][a-z0-9+.-]*:)(?!\/\/)[^\s<>"'`]+$/i;
+  const LOCAL_PATH = /^(?![a-z][a-z0-9+.-]*:)(?!\/\/)[^\s<>"'`\\]+$/i;
   const HTTPS_URL = /^https:\/\/[^\s<>"'`]+$/i;
   // Oude paden uit de tijd in de map audit/ van de snackbar (zie js/content.js); bij opslaan wordt het nieuwe pad bewaard
   const LEGACY_ASSETS = /^\.\.\/assets\//;
@@ -259,7 +259,8 @@
   function allRows() {
     return everywhere().filter((row) => row.namespace === scope.namespace);
   }
-  const rowsOf = (type) => allRows().filter((row) => row.type === type).sort((a, b) => (a.position || 0) - (b.position || 0) || (a.id < b.id ? -1 : 1));
+  // Op volgorde zoals je hem bewerkt: de opgeslagen werkversie gaat voor de gepubliceerde positie
+  const rowsOf = (type) => allRows().filter((row) => row.type === type).sort((a, b) => (stateOf(a).position || 0) - (stateOf(b).position || 0) || (a.id < b.id ? -1 : 1));
   const findRow = (type, id) => allRows().find((row) => row.type === type && row.id === id) || null;
   const isSeeded = () => allRows().some((row) => row.type === 'meta' && row.id === 'bron');
 
@@ -285,7 +286,7 @@
     return String(value || '')
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
+      .replace(/[\u0300-\u036f]/g, '') // accenten (é → e)
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 60);
@@ -314,7 +315,9 @@
   };
   const UPLOAD_MAX = 50 * 1024 * 1024;
   const canUpload = () => drafting() && ns.central.isEnabled();
-  const safeName = (name) => String(name || 'bestand').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '').slice(-80) || 'bestand';
+  const safeName = (name) => String(name || 'bestand').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '').slice(-80) || 'bestand';
+  // Past het bestand bij wat dit veld aanneemt (bijv. 'video/mp4,video/webm')?
+  const accepts = (accept, file) => String(accept).split(',').map((type) => type.trim()).includes(file.type);
 
   /** Knop 'Uploaden' naast een padveld: het adres van het geüploade bestand komt in input. */
   function uploadButton(input, accept) {
@@ -325,6 +328,10 @@
       const chosen = file.files && file.files[0];
       file.value = '';
       if (!chosen) return;
+      if (!accepts(accept, chosen)) {
+        toast(`"${chosen.name}" is hier niet te gebruiken. Kies een ${accept.includes('video') ? 'MP4- of WebM-video' : accept.includes('pdf') ? 'PDF, PNG of JPG' : 'PNG-, JPG-, WebP- of GIF-afbeelding'}.`, { tone: 'warning', duration: 7000 });
+        return;
+      }
       if (chosen.size > UPLOAD_MAX) {
         toast('Dit bestand is groter dan 50 MB. Maak het kleiner of zet een link naar Stream of SharePoint.', { tone: 'warning', duration: 7000 });
         return;
@@ -417,11 +424,23 @@
       }
       case 'select': {
         const options = typeof field.options === 'function' ? field.options() : field.options;
+        const current = value == null ? '' : String(value);
+        // Een opgeslagen waarde die niet (meer) in de lijst staat, blijft zichtbaar in plaats van
+        // stil te veranderen in de eerste keuze; bij een verplicht veld moet je dan bewust kiezen
+        const unknown = current !== '' && !options.some((o) => String(o.value) === current);
         const input = el('select', { className: 'field__input', attrs: { id, 'aria-describedby': described } },
-          (field.required ? [] : options.some((o) => o.value === '') ? [] : [{ value: '', label: '—' }]).concat(options).map((o) => el('option', { attrs: { value: o.value }, text: o.label })));
-        input.value = value == null ? '' : String(value);
+          (field.required ? [] : options.some((o) => o.value === '') ? [] : [{ value: '', label: '—' }])
+            .concat(options, unknown ? [{ value: current, label: `${current} (bestaat niet meer)` }] : [])
+            .map((o) => el('option', { attrs: { value: o.value }, text: o.label })));
+        input.value = current;
         if (field.required && !input.value && options[0]) input.value = options[0].value;
-        return { node: wrap(input), get: () => input.value, validate: () => requiredCheck(!input.value) };
+        return {
+          node: wrap(input),
+          get: () => input.value,
+          validate: () => (field.required && unknown && input.value === current
+            ? setError(`"${current}" bestaat niet (meer) of hoort niet bij deze omgeving. Kies een andere.`)
+            : requiredCheck(!input.value))
+        };
       }
       case 'license': {
         const labels = field.choices || ['Ook zonder licentie (gratis Copilot Chat)', 'Met Microsoft 365 Copilot-licentie'];
@@ -443,6 +462,8 @@
       }
       case 'icon': {
         const names = Array.from(document.querySelectorAll('svg.sprite symbol')).map((symbol) => symbol.id.replace(/^i-/, '')).sort();
+        // Een icoon dat niet (meer) in de set staat, blijft bewaard tot je een ander kiest
+        if (value && !names.includes(value)) names.push(value);
         const preview = el('span', { className: 'icon-preview', attrs: { 'aria-hidden': 'true' } }, [icon(value || 'bulb')]);
         const input = el('select', { className: 'field__input', attrs: { id, 'aria-describedby': described } },
           [el('option', { attrs: { value: '' }, text: 'Standaard' })].concat(names.map((name) => el('option', { attrs: { value: name }, text: name }))));
@@ -585,12 +606,15 @@
         el('p', { text: `Er is geen ${schema.one} met het adres "${id}".` })
       ])]);
     }
-    const data = existing ? Object.assign({}, stateOf(existing).data, schema.single ? {} : { id: existing.id }) : {};
+    // Met werkversies: zoals het nu bij jou staat, inclusief niet-opgeslagen wijzigingen op de pagina
+    // (opslaan neemt die mee in plaats van ze stil weg te gooien)
+    const base = !existing ? null : drafting() ? ns.editor.effective(scope.namespace, type, existing.id) || stateOf(existing) : stateOf(existing);
+    const unsaved = Boolean(existing && drafting() && JSON.stringify(base) !== JSON.stringify(stateOf(existing)));
+    const data = existing ? Object.assign({}, base.data, schema.single ? {} : { id: existing.id }) : {};
     const canEdit = may('bewerken', type);
     const canDelete = may('verwijderen', type);
     const canPublish = drafting() && ns.rights.can('publiceren', scope.namespace, type);
     let saving = false;
-    let publishAfterSave = false;
 
     const ctx = {
       idTaken: (value) => {
@@ -648,7 +672,7 @@
 
     const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
     const save = el('button', { className: drafting() && canPublish ? 'btn btn--secondary' : 'btn btn--primary', attrs: { type: 'submit', disabled: !canEdit } }, [icon('check'), el('span', { text: drafting() ? (canPublish ? 'Opslaan' : 'Opslaan als voorstel') : 'Opslaan' })]);
-    const saveAndPublish = canPublish ? el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('send'), el('span', { text: 'Opslaan en publiceren' })]) : null;
+    const saveAndPublish = canPublish ? el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('send'), el('span', { text: 'Opslaan en publiceren' })]) : null;
     const cancel = el('a', { className: 'btn btn--secondary', attrs: { href: schema.single ? scope.base : `${scope.base}/${type}` } }, [el('span', { text: schema.single ? 'Terug' : 'Terug naar de lijst' })]);
     const viewLink = existing && schema.route && existing.status !== 'trash'
       ? el('a', { className: 'btn btn--quiet', attrs: { href: `#/${schema.route}/${existing.id}` } }, [icon('eye'), el('span', { text: 'Bekijk op de site' })])
@@ -664,16 +688,12 @@
       formError,
       el('div', { className: 'cms-form__actions' }, [saveAndPublish, save, cancel, viewLink, el('span', { className: 'cms-form__spacer' }), trash])
     ]);
-    if (saveAndPublish) {
-      saveAndPublish.addEventListener('click', () => {
-        publishAfterSave = true;
-        form.requestSubmit();
-      });
-    }
     if (!canEdit) form.querySelectorAll('input, textarea, select, button[type="button"]').forEach((input) => { input.disabled = true; });
 
     async function onSubmit(event) {
       event.preventDefault();
+      // Welke knop: 'Opslaan en publiceren' geldt alleen voor deze ene keer (ook als er iets misgaat of je annuleert)
+      const publishNow = Boolean(saveAndPublish) && event.submitter === saveAndPublish;
       formError.hidden = true;
       const firstError = controls.map(({ ctl }) => ctl.validate()).find(Boolean);
       if (firstError) {
@@ -689,9 +709,7 @@
         !(await confirm('De datum voor "Tip van de week" is geen vrijdag. Toch opslaan?', { title: 'Geen vrijdag', confirmLabel: 'Toch opslaan' }))) return;
       const renamed = existing && !schema.single && newId !== existing.id;
       if (renamed && !(await confirm(`Het adres verandert van "${existing.id}" naar "${newId}". Links naar het oude adres werken dan niet meer.`, { title: 'Adres wijzigen?', confirmLabel: 'Adres wijzigen' }))) return;
-      const position = existing ? stateOf(existing).position : Math.max(0, ...rowsOf(type).map((row) => row.position || 0)) + 10;
-      const publishNow = publishAfterSave;
-      publishAfterSave = false;
+      const position = existing ? base.position : Math.max(0, ...rowsOf(type).map((row) => stateOf(row).position || 0)) + 10;
       if (drafting() && renamed && !canDelete) {
         formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Het adres wijzigen kan alleen iemand die ook mag verwijderen. Laat het adres staan.' })]));
         formError.hidden = false;
@@ -702,10 +720,13 @@
       try {
         if (drafting()) {
           // Werkversie: pas live na publiceren
-          if (!(await stage(type, newId, record, position, 'published'))) return;
-          if (renamed) await stage(type, existing.id, existing.data, existing.position, 'trash');
+          const saved = await stage(type, newId, record, position, 'published');
+          if (!saved) return;
+          const removed = renamed ? await stage(type, existing.id, existing.data, existing.position, 'trash') : null;
           if (publishNow) {
-            const items = [{ namespace: scope.namespace, type, id: newId }].concat(renamed ? [{ namespace: scope.namespace, type, id: existing.id }] : []);
+            // Precies de versies die je net opsloeg (de database slaat ze over als iemand ertussen kwam)
+            const items = [{ namespace: scope.namespace, type, id: newId, version: saved.version }]
+              .concat(removed ? [{ namespace: scope.namespace, type, id: existing.id, version: removed.version }] : []);
             await ns.editor.publish(items);
           }
         } else {
@@ -715,8 +736,8 @@
         initial = snapshot();
         const target = schema.single ? `${scope.base}/setting` : `${scope.base}/${type}/${newId}`;
         if (window.location.hash !== target) window.history.replaceState(window.history.state, '', target);
-        if (drafting() && publishNow) await ns.app.reloadContent();
-        else await afterChange(drafting() ? (canPublish ? 'Opgeslagen. Nog niet live: publiceer via de bewerkbalk.' : 'Voorstel opgeslagen. Een beheerder publiceert het.') : isNew ? 'Toegevoegd' : 'Opgeslagen');
+        // Na publiceren is de inhoud al opnieuw opgehaald (js/editor.js)
+        if (!(drafting() && publishNow)) await afterChange(drafting() ? (canPublish ? 'Opgeslagen. Nog niet live: publiceer via de bewerkbalk.' : 'Voorstel opgeslagen. Een beheerder publiceert het.') : isNew ? 'Toegevoegd' : 'Opgeslagen');
       } catch (error) {
         formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Opslaan mislukt: ' + error.message })]));
         formError.hidden = false;
@@ -757,6 +778,12 @@
         el('p', { text: `Door ${existing.draft_by || 'onbekend'} op ${stamp(existing.draft_at)}${existing.publish_at ? `, gepland voor ${stamp(existing.publish_at)}` : ''}. Hieronder staat die versie; collega's zien nog de gepubliceerde. Publiceren of weggooien doe je via Publiceren in de bewerkbalk.` })
       ])])
       : null;
+    const unsavedNotice = unsaved
+      ? el('div', { className: 'notice' }, [icon('info'), el('div', {}, [
+        el('p', { className: 'notice__title', text: 'Met je niet-opgeslagen wijzigingen' }),
+        el('p', { text: 'Hieronder staat ook wat je op de pagina hebt aangepast maar nog niet hebt opgeslagen. Opslaan bewaart alles samen.' })
+      ])])
+      : null;
     const node = el('div', { className: 'cms-editor' }, [
       el('div', { className: 'cms-editor__head' }, [
         el('h2', { className: 'cms-editor__title', text: schema.single ? 'Teksten van de site' : isNew ? schema.add : `${schema.one.charAt(0).toUpperCase() + schema.one.slice(1)} bewerken` }),
@@ -765,6 +792,7 @@
       ]),
       !canEdit ? el('div', { className: 'notice notice--warning' }, [icon('lock'), el('div', {}, [el('p', { text: 'Je mag dit onderdeel bekijken, maar niet bewerken. Vraag een hoofdbeheerder om meer rechten.' })])]) : null,
       draftNotice,
+      unsavedNotice,
       warningNotice(schema),
       form
     ]);
@@ -783,7 +811,7 @@
    * je ziet hem meteen op de pagina en slaat op met Opslaan in de bewerkbalk.
    * id leeg = nieuw item. onClose(): het paneel sluiten.
    */
-  function quickForm(type, namespace, id, onClose) {
+  function quickForm(type, namespace, id, onClose, onCancel) {
     const schema = SCHEMAS[type];
     const general = namespace === ns.cockpit.GENERAL_NAMESPACE;
     const discipline = ns.cockpit.active();
@@ -818,7 +846,20 @@
     const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
     const apply = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('check'), el('span', { text: 'Toepassen' })]);
     const cancel = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [el('span', { text: 'Annuleren' })]);
-    cancel.addEventListener('click', onClose);
+    cancel.addEventListener('click', onCancel || onClose);
+    const collect = () => {
+      const record = {};
+      controls.forEach(({ field, ctl }) => {
+        const v = ctl.get();
+        if (field.key !== 'id' && !isEmpty(v)) record[field.key] = v;
+      });
+      return record;
+    };
+    const snapshot = () => JSON.stringify([collect(), idCtl ? idCtl.get() : '']);
+    let initial = '';
+    window.setTimeout(() => {
+      initial = snapshot();
+    }, 0);
     const form = el('form', { className: 'cms-form cms-form--panel', attrs: { novalidate: true } }, [
       el('p', { className: 'field__hint', text: 'Toepassen zet je wijziging klaar op de pagina. Sla daarna op met Opslaan in de bewerkbalk; collega\'s zien het pas na Publiceren.' }),
       el('div', { className: 'form-grid' }, controls.map((c) => c.ctl.node)),
@@ -836,11 +877,7 @@
         formError.hidden = false;
         return;
       }
-      const record = {};
-      controls.forEach(({ field, ctl }) => {
-        const v = ctl.get();
-        if (field.key !== 'id' && !isEmpty(v)) record[field.key] = v;
-      });
+      const record = collect();
       const newId = schema.single ? schema.single : idCtl.get();
       const renamed = !isNew && !schema.single && newId !== id;
       if (renamed && !ns.rights.can('verwijderen', namespace, type)) {
@@ -848,15 +885,20 @@
         formError.hidden = false;
         return;
       }
-      const position = current ? current.position : Math.max(0, ...rowsOf(type).map((row) => ns.editor.savedState(row).position || 0)) + 10;
-      if (renamed) ns.editor.change(namespace, type, id, { status: 'trash' });
-      ns.editor.change(namespace, type, newId, { data: record, position, status: 'published' });
+      const position = current ? current.position : Math.max(0, ...rowsOf(type).map((row) => stateOf(row).position || 0)) + 10;
+      // Eén stap voor ongedaan maken, ook bij een nieuw adres (nieuw item plus het oude weg)
+      ns.editor.batch(() => {
+        if (renamed) ns.editor.change(namespace, type, id, { status: 'trash' });
+        ns.editor.change(namespace, type, newId, { data: record, position, status: 'published' });
+      });
+      initial = snapshot();
       onClose();
       toast(isNew ? 'Toegevoegd op de pagina. Vergeet niet op te slaan.' : 'Toegepast. Vergeet niet op te slaan.', { duration: 5000 });
     });
     const node = el('div', { className: 'cms-editor cms-editor--panel' }, [warningNotice(schema), form]);
     if (!isNew) ns.editor.watch(namespace, type, id, node);
-    return node;
+    // isDirty(): is er iets ingevuld dat nog niet is toegepast (dan eerst vragen bij sluiten)
+    return { node, isDirty: () => Boolean(initial) && snapshot() !== initial };
   }
 
   /* ---- Lijst per soort ---------------------------------------------------------------- */
@@ -910,17 +952,24 @@
         if (canMove && may('bewerken', type)) {
           const up = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omhoog: ' + (data.title || data.label || row.id), disabled: index <= 0 } }, [icon('arrow-up')]);
           const down = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omlaag: ' + (data.title || data.label || row.id), disabled: index >= live.length - 1 } }, [icon('arrow-down')]);
+          const setPosition = (item, position) => (drafting()
+            ? stage(type, item.id, stateOf(item).data, position, stateOf(item).status)
+            : ns.central.patchContent(type, item.id, { position }, scope.namespace));
           const swap = (other) => act(async () => {
-            // Gelijke posities eerst uit elkaar trekken, dan wisselen
             const a = stateOf(row).position || 0;
-            let b = stateOf(other).position || 0;
-            if (a === b) b = a + (live.indexOf(other) > index ? 1 : -1);
-            if (drafting()) {
-              await stage(type, row.id, stateOf(row).data, b, stateOf(row).status);
-              await stage(type, other.id, stateOf(other).data, a, stateOf(other).status);
-            } else {
-              await ns.central.patchContent(type, row.id, { position: b }, scope.namespace);
-              await ns.central.patchContent(type, other.id, { position: a }, scope.namespace);
+            const b = stateOf(other).position || 0;
+            if (a !== b) {
+              await setPosition(row, b);
+              await setPosition(other, a);
+              return;
+            }
+            // Gelijke posities: de hele lijst opnieuw nummeren (10, 20, …) in de nieuwe volgorde
+            const order = live.slice();
+            const from = order.indexOf(row);
+            const to = order.indexOf(other);
+            [order[from], order[to]] = [order[to], order[from]];
+            for (let i = 0; i < order.length; i++) {
+              if ((stateOf(order[i]).position || 0) !== (i + 1) * 10) await setPosition(order[i], (i + 1) * 10);
             }
           });
           up.addEventListener('click', () => swap(live[index - 1]));
@@ -1031,7 +1080,7 @@
       button.disabled = true;
       button.querySelector('span').textContent = 'Bezig met overzetten…';
       try {
-        await ns.central.saveContent(rows, scope.namespace);
+        await ns.central.saveContent(rows, scope.namespace, { onlyNew: true });
         await afterChange('Overgezet: de database is nu leidend');
       } catch (error) {
         button.disabled = false;
@@ -1069,7 +1118,7 @@
         button.disabled = true;
         button.querySelector('span').textContent = 'Bezig met toevoegen…';
         try {
-          await ns.central.saveContent(rows, scope.namespace);
+          await ns.central.saveContent(rows, scope.namespace, { onlyNew: true });
           await afterChange(`${what} toegevoegd`);
         } catch (error) {
           button.disabled = false;
@@ -1142,7 +1191,7 @@
       empty.disabled = true;
       fromExample.disabled = true;
       try {
-        await ns.central.saveContent(list, scope.namespace);
+        await ns.central.saveContent(list, scope.namespace, { onlyNew: true });
         await afterChange(`${discipline.name} heeft nu een eigen omgeving`);
       } catch (error) {
         empty.disabled = false;
@@ -1233,7 +1282,7 @@
       let copied = false;
       try {
         label.textContent = 'Bezig met kopiëren…';
-        await ns.central.saveContent(picked.map((row) => ({ type: row.type, id: row.id, data: row.data, position: row.position || 0, status: row.status })).concat([startRow()]), ns.cockpit.GENERAL_NAMESPACE);
+        await ns.central.saveContent(picked.map((row) => ({ type: row.type, id: row.id, data: row.data, position: row.position || 0, status: row.status })).concat([startRow()]), ns.cockpit.GENERAL_NAMESPACE, { onlyNew: true });
         copied = true;
         // Wat uit Audit kwam, daar weghalen (wat uit de bestanden kwam, stond nog nergens)
         const moved = picked.filter((row) => row.namespace === source);
@@ -1301,6 +1350,18 @@
    */
   function render(params, state, where) {
     if (where) scope = where;
+    // De inhoud kon niet worden opgehaald (bijv. even geen netwerk): niet doen alsof de database
+    // leeg is, want dan zou 'Overzetten' of 'Inrichten' verschijnen
+    if (state && state.status === 'failed' && !Array.isArray(ns.content.adminRows)) {
+      return {
+        node: el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [
+          el('p', { className: 'notice__title', text: 'De inhoud kon niet worden opgehaald' }),
+          el('p', { text: 'Controleer je verbinding en probeer het opnieuw. Tot die tijd kun je hier niets aanpassen.' }),
+          el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: () => ns.app.reloadContent() } }, [icon('refresh'), el('span', { text: 'Opnieuw proberen' })])
+        ])]),
+        canLeave: null
+      };
+    }
     // Met een rol voor bepaalde onderdelen zie je alleen die onderdelen
     const owner = !drafting() || ns.rights.isOwner();
     const allowed = ORDER.filter((key) => owner || ns.rights.can('bewerken', scope.namespace, key));

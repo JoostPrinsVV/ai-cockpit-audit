@@ -169,33 +169,83 @@
     }
   };
 
-  /** Bladwijzerknop: bewaar een prompt, usecase of tip om later terug te vinden. */
-  function saveButton(type, id, title, onChange) {
-    const btn = el('button', { className: 'fav', attrs: { type: 'button' } }, [icon('bookmark')]);
-    function sync() {
-      const on = saved.has(type, id);
-      btn.setAttribute('aria-pressed', String(on));
-      btn.setAttribute('aria-label', (on ? 'Niet meer bewaren: ' : 'Bewaren: ') + title);
-      btn.title = on ? 'Niet meer bewaren' : 'Bewaren';
-      setIcon(btn.querySelector('svg'), on ? 'bookmark-filled' : 'bookmark');
-    }
+  const SAVED_EVENT = 'ai:saved';
+
+  function syncSaveButton(btn, on) {
+    btn.setAttribute('aria-pressed', String(on));
+    btn.setAttribute('aria-label', (on ? 'Niet meer bewaren: ' : 'Bewaren: ') + btn.dataset.saveTitle);
+    btn.title = on ? 'Niet meer bewaren' : 'Bewaren';
+    setIcon(btn.querySelector('svg'), on ? 'bookmark-filled' : 'bookmark');
+  }
+
+  /**
+   * Bladwijzerknop: bewaar een prompt, usecase of tip om later terug te vinden. Na een klik krijgen
+   * alle knoppen van dit item de nieuwe stand (een tip kan uitgelicht én in de lijst staan) en gaat
+   * het event 'ai:saved' rond, voor lijsten met een 'Bewaard'-filter (zie onSaved).
+   */
+  function saveButton(type, id, title) {
+    const btn = el('button', { className: 'fav', attrs: { type: 'button', 'data-save-type': type, 'data-save-id': id, 'data-save-title': title } }, [icon('bookmark')]);
     btn.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
       const on = saved.toggle(type, id);
-      sync();
+      document.querySelectorAll('.fav[data-save-type]').forEach((other) => {
+        if (other.dataset.saveType === type && other.dataset.saveId === id) syncSaveButton(other, on);
+      });
       toast(on ? 'Bewaard: je vindt het terug op de startpagina' : 'Niet meer bewaard', { icon: on ? 'bookmark-filled' : 'bookmark' });
-      if (onChange) onChange(on);
+      document.dispatchEvent(new CustomEvent(SAVED_EVENT, { detail: { type, id, on } }));
     });
-    sync();
+    syncSaveButton(btn, saved.has(type, id));
     return btn;
   }
 
+  /**
+   * Na bewaren of niet meer bewaren van een item van deze soort (null: elke soort): refresh() werkt
+   * de lijst bij. Verdwijnt daarbij de kaart met de focus uit list (filter 'Bewaard'), dan gaat de
+   * focus naar de bladwijzer van de kaart die op die plek komt. Geeft een functie om te stoppen (destroy).
+   */
+  function onSaved(type, list, refresh) {
+    const handler = (event) => {
+      if (type && event.detail.type !== type) return;
+      if (!list) {
+        refresh();
+        return;
+      }
+      const cards = () => Array.from(list.querySelectorAll('.fav'));
+      const index = cards().indexOf(document.activeElement);
+      refresh();
+      if (index < 0 || list.contains(document.activeElement)) return;
+      const rest = cards();
+      const next = rest[Math.min(index, rest.length - 1)];
+      if (next) next.focus();
+    };
+    document.addEventListener(SAVED_EVENT, handler);
+    return () => document.removeEventListener(SAVED_EVENT, handler);
+  }
+
   /* ---- Meldingen (toasts) en schermlezers ------------------------------------- */
+  /**
+   * De meldingen in de bovenste laag zetten (popover in index.html), boven een venster dat
+   * daarna is geopend. Opnieuw openen zet ze er weer bovenop.
+   */
+  function raiseToasts(region) {
+    if (typeof region.showPopover !== 'function') return;
+    try {
+      if (region.matches(':popover-open')) {
+        if (!document.querySelector('dialog[open]')) return;
+        region.hidePopover();
+      }
+      region.showPopover();
+    } catch (error) {
+      /* geen popover: dan gewoon onderaan de pagina */
+    }
+  }
+
   function toast(message, options) {
     const opts = options || {};
     const region = document.getElementById('toast-region');
     if (!region) return;
+    raiseToasts(region);
     while (region.children.length >= TOAST_LIMIT) region.firstElementChild.remove();
     const tone = opts.tone || 'info';
     const iconName = opts.icon || (tone === 'success' ? 'check-circle' : tone === 'warning' ? 'alert' : 'info');
@@ -355,7 +405,7 @@
     return String(text || '')
       .toLowerCase()
       .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
   }
@@ -528,9 +578,10 @@
     return btn;
   }
 
-  function emptyState(title, text, action) {
+  /** Lege toestand: kop, uitleg, eventueel een knop; iconName standaard het vergrootglas (niets gevonden). */
+  function emptyState(title, text, action, iconName) {
     return el('div', { className: 'empty' }, [
-      el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('search')]),
+      el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon(iconName || 'search')]),
       el('p', { className: 'empty__title', text: title }),
       text ? el('p', { className: 'empty__text', text }) : null,
       action || null
@@ -549,6 +600,7 @@
     saved,
     viewed,
     saveButton,
+    onSaved,
     toast,
     confirmDialog,
     announce,

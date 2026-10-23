@@ -101,7 +101,7 @@
   function placeTopbar(tape) {
     const box = tape.getBoundingClientRect();
     if (!box.width) return;
-    const active = document.querySelector('.nav__link[aria-current="page"]');
+    const active = document.querySelector('.nav__link[aria-current]');
     const anchor = active || document.querySelector('.brand__mark') || document.querySelector('.brand');
     const rect = anchor ? anchor.getBoundingClientRect() : null;
     const x = rect && rect.width ? rect.left + rect.width / 2 - box.left : 28;

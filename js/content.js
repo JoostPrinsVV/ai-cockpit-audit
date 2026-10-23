@@ -53,8 +53,9 @@
   const list = (value) => (Array.isArray(value) ? value.map(text).filter(Boolean) : []);
   const bool = (value) => (value === true ? true : value === false ? false : null);
 
-  /* Alleen eigen bestanden (relatief pad, geen 'javascript:' of ander schema) of https:// */
-  const LOCAL_PATH = /^(?![a-z][a-z0-9+.-]*:)(?!\/\/)[^\s<>"'`]+$/i;
+  /* Alleen eigen bestanden (relatief pad, geen 'javascript:' of ander schema) of https://.
+     Geen backslash: browsers lezen '/\host' als '//host', een ander domein. */
+  const LOCAL_PATH = /^(?![a-z][a-z0-9+.-]*:)(?!\/\/)[^\s<>"'`\\]+$/i;
   const HTTPS_URL = /^https:\/\/[^\s<>"'`]+$/i;
   /* Het platform stond eerst in de map audit/ van de AI Snackbar. Paden uit die tijd ('../assets/…')
      staan nog in de database; die bestanden staan nu in assets/ van deze site. */

@@ -44,6 +44,8 @@
 
   function toggle() {
     on = !on;
+    // Bewerken gaat over je werkversie: niet tegelijk 'Als collega' (de gepubliceerde versie) bekijken
+    if (on) ns.editor.setVisitorView(false);
     try {
       window.sessionStorage.setItem(MODE_KEY, on ? 'aan' : 'uit');
     } catch (error) {
@@ -74,18 +76,20 @@
     const schema = ns.adminContent.SCHEMAS[type];
     const what = schema ? schema.one : 'item';
     let handle = null;
-    const form = ns.adminContent.quickForm(type, namespace, id, () => handle && handle.close());
-    handle = ns.editor.drawer(id ? `${what.charAt(0).toUpperCase() + what.slice(1)} bewerken` : (ADD_LABEL[type] || 'Nieuw'), form);
-    const first = form.querySelector('input, textarea, select');
+    const panel = ns.adminContent.quickForm(type, namespace, id, () => handle && handle.close(), () => handle && handle.tryClose());
+    // Iets ingevuld maar niet toegepast: eerst vragen (ook bij Escape of een klik naast het paneel)
+    const canClose = () => !panel.isDirty() || ns.ui.confirmDialog('Wat je in dit paneel hebt ingevuld, is nog niet toegepast.', { title: 'Paneel sluiten?', confirmLabel: 'Sluiten zonder toepassen', cancelLabel: 'Verder invullen', danger: true });
+    handle = ns.editor.drawer(id ? `${what.charAt(0).toUpperCase() + what.slice(1)} bewerken` : (ADD_LABEL[type] || 'Nieuw'), panel.node, null, { canClose });
+    const first = panel.node.querySelector('input, textarea, select');
     if (first) first.focus();
   }
 
   /* ---- Teksten direct op de pagina ------------------------------------------------------ */
   /**
    * Maakt node bewerkbaar. commit(text) wordt aangeroepen als de tekst is veranderd.
-   * multiline: Enter maakt een nieuwe regel (anders: klaar).
+   * multiline: Enter maakt een nieuwe regel (anders: klaar). label: wat je bewerkt (voor schermlezers).
    */
-  function inline(node, commit, multiline) {
+  function inline(node, commit, multiline, label) {
     if (!node || node.dataset.inline) return;
     node.dataset.inline = 'aan';
     try {
@@ -96,7 +100,8 @@
     if (node.contentEditable !== 'plaintext-only') node.contentEditable = 'true';
     node.spellcheck = true;
     node.setAttribute('role', 'textbox');
-    node.setAttribute('aria-label', 'Tekst bewerken');
+    node.setAttribute('aria-label', `${label || 'Tekst'} bewerken: ${node.textContent.trim()}`);
+    if (multiline) node.setAttribute('aria-multiline', 'true');
     let original = '';
     node.addEventListener('focus', () => {
       original = node.textContent;
@@ -105,7 +110,8 @@
       if (event.key === 'Escape') {
         node.textContent = original;
         node.blur();
-      } else if (event.key === 'Enter' && !multiline && !event.shiftKey) {
+      } else if (event.key === 'Enter' && !multiline) {
+        // Een titel is één regel: ook Shift+Enter is klaar
         event.preventDefault();
         node.blur();
       }
@@ -113,11 +119,12 @@
     node.addEventListener('paste', (event) => {
       // Alleen platte tekst
       event.preventDefault();
-      const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+      const text = event.clipboardData.getData('text/plain');
       document.execCommand('insertText', false, multiline ? text : text.replace(/\s*\n\s*/g, ' '));
     });
     node.addEventListener('blur', () => {
-      const text = node.textContent.replace(/ /g, ' ').trim();
+      // innerText houdt regeleinden (ook als de browser <br> gebruikt); harde spaties worden gewone
+      const text = node.innerText.replace(/\u00a0/g, ' ').trim();
       if (text === original.trim()) return;
       if (!text) {
         node.textContent = original;
@@ -166,6 +173,10 @@
       const grip = el('span', { className: 'edit-tools__btn edit-tools__grip', attrs: { title: 'Verslepen', 'aria-hidden': 'true' } }, [icon('grip')]);
       grip.addEventListener('mousedown', () => {
         slot.draggable = true;
+        // Alleen klikken, niet slepen: niet versleepbaar laten (anders sleept selecteren in de titel de kaart)
+        window.addEventListener('mouseup', () => {
+          if (!dragging) slot.draggable = false;
+        }, { once: true });
       });
       tools.push(grip);
       tools.push(toolButton('arrow-left', 'Eerder: ' + label, () => step(slot, -1)));
@@ -182,8 +193,8 @@
 
     // Titel en korte tekst direct aanpassen (niet bij een prompt uit een usecase)
     if (!t.derived) {
-      inline(title, editField(t, 'title'));
-      inline(card.querySelector(spec.text), editField(t, spec.textKey), true);
+      inline(title, editField(t, 'title'), false, 'Titel');
+      inline(card.querySelector(spec.text), editField(t, spec.textKey), true, 'Korte tekst');
     }
     if (orderable) enableDrop(slot, t);
   }
@@ -255,9 +266,9 @@
       return state;
     });
     const titleSpan = view.querySelector('.hero__title > span:first-child');
-    inline(titleSpan, (text) => setting('applicationTitle')(text.trim()));
-    inline(view.querySelector('.hero__tagline'), setting('tagline'));
-    inline(view.querySelector('.hero__subtitle'), setting('applicationSubtitle'), true);
+    inline(titleSpan, (text) => setting('applicationTitle')(text.trim()), false, 'Naam van het platform');
+    inline(view.querySelector('.hero__tagline'), setting('tagline'), false, 'Slogan');
+    inline(view.querySelector('.hero__subtitle'), setting('applicationSubtitle'), true, 'Uitleg');
   }
 
   /* ---- Detailpagina: titel en ondertitel -------------------------------------------------- */
@@ -266,8 +277,8 @@
     if (!MAPS[type]) return;
     const t = target(type, parsed.params[0]);
     if (!t || t.derived || !ns.rights.can('bewerken', t.namespace, t.type)) return;
-    inline(view.querySelector('.detail__title'), editField(t, 'title'));
-    inline(view.querySelector('.detail__subtitle'), editField(t, DETAIL_TEXT[type]), true);
+    inline(view.querySelector('.detail__title'), editField(t, 'title'), false, 'Titel');
+    inline(view.querySelector('.detail__subtitle'), editField(t, DETAIL_TEXT[type]), true, 'Ondertitel');
   }
 
   let lastParsed = null;

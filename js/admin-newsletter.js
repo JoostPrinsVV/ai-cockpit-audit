@@ -92,7 +92,8 @@
   /** Op de laatste dag van de maand: een melding bovenaan Beheer. */
   function reminder() {
     const today = ns.content.today();
-    if (!lastDayOfMonth(today) || !ns.central.signedIn()) return null;
+    // Alleen voor wie de nieuwsbrief kan maken (het tabblad is er alleen voor hoofdbeheerders)
+    if (!lastDayOfMonth(today) || !ns.central.signedIn() || !ns.rights.isOwner()) return null;
     const name = MONTHS[parse(today).getMonth()];
     return el('div', { className: 'notice notice--cta' }, [
       icon('mail'),
@@ -628,7 +629,8 @@ ${row(`<div style="height:8px;"></div>` +
 
     function setup() {
       const p = period(state.kind, state.anchor);
-      const sections = collect(p, extras);
+      // Alleen wat collega's zien: geen werkversies, voorstellen of niet-opgeslagen wijzigingen
+      const sections = ns.app.withPublished(() => collect(p, extras));
       const remembered = saved(p);
       const off = new Set(Array.isArray(remembered.off) ? remembered.off : sections.filter((section) => section.defaultOff).map((section) => 'section:' + section.id));
       current = { p, sections, texts: Object.assign(defaults(p), remembered.texts || {}), off };

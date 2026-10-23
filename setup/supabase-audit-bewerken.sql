@@ -3,7 +3,10 @@
 -- ----------------------------------------------------------------------------
 -- Voer dit uit NA setup/supabase-audit.sql (stap 1 t/m 6):
 --   Supabase → SQL Editor → New query → plak dit hele bestand → Run.
--- Opnieuw uitvoeren kan geen kwaad: bestaande gegevens blijven staan.
+-- Daarna: setup/supabase-audit-beveiligen.sql (stap 8).
+-- Is stap 8 al uitgevoerd, voer dit bestand dan niet opnieuw uit: het zou een paar functies
+-- en rechten terugzetten naar de oude vorm. Het weigert dat ook (zie hieronder). Wil je de
+-- functies opnieuw laten zetten, voer dan stap 8 opnieuw uit.
 --
 -- Wat het toevoegt:
 --   7a. Werkversie naast de gepubliceerde versie. Opslaan zet je wijziging klaar
@@ -25,6 +28,16 @@
 -- Nieuwe beheerders hebben een Supabase-account nodig met hetzelfde e-mailadres
 -- (Authentication → Users → Add user). De portal laat zien of dat account er al is.
 -- ============================================================================
+
+-- Na stap 8 niet meer: dan zou dit bestand het vier-ogengat en oude rechten terugzetten
+do $guard$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'audit_content' and column_name = 'publish_version') then
+    raise exception 'Stap 8 is al uitgevoerd: voer dit bestand niet opnieuw uit. Voer alleen setup/supabase-audit-beveiligen.sql opnieuw uit.';
+  end if;
+end;
+$guard$;
 
 -- ---- 7a. Werkversie naast de gepubliceerde versie ---------------------------------
 -- draft: { "data": {...}, "position": 10, "status": "published" | "trash" } of null
@@ -89,6 +102,7 @@ create or replace function public.audit_email()
 returns text
 language sql
 stable
+set search_path = public
 as $$
   select lower(coalesce(auth.jwt() ->> 'email', ''));
 $$;

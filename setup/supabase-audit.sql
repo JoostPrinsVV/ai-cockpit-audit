@@ -14,20 +14,25 @@
 --   3. Controleer in Authentication → Sign In / Providers dat
 --      'Allow new users to sign up' UIT staat.
 --
--- Opnieuw uitvoeren kan geen kwaad: bestaande gegevens blijven staan. Doe dat
--- ook na een nieuwe soort inhoud of tellers (bijv. agents & tools), zodat de
--- database die accepteert.
+-- Opnieuw uitvoeren kan geen kwaad: bestaande gegevens blijven staan, en wat stap 7
+-- en 8 hebben aangepast (geschiedenis, rechten) blijft zoals het is. Doe dat ook na
+-- een nieuwe soort inhoud of tellers (bijv. agents & tools), zodat de database die
+-- accepteert.
 --
--- Daarna: setup/supabase-audit-bewerken.sql (stap 7: bewerken op de site,
--- opslaan en publiceren, rollen, logboek, gepland publiceren en uploads).
+-- Daarna, in deze volgorde:
+--   setup/supabase-audit-bewerken.sql  (stap 7: bewerken op de site, opslaan en
+--                                       publiceren, rollen, logboek, gepland publiceren, uploads)
+--   setup/supabase-audit-beveiligen.sql (stap 8: werkversies afgeschermd, vier ogen ook
+--                                       bij gepland publiceren, publiceren per versie)
 --
 -- Rechten in het kort (Row Level Security):
 --   - Iedereen mag gepubliceerde inhoud lezen (usecases, prompts, tips, ...).
 --   - Iedereen mag een inzending, stem, review of teller toevoegen, niets anders.
 --   - Iedereen mag alleen gepubliceerde inzendingen lezen, zonder naam en e-mail,
 --     en van reviews alleen het gemiddelde en de gepubliceerde toelichtingen.
---   - Inhoud aanpassen, alles lezen, beantwoorden, publiceren en wissen kan
---     alleen een ingelogde beheerder van wie het e-mailadres in audit_admins staat.
+--   - Inzendingen, reviews, tellers en rechtstreeks schrijven in de inhoud: alleen
+--     hoofdbeheerders (e-mailadres in audit_admins). Rollen per discipline en het
+--     bewerken via opslaan en publiceren komen in stap 7 en 8.
 -- ============================================================================
 
 -- ---- 1. Beheerders ----------------------------------------------------------
@@ -37,10 +42,12 @@ create table if not exists public.audit_admins (
 alter table public.audit_admins enable row level security;
 revoke all on public.audit_admins from anon, authenticated;
 
--- PAS DIT AAN: één regel per beheerder.
-insert into public.audit_admins (email) values
-  ('beheerder@visser-visser.nl')
-on conflict do nothing;
+-- PAS DIT AAN: het e-mailadres van de eerste hoofdbeheerder. Alleen bij een lege tabel,
+-- zodat opnieuw uitvoeren geen beheerder terugzet die je in Beheer → Beheerders hebt
+-- verwijderd. Meer beheerders voeg je daarna toe in Beheer → Beheerders.
+insert into public.audit_admins (email)
+select 'beheerder@visser-visser.nl'
+where not exists (select 1 from public.audit_admins);
 
 create or replace function public.audit_is_admin()
 returns boolean
@@ -54,8 +61,9 @@ as $$
     where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
   );
 $$;
-revoke all on function public.audit_is_admin() from public;
-grant execute on function public.audit_is_admin() to anon, authenticated;
+-- Alleen voor ingelogde gebruikers (geen policy voor bezoekers gebruikt hem)
+revoke all on function public.audit_is_admin() from public, anon;
+grant execute on function public.audit_is_admin() to authenticated;
 
 -- ---- 2. Inzendingen uit de ideeënhub ------------------------------------------
 create table if not exists public.audit_ideas (
@@ -122,6 +130,7 @@ create policy "audit_ideas beheer wissen" on public.audit_ideas
 create or replace function public.audit_ideas_touch()
 returns trigger
 language plpgsql
+set search_path = public
 as $$
 begin
   new.updated_at := now();
@@ -231,7 +240,19 @@ alter table public.audit_content enable row level security;
 
 revoke all on public.audit_content from anon, authenticated;
 grant select (namespace, type, id, data, position, status, updated_at) on public.audit_content to anon;
-grant select, insert, update, delete on public.audit_content to authenticated;
+-- Ingelogd: dezelfde kolommen; werkversies en wie wat deed via audit_content_editor (stap 8).
+-- Schrijven mag, maar de policy hieronder laat alleen hoofdbeheerders toe.
+grant select (namespace, type, id, data, position, status, updated_at) on public.audit_content to authenticated;
+grant insert, update, delete on public.audit_content to authenticated;
+-- Tot stap 8 er is, leest Beheer de werkversies nog rechtstreeks uit de tabel
+do $grant$
+begin
+  if not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                 where n.nspname = 'public' and p.proname = 'audit_content_editor') then
+    grant select on public.audit_content to authenticated;
+  end if;
+end;
+$grant$;
 
 drop policy if exists "audit_content gepubliceerd lezen" on public.audit_content;
 create policy "audit_content gepubliceerd lezen" on public.audit_content
@@ -260,31 +281,49 @@ alter table public.audit_content_history enable row level security;
 revoke all on public.audit_content_history from anon, authenticated;
 grant select on public.audit_content_history to authenticated;
 
-drop policy if exists "audit_content_history beheer lezen" on public.audit_content_history;
-create policy "audit_content_history beheer lezen" on public.audit_content_history
-  for select to authenticated
-  using (public.audit_is_admin());
-
--- Bij opslaan: tijdstip en wie; de oude versie gaat naar de geschiedenis
-create or replace function public.audit_content_stamp()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
+-- Alleen bij een nieuwe installatie: stap 7 vervangt deze policy (ook rollen mogen lezen)
+-- en opnieuw uitvoeren van dit bestand mag dat niet terugdraaien
+do $policy$
 begin
-  if tg_op in ('UPDATE', 'DELETE') then
-    insert into public.audit_content_history (namespace, type, id, data, status, action, changed_by)
-    values (old.namespace, old.type, old.id, old.data, old.status, lower(tg_op), auth.jwt() ->> 'email');
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'audit_content_history'
+                 and policyname = 'audit_content_history beheer lezen') then
+    create policy "audit_content_history beheer lezen" on public.audit_content_history
+      for select to authenticated
+      using (public.audit_is_admin());
   end if;
-  if tg_op = 'DELETE' then
-    return old;
-  end if;
-  new.updated_at := now();
-  new.updated_by := auth.jwt() ->> 'email';
-  return new;
 end;
-$$;
+$policy$;
+
+-- Bij opslaan: tijdstip en wie; de oude versie gaat naar de geschiedenis. Alleen bij een
+-- nieuwe installatie: stap 7 en 8 vervangen deze functie, en dat blijft zo.
+do $stamp$
+begin
+  if not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                 where n.nspname = 'public' and p.proname = 'audit_content_stamp') then
+    execute $fn$
+      create function public.audit_content_stamp()
+      returns trigger
+      language plpgsql
+      security definer
+      set search_path = public
+      as $$
+      begin
+        if tg_op in ('UPDATE', 'DELETE') then
+          insert into public.audit_content_history (namespace, type, id, data, status, action, changed_by)
+          values (old.namespace, old.type, old.id, old.data, old.status, lower(tg_op), auth.jwt() ->> 'email');
+        end if;
+        if tg_op = 'DELETE' then
+          return old;
+        end if;
+        new.updated_at := now();
+        new.updated_by := auth.jwt() ->> 'email';
+        return new;
+      end;
+      $$;
+    $fn$;
+  end if;
+end;
+$stamp$;
 drop trigger if exists audit_content_stamp on public.audit_content;
 create trigger audit_content_stamp
   before insert or update or delete on public.audit_content

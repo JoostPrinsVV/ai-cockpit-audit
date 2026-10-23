@@ -16,7 +16,7 @@
   const filters = { category: 'all' };
 
   const isUpcoming = (training) => !training.available && training.date >= ns.content.today();
-  const reduceMotion = () => Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const scrollBehavior = () => (ns.motion.calm() ? 'auto' : 'smooth'); // minder beweging: direct springen
   const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 
   /** Label rechtsonder op de kaart: duur van de opname, aantal slides, of de stand van zaken. */
@@ -105,6 +105,8 @@
     }
 
     const categories = ns.content.trainingCategories.filter((category) => archive.some((training) => training.category === category));
+    // Een soort die er niet meer is, of geen filterbalk (één soort): dan alles tonen
+    if (categories.length < 2 || !categories.includes(filters.category)) filters.category = 'all';
     const filterBlock = categories.length > 1 ? el('div', { className: 'filters' }, [
       el('div', { className: 'filters__row' }, [
         el('span', { className: 'filters__label', text: 'Soort' }),
@@ -453,7 +455,7 @@
         link.addEventListener('click', (event) => {
           event.preventDefault();
           target.heading.focus({ preventScroll: true });
-          target.node.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' });
+          target.node.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
         });
         return { id: target.id, link };
       });
@@ -487,7 +489,6 @@
   function renderDetail(id) {
     const training = ns.content.trainingById.get(id);
     if (!training) return null;
-    ns.central.track('view_training', training.id);
     const recording = recordingBlock(training);
     const viewer = training.slides.length ? slideViewer(training) : null;
     const slides = viewer ? slidesBlock(training, viewer, Boolean(recording.node)) : null;
@@ -502,7 +503,7 @@
         jump.addEventListener('click', () => {
           recording.video.currentTime = chapter.seconds;
           recording.video.play().catch(() => {});
-          recording.video.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          recording.video.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
         });
         return el('li', { className: 'chapters__item' }, [jump]);
       }))

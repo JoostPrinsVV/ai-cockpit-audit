@@ -21,6 +21,7 @@
   const confirm = (message, options) => ns.ui.confirmDialog(message, options);
   const UNDO_MAX = 50;
   const PING_EVERY = 30000;
+  const KEEP_DAYS = 30; // niet-opgeslagen werk dat ouder is, wordt bij de volgende keer niet meer teruggehaald
   const TYPE_LABEL = { usecase: 'Usecase', prompt: 'Prompt', tip: 'Tip', training: 'Training', agent: 'Agent', phase: 'Fase', setting: 'Teksten' };
   const ROUTE = { usecase: 'usecase', prompt: 'prompt', tip: 'tip', training: 'training', agent: 'agent' };
 
@@ -33,6 +34,7 @@
   let visitorView = false; // 'Bekijk als collega': alleen de gepubliceerde versie
   let restoredFor = '';
   let busy = false;
+  let batching = false; // binnen batch(): één stap voor ongedaan maken
   const listeners = new Set();
 
   /* ---- Toestand ---------------------------------------------------------------- */
@@ -71,8 +73,13 @@
   }
 
   function persist() {
-    storage.set(storeKey(), pending.size ? Array.from(pending.values()) : null);
+    if (!ns.central.signedIn()) return;
+    if (!pending.size) storage.remove(storeKey());
+    else if (!storage.set(storeKey(), Array.from(pending.values()))) toast('Je wijzigingen kunnen niet in deze browser worden bewaard (opslag vol of geblokkeerd). Sla ze op voordat je het tabblad sluit.', { tone: 'warning', duration: 8000 });
   }
+
+  const usable = (entry) => Boolean(entry && entry.namespace && entry.type && entry.id && entry.draft);
+  const fresh = (entry) => !entry.at || Date.now() - entry.at < KEEP_DAYS * 86400000;
 
   /** Niet-opgeslagen wijzigingen van een vorige keer terughalen (eenmalig per sessie). */
   function restore() {
@@ -81,15 +88,45 @@
     restoredFor = email;
     const saved = storage.get(storeKey(), null);
     if (!Array.isArray(saved) || !saved.length) return;
-    saved.forEach((entry) => {
-      if (entry && entry.namespace && entry.type && entry.id && entry.draft) pending.set(keyOf(entry.namespace, entry.type, entry.id), entry);
-    });
+    saved.filter(usable).filter(fresh).forEach((entry) => pending.set(keyOf(entry.namespace, entry.type, entry.id), entry));
     if (pending.size) toast(`${pending.size === 1 ? '1 wijziging' : pending.size + ' wijzigingen'} van de vorige keer terug: nog niet opgeslagen.`, { duration: 7000 });
+  }
+
+  /**
+   * Een ander tabblad (zelfde beheerder) bewaarde zijn niet-opgeslagen werk. Dat komt er hier bij,
+   * anders overschrijft het tabblad dat het laatst bewaart het werk van het andere. Bij hetzelfde
+   * item gaat de wijziging in dit tabblad voor.
+   */
+  function onOtherTab(event) {
+    if (!event.key || !ns.central.signedIn() || !event.key.endsWith(':' + storeKey())) return;
+    let theirs = [];
+    try {
+      theirs = JSON.parse(event.newValue || '[]') || [];
+    } catch (error) {
+      return;
+    }
+    let added = 0;
+    (Array.isArray(theirs) ? theirs : []).filter(usable).forEach((entry) => {
+      const key = keyOf(entry.namespace, entry.type, entry.id);
+      if (pending.has(key)) return;
+      pending.set(key, entry);
+      added++;
+    });
+    if (!added) return;
+    persist();
+    afterLocalChange();
   }
 
   const snapshot = () => JSON.stringify(Array.from(pending.entries()));
   function load(state) {
     pending = new Map(JSON.parse(state));
+  }
+
+  /** Eén stap voor ongedaan maken vastleggen (de stand vóór de wijziging). */
+  function record() {
+    undoStack.push(snapshot());
+    if (undoStack.length > UNDO_MAX) undoStack.shift();
+    redoStack = [];
   }
 
   /**
@@ -100,18 +137,26 @@
     const current = effective(namespace, type, id) || { data: {}, position: 0, status: 'published' };
     const next = typeof update === 'function' ? update(clone(current)) : Object.assign(clone(current), clone(update));
     if (!next) return false;
-    const row = rowOf(namespace, type, id);
-    const draft = { data: next.data || {}, position: Number.isFinite(next.position) ? next.position : 0, status: next.status === 'trash' ? 'trash' : 'published' };
-    undoStack.push(snapshot());
-    if (undoStack.length > UNDO_MAX) undoStack.shift();
-    redoStack = [];
-    const key = keyOf(namespace, type, id);
-    // Weer gelijk aan de opgeslagen stand: dan is er niets meer te bewaren
-    if (row && JSON.stringify(draft) === JSON.stringify(savedState(row))) pending.delete(key);
-    else pending.set(key, { namespace, type, id, draft, version: row ? row.version : null, title: titleOf(draft.data, id) });
+    if (!batching) record();
+    stageQuiet(namespace, type, id, next);
+    if (!batching) {
+      persist();
+      afterLocalChange();
+    }
+    return true;
+  }
+
+  /** Meerdere wijzigingen als één stap (één keer ongedaan maken), bijv. een nieuw adres: het item onder het nieuwe adres en het oude weg. */
+  function batch(run) {
+    record();
+    batching = true;
+    try {
+      run();
+    } finally {
+      batching = false;
+    }
     persist();
     afterLocalChange();
-    return true;
   }
 
   /**
@@ -143,38 +188,30 @@
     else if (prevPos !== null && nextPos - prevPos >= 2) position = Math.floor((prevPos + nextPos) / 2);
     if (position !== null) return change(namespace, type, id, { position });
     // Geen ruimte: alles in stappen van 10, in één stap ongedaan te maken
-    const before = snapshot();
-    list.forEach((item, index) => {
+    batch(() => list.forEach((item, index) => {
       const wanted = (index + 1) * 10;
       if (item.state.position !== wanted) stageQuiet(namespace, type, item.id, Object.assign(item.state, { position: wanted }));
-    });
-    undoStack.push(before);
-    redoStack = [];
-    persist();
-    afterLocalChange();
+    }));
     return true;
   }
 
-  /** Zoals change(), maar zonder eigen stap voor ongedaan maken en zonder opnieuw opbouwen. */
+  /**
+   * Zoals change(), maar zonder eigen stap voor ongedaan maken en zonder opnieuw opbouwen.
+   * De versie blijft die van het moment waarop je met dit item begon: is het intussen door
+   * een ander opgeslagen, dan meldt Opslaan dat (in plaats van stil te overschrijven).
+   */
   function stageQuiet(namespace, type, id, next) {
     const row = rowOf(namespace, type, id);
     const draft = { data: next.data || {}, position: Number.isFinite(next.position) ? next.position : 0, status: next.status === 'trash' ? 'trash' : 'published' };
     const key = keyOf(namespace, type, id);
+    const before = pending.get(key);
+    // Weer gelijk aan de opgeslagen stand: dan is er niets meer te bewaren
     if (row && JSON.stringify(draft) === JSON.stringify(savedState(row))) pending.delete(key);
-    else pending.set(key, { namespace, type, id, draft, version: row ? row.version : null, title: titleOf(draft.data, id) });
-  }
-
-  /** Niet-opgeslagen wijziging van één item laten vallen. */
-  function forget(namespace, type, id) {
-    if (!pending.has(keyOf(namespace, type, id))) return;
-    undoStack.push(snapshot());
-    pending.delete(keyOf(namespace, type, id));
-    persist();
-    afterLocalChange();
+    else pending.set(key, { namespace, type, id, draft, version: before ? before.version : row ? row.version : null, title: titleOf(draft.data, id), at: Date.now() });
   }
 
   function undo() {
-    if (!undoStack.length) return;
+    if (busy || !undoStack.length) return;
     redoStack.push(snapshot());
     load(undoStack.pop());
     persist();
@@ -183,7 +220,7 @@
   }
 
   function redo() {
-    if (!redoStack.length) return;
+    if (busy || !redoStack.length) return;
     undoStack.push(snapshot());
     load(redoStack.pop());
     persist();
@@ -230,45 +267,66 @@
 
   function setVisitorView(on) {
     visitorView = Boolean(on);
+    // Als collega kijken en tegelijk bewerken gaat niet samen: je zou de werkversie aanpassen terwijl je de gepubliceerde ziet
+    if (visitorView && ns.editmode && ns.editmode.isOn()) ns.editmode.toggle();
     if (ns.app && ns.app.recompose) ns.app.recompose();
     emit();
   }
 
   /* ---- Opslaan ------------------------------------------------------------------- */
-  /** Eén item direct opslaan als werkversie (vanuit een formulier). Geeft true als het gelukt is. */
+  /**
+   * Eén item opslaan als werkversie (uit de bewerkbalk of een formulier in Beheer).
+   * Geeft { kind: 'wijziging' | 'voorstel' (een ander zet het live), version }, of false als je bij
+   * een conflict de versie van de ander houdt. Gooit een fout als het niet lukt; de wijziging blijft dan staan.
+   */
   async function saveOne(entry) {
+    const key = keyOf(entry.namespace, entry.type, entry.id);
+    const before = pending.get(key);
     const row = rowOf(entry.namespace, entry.type, entry.id);
-    const item = Object.assign({ version: row ? row.version : null, title: titleOf(entry.draft.data, entry.id) }, entry);
+    const item = Object.assign({ version: before ? before.version : row ? row.version : null, title: titleOf(entry.draft.data, entry.id) }, entry);
+    // Alleen weg als er intussen (tijdens het opslaan) niets meer aan dit item is veranderd
+    const settled = () => {
+      if (pending.get(key) === before) pending.delete(key);
+      persist();
+    };
     let result = await ns.central.saveDraft(item);
     if (result && result.conflict) {
-      const overwrite = await askConflict(item, result);
-      if (!overwrite) {
-        // Hun versie houden: jouw niet-opgeslagen wijziging vervalt
-        pending.delete(keyOf(item.namespace, item.type, item.id));
-        persist();
+      if (!(await askConflict(item, result))) {
+        settled(); // hun versie houden: jouw niet-opgeslagen wijziging vervalt
         return false;
       }
       result = await ns.central.saveDraft(Object.assign({}, item, { version: result.version }));
+      // Intussen wéér door iemand opgeslagen: niet blind overschrijven
+      if (result && result.conflict) throw new Error(`intussen opnieuw opgeslagen door ${result.draft_by || result.updated_by || 'een ander'}; bekijk het item en probeer het nog eens`);
     }
-    pending.delete(keyOf(item.namespace, item.type, item.id));
-    persist();
+    settled();
     // 'voorstel' als je niet mag publiceren (een ander zet het live), anders 'wijziging'
-    return (result && result.kind) || 'wijziging';
+    return { kind: (result && result.kind) || 'wijziging', version: result && Number.isFinite(result.version) ? result.version : null };
   }
 
   function askConflict(item, result) {
-    const who = result.draft_by || result.updated_by || 'een andere beheerder';
-    const when = result.draft_at || result.updated_at;
-    return confirm(`"${item.title || item.id}" is intussen opgeslagen door ${who}${when ? ' (' + new Date(when).toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' }) + ')' : ''}. Zet je jouw versie eroverheen, dan gaat die van de ander verloren.`, {
+    const who = result.draft_by || result.updated_by || '';
+    const at = result.draft_at || result.updated_at;
+    const stamp = at ? ' (' + new Date(at).toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' }) + ')' : '';
+    // Zelf opgeslagen, bijvoorbeeld in een ander tabblad
+    if (who && who.toLowerCase() === (ns.central.signedIn() || '').toLowerCase()) {
+      return confirm(`Je hebt "${item.title || item.id}" intussen zelf opgeslagen${stamp}, misschien in een ander tabblad. Welke versie wil je houden?`, {
+        title: 'Al eerder opgeslagen',
+        confirmLabel: 'Deze versie opslaan',
+        cancelLabel: 'De opgeslagen versie houden'
+      });
+    }
+    return confirm(`"${item.title || item.id}" is intussen opgeslagen door ${who || 'een andere beheerder'}${stamp}. Zet je jouw versie eroverheen, dan gaat die van de ander verloren.`, {
       title: 'Iemand anders was je voor',
       confirmLabel: 'Mijn versie opslaan',
       cancelLabel: 'Hun versie houden'
     });
   }
 
-  /** Alle niet-opgeslagen wijzigingen opslaan. */
+  /** Alle niet-opgeslagen wijzigingen opslaan. Geeft true als alles is opgeslagen. */
   async function save() {
-    if (busy || !pending.size) return true;
+    if (busy) return false;
+    if (!pending.size) return true;
     busy = true;
     emit();
     const failed = [];
@@ -281,6 +339,10 @@
           failed.push(`${entry.title || entry.id}: ${error.message}`);
         }
       }
+      // Ongedaan maken gaat over niet-opgeslagen werk: na opslaan begint dat opnieuw
+      // (anders haalt Ctrl+Z een stand terug die al is opgeslagen, met een oude versie)
+      undoStack = [];
+      redoStack = [];
       await ns.app.reloadContent();
     } finally {
       busy = false;
@@ -290,8 +352,9 @@
       toast('Niet alles is opgeslagen. ' + failed.join(' · '), { tone: 'warning', duration: 9000 });
       return false;
     }
-    const proposals = kinds.filter((kind) => kind === 'voorstel').length;
-    if (proposals && proposals === kinds.filter(Boolean).length) toast('Voorstel opgeslagen. Een beheerder of redacteur bekijkt het en publiceert het.', { tone: 'success', duration: 6000 });
+    const savedKinds = kinds.filter(Boolean).map((saved) => saved.kind);
+    if (!savedKinds.length) toast('Niets opgeslagen: de versie die al was opgeslagen is gehouden.');
+    else if (savedKinds.every((kind) => kind === 'voorstel')) toast('Voorstel opgeslagen. Een beheerder of redacteur bekijkt het en publiceert het.', { tone: 'success', duration: 6000 });
     else toast('Opgeslagen. Nog niet live: publiceer om het voor iedereen te tonen.', { tone: 'success' });
     return true;
   }
@@ -366,7 +429,9 @@
     busy = true;
     emit();
     try {
-      const result = await ns.central.publish(items.map((item) => ({ namespace: item.namespace, type: item.type, id: item.id })), at || null);
+      // Met de versie die je in het paneel zag: is het item intussen opnieuw opgeslagen, dan slaat de database het over (stap 8)
+      const versionOf = (item) => (Number.isFinite(item.version) ? item.version : item.row ? item.row.version : null);
+      const result = await ns.central.publish(items.map((item) => ({ namespace: item.namespace, type: item.type, id: item.id, version: versionOf(item) })), at || null);
       await ns.app.reloadContent();
       const skipped = (result && result.skipped) || [];
       const done = (result && result.done) || 0;
@@ -385,7 +450,8 @@
   }
 
   async function discard(item) {
-    if (!(await confirm(`De opgeslagen wijziging van "${item.title}" wordt weggegooid. ${item.kind === 'nieuw' ? 'Het nieuwe item verdwijnt helemaal.' : 'De gepubliceerde versie blijft staan.'}`, { title: 'Wijziging weggooien?', confirmLabel: 'Weggooien', danger: true }))) return false;
+    const effect = item.kind === 'nieuw' ? 'Het nieuwe item verdwijnt helemaal.' : item.kind === 'concept' ? 'Het concept verdwijnt helemaal.' : 'De gepubliceerde versie blijft staan.';
+    if (!(await confirm(`De opgeslagen wijziging van "${item.title}" wordt weggegooid. ${effect}`, { title: 'Wijziging weggooien?', confirmLabel: 'Weggooien', danger: true }))) return false;
     try {
       await ns.central.discardDraft(item.type, item.id, item.namespace);
       await ns.app.reloadContent();
@@ -398,7 +464,12 @@
   }
 
   /* ---- Zijpaneel (publiceren, logboek, versies) ----------------------------------------- */
-  function drawer(title, body, footer) {
+  /**
+   * options.canClose(): mag het paneel dicht (Sluiten, Escape, klik ernaast)? Bijv. vragen bij
+   * een half ingevuld formulier. Mag ook een Promise geven.
+   */
+  function drawer(title, body, footer, options) {
+    const opts = options || {};
     const titleId = 'drawer-' + Math.random().toString(36).slice(2, 8);
     const closeButton = el('button', { className: 'btn btn--quiet btn--icon', attrs: { type: 'button', 'aria-label': 'Sluiten' } }, [icon('close')]);
     const dialog = el('dialog', { className: 'drawer', attrs: { 'aria-labelledby': titleId } }, [
@@ -416,15 +487,24 @@
       }
       dialog.remove();
     };
-    closeButton.addEventListener('click', close);
+    const tryClose = async () => {
+      if (opts.canClose && !(await opts.canClose())) return;
+      close();
+    };
+    closeButton.addEventListener('click', tryClose);
     dialog.addEventListener('click', (event) => {
-      if (event.target === dialog) close();
+      if (event.target === dialog) tryClose();
+    });
+    // Escape: eerst vragen (de browser zou het paneel anders meteen sluiten)
+    dialog.addEventListener('cancel', (event) => {
+      event.preventDefault();
+      tryClose();
     });
     dialog.addEventListener('close', () => dialog.remove());
     document.body.append(dialog);
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else dialog.setAttribute('open', '');
-    return { dialog, close };
+    return { dialog, close, tryClose };
   }
 
   const shortName = (email) => String(email || '').split('@')[0] || 'onbekend';
@@ -433,6 +513,7 @@
 
   /** Paneel Publiceren: wat klaarstaat, met aandachtspunten, nu of gepland. */
   async function openPublish() {
+    if (busy) return;
     if (pending.size) {
       const ok = await confirm(`Je hebt nog ${pending.size === 1 ? '1 wijziging' : pending.size + ' wijzigingen'} die niet is opgeslagen. Die sla ik eerst op.`, { title: 'Eerst opslaan', confirmLabel: 'Opslaan en verder' });
       if (!ok || !(await save())) return;
@@ -492,6 +573,7 @@
     moment.value = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     moment.addEventListener('focus', () => {
       later.checked = true;
+      sync();
     });
     const go = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('send'), el('span')]);
     const selected = () => items.filter((item) => checks.get(item).checked);
@@ -612,29 +694,53 @@
   }
 
   /* ---- Wie bewerkt wat ------------------------------------------------------------- */
+  // Eén melding per item, ook als de pagina intussen opnieuw wordt opgebouwd (dan verhuist hij mee)
+  const watching = new Map(); // keyOf → { namespace, type, id, node, notice, timer }
+
+  function stopWatch(key) {
+    const entry = watching.get(key);
+    if (!entry) return;
+    window.clearTimeout(entry.timer);
+    watching.delete(key);
+    ns.central.leave(entry.type, entry.id, entry.namespace);
+  }
+
   /**
    * Meldt dat je dit item open hebt (zolang node in de pagina staat) en toont een
    * waarschuwing in node als iemand anders het ook open heeft.
    */
   function watch(namespace, type, id, node) {
     if (!available() || !node) return;
+    const key = keyOf(namespace, type, id);
     const notice = el('p', { className: 'notice notice--warning presence', attrs: { role: 'status', hidden: true } });
     node.prepend(notice);
-    let timer = 0;
+    const running = watching.get(key);
+    if (running) {
+      // Al bezig (de pagina is opnieuw opgebouwd): verder in het nieuwe formulier
+      running.node = node;
+      running.notice = notice;
+      return;
+    }
+    const entry = { namespace, type, id, node, notice, timer: 0 };
+    watching.set(key, entry);
     async function tick() {
-      if (!node.isConnected) {
-        ns.central.leave(type, id, namespace);
+      if (watching.get(key) !== entry) return;
+      if (!entry.node.isConnected || !signedIn()) {
+        stopWatch(key);
         return;
       }
-      const others = await ns.central.ping(type, id, namespace);
-      if (others.length) {
-        notice.replaceChildren(icon('users'), el('span', { text: `${others.map((o) => shortName(o.editor)).join(' en ')} ${others.length === 1 ? 'heeft' : 'hebben'} dit item ook open. Overleg even, anders overschrijven jullie elkaars werk.` }));
-        notice.hidden = false;
-      } else notice.hidden = true;
-      timer = window.setTimeout(tick, PING_EVERY);
+      // Tabblad op de achtergrond: niet melden (scheelt verzoeken), wel blijven kijken
+      if (!document.hidden) {
+        const others = await ns.central.ping(type, id, namespace);
+        if (watching.get(key) !== entry) return;
+        if (others.length) {
+          entry.notice.replaceChildren(icon('users'), el('span', { text: `${others.map((o) => shortName(o.editor)).join(' en ')} ${others.length === 1 ? 'heeft' : 'hebben'} dit item ook open. Overleg even, anders overschrijven jullie elkaars werk.` }));
+          entry.notice.hidden = false;
+        } else entry.notice.hidden = true;
+      }
+      entry.timer = window.setTimeout(tick, PING_EVERY);
     }
-    window.setTimeout(tick, 400);
-    return () => window.clearTimeout(timer);
+    entry.timer = window.setTimeout(tick, 400);
   }
 
   /* ---- Bewerkbalk ------------------------------------------------------------------ */
@@ -706,15 +812,21 @@
   function onKey(event) {
     if (!signedIn() || !available()) return;
     const mod = event.ctrlKey || event.metaKey;
-    if (!mod) return;
+    // AltGr (Ctrl+Alt) is een gewone letter; een ingedrukt gehouden toets niet steeds opnieuw
+    if (!mod || event.altKey || event.repeat) return;
     const key = event.key.toLowerCase();
+    const target = event.target;
     if (key === 's') {
       event.preventDefault();
-      save();
+      // In een formulier (Beheer of het zijpaneel): dát formulier opslaan, niet de bewerkbalk
+      const form = target && target.closest ? target.closest('form.cms-form') : null;
+      if (form) form.requestSubmit();
+      else if (!document.querySelector('dialog[open]')) save();
       return;
     }
+    // Niet achter een open venster (bijv. het publiceerpaneel) iets ongedaan maken
+    if (document.querySelector('dialog[open]')) return;
     // In een tekstveld doet de browser zelf ongedaan maken
-    const target = event.target;
     if (target && (target.isContentEditable || /^(input|textarea|select)$/i.test(target.tagName))) return;
     if (key === 'z' && !event.shiftKey) {
       event.preventDefault();
@@ -729,47 +841,56 @@
     listeners.add(renderBar);
     document.addEventListener('keydown', onKey);
     window.addEventListener('beforeunload', persist);
+    window.addEventListener('storage', onOtherTab);
   }
 
   /** Na het (opnieuw) laden van de inhoud: niet-opgeslagen werk terughalen en de balk bijwerken. */
   function contentLoaded() {
+    // Uitgelogd (bijv. sessie verlopen) of iemand anders ingelogd in dit tabblad: niets van de vorige
+    // meenemen (diens werk staat al onder diens eigen naam in deze browser)
+    const email = (ns.central.signedIn() || '').toLowerCase();
+    if (restoredFor && restoredFor !== email) {
+      pending = new Map();
+      undoStack = [];
+      redoStack = [];
+      visitorView = false;
+      restoredFor = '';
+    }
     if (available()) restore();
     renderBar();
   }
 
-  function subscribe(listener) {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
+  /**
+   * Vóór uitloggen: het werk blijft bewaard in deze browser (onder je eigen naam), maar niets
+   * ervan blijft in het geheugen hangen voor wie hierna in dit tabblad inlogt.
+   */
+  function reset() {
+    persist();
+    Array.from(watching.keys()).forEach(stopWatch);
+    pending = new Map();
+    undoStack = [];
+    redoStack = [];
+    visitorView = false;
+    restoredFor = '';
+    barItem = null;
   }
 
   ns.editor = {
     init,
     available,
     contentLoaded,
-    subscribe,
+    reset,
     overlay,
     effective,
     change,
+    batch,
     move,
-    forget,
     drawer,
-    undo,
-    redo,
-    save,
     saveOne,
     publish,
-    openPublish,
-    openLog,
-    openVersions,
-    waiting,
-    checks,
     watch,
     setPageItem,
     setVisitorView,
-    isVisitorView: () => visitorView,
-    pendingCount: () => pending.size,
-    hasPending: (namespace, type, id) => pending.has(keyOf(namespace, type, id)),
-    rowOf,
     savedState
   };
 })(window.AIAudit);

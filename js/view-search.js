@@ -5,25 +5,25 @@
   'use strict';
 
   const { el, icon, pageHeader } = ns.ui;
-  const LIMIT = 12;
 
   function render(params) {
-    const initial = params[0] ? decodeURIComponent(params[0]) : '';
-    const results = el('div', { className: 'search-results', attrs: { 'aria-live': 'polite' } });
+    const initial = params[0] || ''; // al gedecodeerd (js/app.js)
+    // Alleen het aantal wordt voorgelezen, niet de hele lijst bij iedere toetsaanslag
+    const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
+    const results = el('div', { className: 'search-results' });
     const input = el('input', {
       className: 'search__input',
       attrs: { id: 'global-search', type: 'search', placeholder: 'Bijv. "transcriptie", "materialiteit" of "Facilitator"', autocomplete: 'off', enterkeyhint: 'search' }
     });
     input.value = initial;
 
-    function group(title, items, renderItem, moreHref) {
+    function group(title, items, renderItem) {
       if (!items.length) return null;
       return el('section', { className: 'section section--tight', attrs: { 'aria-label': title } }, [
         el('div', { className: 'section__head' }, [
-          el('h2', { className: 'section__title' }, [el('span', { text: title }), el('span', { className: 'section__count', text: String(items.length) })]),
-          moreHref && items.length > LIMIT ? el('a', { className: 'section__link', attrs: { href: moreHref } }, [el('span', { text: 'Alles bekijken' }), icon('arrow-right')]) : null
+          el('h2', { className: 'section__title' }, [el('span', { text: title }), el('span', { className: 'section__count', text: String(items.length) })])
         ]),
-        el('ul', { className: 'card-grid', attrs: { role: 'list' } }, items.slice(0, LIMIT).map((item) => el('li', {}, [renderItem(item)])))
+        el('ul', { className: 'card-grid', attrs: { role: 'list' } }, items.map((item) => el('li', {}, [renderItem(item)])))
       ]);
     }
 
@@ -33,11 +33,13 @@
       const hash = '#/zoeken' + (query ? '/' + encodeURIComponent(query) : '');
       if (window.location.hash !== hash) window.history.replaceState(window.history.state, '', hash);
       if (!query) {
+        count.textContent = '';
         results.replaceChildren(el('p', { className: 'section__lead', text: 'Typ een of meer woorden. Je zoekt tegelijk in usecases, prompts, tips, trainingen en agents & tools.' }));
         return;
       }
       const found = ns.content.search(query);
       const total = found.usecases.length + found.prompts.length + found.tips.length + found.trainings.length + found.agents.length;
+      count.textContent = total === 1 ? '1 resultaat' : total + ' resultaten';
       if (!total) {
         results.replaceChildren(el('div', { className: 'empty' }, [
           el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('search')]),
@@ -48,9 +50,8 @@
         return;
       }
       results.replaceChildren(...[
-        el('p', { className: 'results-count', text: total === 1 ? '1 resultaat' : total + ' resultaten' }),
         group('Usecases', found.usecases, (u) => ns.views.usecases.card(u, 'h3')),
-        group('Prompts', found.prompts, (p) => ns.views.prompts.card(p, 'h3'), '#/prompts'),
+        group('Prompts', found.prompts, (p) => ns.views.prompts.card(p, 'h3')),
         group('Tips & tricks', found.tips, (t) => ns.views.tips.card(t, 'h3')),
         group('Trainingen', found.trainings, (t) => ns.views.trainings.card(t, 'h3')),
         group('Agents & tools', found.agents, (a) => ns.views.agents.card(a, 'h3'))
@@ -75,12 +76,15 @@
     const node = el('div', { className: 'page container' }, [
       pageHeader({ eyebrow: 'Zoeken', title: 'Zoek op het hele platform' }),
       form,
+      count,
       results
     ]);
     update();
     return {
       node,
       title: initial ? 'Zoeken: ' + initial : 'Zoeken',
+      // Weg van deze pagina vlak na typen: het adres van de nieuwe pagina niet meer overschrijven
+      destroy: () => window.clearTimeout(timer),
       // Na het openen meteen in het zoekveld (in plaats van op de kop)
       focus: () => {
         input.focus();

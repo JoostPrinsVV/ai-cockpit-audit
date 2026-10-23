@@ -29,12 +29,19 @@
   let current = null;
   let currentHash = '';
   let firstRoute = true;
-  let rendered = false;
+  let contentReady = false; // er staat inhoud klaar (uit de cache, de database of de bestanden)
+  let rendered = false; // er staat een pagina
+  let routeSeq = 0; // nummer van de laatste routering (een oudere overgang toont niets meer)
+  let loadRun = 0; // nummer van de laatste keer ophalen (een oudere uitkomst telt niet meer)
   let leaveApproved = false; // 'Verlaten zonder opslaan' is bevestigd
   let scrollPositions = {};
   let currentScrollKey = '';
   let pendingScroll = null; // plek die nog niet te halen was (de pagina was nog niet compleet)
 
+  // Opzoeken in een tabel zonder wat elk object erft (#/constructor is geen pagina)
+  const own = (table, key) => (Object.prototype.hasOwnProperty.call(table, key) ? table[key] : null);
+
+  let ROUTES = null;
   function routes() {
     const v = ns.views;
     return {
@@ -58,11 +65,20 @@
   // Bij welk menu-item hoort een route?
   const NAV_FOR = { usecases: 'usecases', usecase: 'usecases', prompts: 'prompts', prompt: 'prompts', tips: 'tips', tip: 'tips', trainingen: 'trainingen', training: 'trainingen', agents: 'agents', agent: 'agents', ideeen: 'ideeen' };
 
+  /** Een deel van het adres als tekst; een kapotte %-code (bijv. uit een verminkte link) blijft zoals hij is. */
+  function decodePart(part) {
+    try {
+      return decodeURIComponent(part);
+    } catch (error) {
+      return part;
+    }
+  }
+
   function parseHash() {
     const raw = window.location.hash.replace(/^#\/?/, '');
     // Ankers binnen een pagina (bijv. #idea-3) zijn geen route
     if (raw && !window.location.hash.startsWith('#/')) return null;
-    const parts = raw.split('/').filter(Boolean);
+    const parts = raw.split('/').filter(Boolean).map(decodePart);
     return { name: (parts[0] || '').toLowerCase(), params: parts.slice(1) };
   }
 
@@ -95,7 +111,7 @@
   /** Het item op deze pagina, voor 'Bewerk deze tip' in de bewerkbalk (js/editor.js). */
   function pageItem(parsed) {
     if (!ns.central.signedIn() || ns.content.source === 'bestanden') return null;
-    const info = EDITABLE[parsed.name];
+    const info = own(EDITABLE, parsed.name);
     if (!info) return null;
     let item = ns.content[info.map].get(parsed.params[0]);
     if (!item) return null;
@@ -114,18 +130,47 @@
   /** Detailpagina van een gedeeld item: een regel uitleg onder de titel. */
   const NOTE_WHAT = { usecase: 'Deze usecase', prompt: 'Deze prompt', tip: 'Deze tip', training: 'Deze training', agent: 'Deze agent' };
   function sharedNote(parsed, node) {
-    const info = EDITABLE[parsed.name];
+    const info = own(EDITABLE, parsed.name);
     const item = info ? ns.content[info.map].get(parsed.params[0]) : null;
     const note = item ? ns.cockpit.sharedNote(item, NOTE_WHAT[parsed.name]) : null;
-    const heading = note ? node.querySelector('h1') : null;
-    if (heading) heading.insertAdjacentElement('afterend', note);
+    if (!note) return;
+    // Onder de kop; staat de kop in een rij met de bladwijzer, dan onder die rij
+    const heading = node.querySelector('h1');
+    const anchor = heading ? heading.closest('.detail__title-row') || heading : null;
+    if (anchor) anchor.insertAdjacentElement('afterend', note);
   }
 
-  /** 'Recent bekeken' op de startpagina: een geopende usecase, prompt, tip, training of agent (alleen in deze browser). */
+  // Anonieme teller 'bekeken' (js/central.js); een prompt telt bij kopiëren
+  const VIEW_KIND = { usecase: 'view_usecase', tip: 'view_tip', training: 'view_training', agent: 'view_agent' };
+
+  /**
+   * Een geopende usecase, prompt, tip, training of agent: onthouden voor 'Recent bekeken' op de
+   * startpagina (alleen in deze browser) en één keer tellen. Niet bij opnieuw opbouwen van dezelfde pagina.
+   */
   function rememberViewed(parsed) {
-    const info = EDITABLE[parsed.name];
+    const info = own(EDITABLE, parsed.name);
     const item = info ? ns.content[info.map].get(parsed.params[0]) : null;
-    if (item && !item.locked) ns.ui.viewed.add(info.type, item.id);
+    if (!item || item.locked) return;
+    ns.ui.viewed.add(info.type, item.id);
+    if (own(VIEW_KIND, info.type)) ns.central.track(VIEW_KIND[info.type], item.id);
+  }
+
+  /* ---- Focus bij opnieuw opbouwen ------------------------------------------------------
+     Nieuwe inhoud of een wijziging in de bewerkmodus bouwt de pagina opnieuw op. Wie met het
+     toetsenbord werkt, blijft dan op hetzelfde element (zelfde soort, zelfde volgnummer). */
+  const FOCUSABLE = 'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable="true"], [contenteditable="plaintext-only"]';
+
+  function focusMark(view) {
+    const active = document.activeElement;
+    if (!active || active === view || !view.contains(active)) return null;
+    return { index: Array.from(view.querySelectorAll(FOCUSABLE)).indexOf(active), tag: active.tagName };
+  }
+
+  function restoreFocus(view, mark) {
+    if (!mark) return;
+    const target = Array.from(view.querySelectorAll(FOCUSABLE))[mark.index];
+    const next = target && target.tagName === mark.tag ? target : view.querySelector('h1');
+    if (next) next.focus({ preventScroll: true });
   }
 
   /* ---- Scrollpositie ------------------------------------------------------------------
@@ -168,11 +213,22 @@
   /* ---- Routeren ----------------------------------------------------------------------- */
   function route(options) {
     const opts = options || {};
-    const parsed = parseHash();
-    if (!parsed) return;
+    // Zolang er nog geen inhoud is, blijft 'Inhoud laden…' staan; daarna volgt deze pagina vanzelf
+    if (!contentReady) return;
+    let parsed = parseHash();
+    if (!parsed) {
+      // Een anker binnen de pagina (bijv. #idea-3): niets te doen. Opent de site op zo'n adres
+      // (verversen, een gedeelde link), dan op de startpagina.
+      if (rendered) return;
+      window.history.replaceState(window.history.state, '', '#/');
+      parsed = parseHash();
+    }
 
-    // Niet-opgeslagen wijzigingen in Beheer: eerst terug naar het formulier en vragen
-    if (!opts.keepScroll && !leaveApproved && current && current.canLeave && window.location.hash !== currentHash && !current.canLeave()) {
+    // Niet-opgeslagen wijzigingen in Beheer: het formulier blijft staan bij verversen,
+    // en bij weggaan eerst terug naar het formulier en vragen
+    const unsaved = Boolean(current && current.canLeave && !current.canLeave());
+    if (unsaved && opts.keepScroll) return;
+    if (unsaved && !leaveApproved && window.location.hash !== currentHash) {
       const target = window.location.hash;
       window.history.replaceState(currentScrollKey ? { scroll: currentScrollKey } : null, '', currentHash);
       ns.ui.confirmDialog('Je hebt wijzigingen die nog niet zijn opgeslagen.', { title: 'Pagina verlaten?', confirmLabel: 'Verlaten zonder opslaan', cancelLabel: 'Blijven', danger: true }).then((ok) => {
@@ -186,7 +242,7 @@
     // Hoe ver de pagina die je verlaat gescrold was (voor als je straks terugkomt)
     if (!opts.keepScroll) rememberScroll();
 
-    const handler = routes()[parsed.name];
+    const handler = own(ROUTES || (ROUTES = routes()), parsed.name);
     let result = null;
     try {
       result = handler ? handler(parsed.params) : null;
@@ -201,12 +257,16 @@
     current = result;
     currentHash = window.location.hash || '#/';
     rendered = true;
+    const seq = ++routeSeq;
 
     // Nieuwe pagina tonen, met een overgang (js/motion.js); niet bij verversen van dezelfde pagina
     const mode = opts.keepScroll ? 'refresh' : firstRoute ? 'first' : 'page';
     ns.motion.swap(() => {
+      // Intussen al een nieuwere pagina (de overgang tekent een beeld later): deze niet meer tonen
+      if (seq !== routeSeq) return;
       const viewNode = document.getElementById('view');
       const scrollY = window.scrollY;
+      const focus = opts.keepScroll ? focusMark(viewNode) : null;
       sharedNote(parsed, result.node);
       if (!opts.keepScroll) rememberViewed(parsed);
       viewNode.replaceChildren(...[ns.cockpit.lockBar(), result.node].filter(Boolean));
@@ -217,10 +277,11 @@
       const siteTitle = [config.applicationTitle, config.discipline].filter(Boolean).join(' ') || SITE_TITLE;
       document.title = result.title ? `${result.title} · ${siteTitle}` : siteTitle;
 
-      // Menu: huidige pagina markeren
-      const navKey = NAV_FOR[parsed.name] || '';
+      // Menu: huidige pagina markeren ('page' op het overzicht zelf, 'true' op een pagina daarbinnen)
+      const navKey = own(NAV_FOR, parsed.name) || '';
+      const onOverview = navKey === parsed.name;
       document.querySelectorAll('[data-nav]').forEach((link) => {
-        if (link.dataset.nav === navKey) link.setAttribute('aria-current', 'page');
+        if (link.dataset.nav === navKey) link.setAttribute('aria-current', onOverview ? 'page' : 'true');
         else link.removeAttribute('aria-current');
       });
       ns.instruments.update(); // koersband: het pijltje naar deze pagina
@@ -229,6 +290,7 @@
         // Was de vorige plek nog niet te halen (eerst alleen 'Inhoud laden…')? Dan nu alsnog
         window.scrollTo(0, pendingScroll !== null ? pendingScroll : scrollY);
         pendingScroll = null;
+        restoreFocus(viewNode, focus);
         return;
       }
       const entry = historyKey();
@@ -276,6 +338,7 @@
   function useSource(source, kind) {
     ns.content.load(source || undefined);
     ns.content.source = source ? kind : 'bestanden';
+    contentReady = true;
     applySettings();
     if (config.debugMode && ns.content.issues.length) ns.ui.toast(ns.content.issues.length + ' melding(en) over de inhoud: zie de console', { tone: 'warning' });
   }
@@ -286,20 +349,28 @@
    * Haalt de inhoud (opnieuw) op en toont hem. Bezoekers: gepubliceerde inhoud, met cache.
    * Beheerders: ook concepten, zonder cache. Geen database of niet bereikbaar: de bestanden.
    */
-  async function loadContent(options) {
+  let latestLoad = null;
+  function loadContent(options) {
+    latestLoad = fetchAndShow(options);
+    return latestLoad;
+  }
+
+  async function fetchAndShow(options) {
     const opts = options || {};
+    // Wordt er intussen opnieuw opgehaald (bijv. na opslaan), dan gaat die nieuwere keer voor
+    const run = ++loadRun;
+    const superseded = () => run !== loadRun;
     const asAdmin = Boolean(ns.central.signedIn());
     ns.cockpit.setAdmin(asAdmin && ns.central.isAdmin());
     // Deze cockpit: de eigen inhoud van de discipline plus de gedeelde basis
-    const discipline = ns.cockpit.activeId();
-    const space = { own: ns.cockpit.namespace(discipline), general: ns.cockpit.GENERAL_NAMESPACE, discipline };
+    const space = cockpitSpace();
     // Beheerders zien de site met hun werkversies erin (js/editor.js)
     const compose = (rows) => ns.content.fromCockpitRows(asAdmin ? ns.editor.overlay(rows) : rows, space);
-    const cacheKey = 'inhoud:' + discipline;
+    const cacheKey = 'inhoud:' + space.discipline;
     let shownSignature = '';
 
     // 1. Snel: de laatst bekende versie uit deze browser (alleen voor bezoekers)
-    if (!rendered && !asAdmin) {
+    if (!contentReady && !asAdmin) {
       const cached = storage.get(cacheKey, null);
       const source = cached && Array.isArray(cached.rows) ? compose(cached.rows) : null;
       if (source) {
@@ -308,23 +379,26 @@
         route();
       }
     }
-    if (!rendered) {
-      document.getElementById('view').replaceChildren(el('div', { className: 'page container' }, [el('p', { className: 'loading', text: 'Inhoud laden…' })]));
-    }
 
     // 2. Actueel: de database (met een maximale wachttijd voor de eerste weergave)
     const fetching = ns.central.fetchContent({ admin: asAdmin, namespaces: [space.own, space.general] });
     const timer = new Promise((resolve) => window.setTimeout(() => resolve(null), FETCH_TIMEOUT));
     let result = await Promise.race([fetching, timer]);
-    if (!result && !rendered) {
+    if (superseded()) return latestLoad;
+    if (!result && !contentReady) {
       useSource(null);
       route();
     }
     if (!result) result = await fetching;
+    if (superseded()) return latestLoad;
+    const failed = result.status === 'failed';
 
-    // Voor Beheer → Inhoud: alle rijen, ook concepten en prullenbak
-    ns.content.adminRows = asAdmin && result.status === 'ok' ? result.rows : null;
-    ns.content.adminStatus = result.status;
+    // Voor Beheer → Inhoud: alle rijen, ook concepten en prullenbak. Mislukt alleen het
+    // verversen (netwerk), dan blijven de rijen van de vorige keer staan.
+    if (!(failed && asAdmin && Array.isArray(ns.content.adminRows))) {
+      ns.content.adminRows = asAdmin && result.status === 'ok' ? result.rows : null;
+      ns.content.adminStatus = result.status;
+    }
     // Niet-opgeslagen werk van een vorige keer terug, vóór het samenstellen
     ns.editor.contentLoaded();
 
@@ -332,33 +406,60 @@
       // Lijst met disciplines bijwerken; deze cockpit (inmiddels) op slot: naar de standaard
       if (!ns.cockpit.updateRegistry(result.rows)) return 'op slot';
       const source = compose(result.rows);
-      if (!asAdmin) storage.set(cacheKey, source ? { at: Date.now(), rows: result.rows } : null);
+      const sig = signature(result.rows);
+      // Alleen bewaren als er iets veranderd is (scheelt bij elk bezoek een grote schrijfactie)
+      if (!asAdmin && (sig !== shownSignature || !source)) storage.set(cacheKey, source ? { rows: result.rows } : null);
       if (source) {
-        if (!rendered || opts.force || signature(result.rows) !== shownSignature || ns.content.source === 'bestanden') {
-          const wasRendered = rendered;
+        if (!contentReady || opts.force || sig !== shownSignature || ns.content.source === 'bestanden') {
+          const wasShown = contentReady;
           useSource(source, 'database');
-          route({ keepScroll: wasRendered });
+          route({ keepScroll: wasShown });
         }
         return 'database';
       }
     }
-    // Database (nog) niet leidend of niet bereikbaar: de bestanden
-    if (!rendered || opts.force || (result.status === 'ok' && ns.content.source !== 'bestanden')) {
-      const wasRendered = rendered;
+    // Database (nog) niet ingericht of niet in gebruik: de bestanden. Mislukt alleen het
+    // ophalen terwijl er al inhoud staat, dan blijft die staan (bijv. even geen netwerk).
+    if (!contentReady || (!failed && (opts.force || ns.content.source !== 'bestanden'))) {
+      const wasShown = contentReady;
       useSource(null);
-      route({ keepScroll: wasRendered });
+      route({ keepScroll: wasShown });
+    } else if (failed && opts.force && asAdmin) {
+      ns.ui.toast('De inhoud kon niet opnieuw worden opgehaald. Controleer je verbinding en ververs de pagina.', { tone: 'warning', duration: 8000 });
     }
     return result.status === 'ok' ? 'bestanden' : result.status;
+  }
+
+  /** De naamruimtes van deze cockpit: de eigen inhoud van de discipline en de gedeelde basis. */
+  function cockpitSpace() {
+    const discipline = ns.cockpit.activeId();
+    return { own: ns.cockpit.namespace(discipline), general: ns.cockpit.GENERAL_NAMESPACE, discipline };
   }
 
   /** Opnieuw samenstellen na een niet-opgeslagen wijziging (js/editor.js), zonder de database te vragen. */
   function recompose() {
     if (!Array.isArray(ns.content.adminRows)) return;
-    const discipline = ns.cockpit.activeId();
-    const source = ns.content.fromCockpitRows(ns.editor.overlay(ns.content.adminRows), { own: ns.cockpit.namespace(discipline), general: ns.cockpit.GENERAL_NAMESPACE, discipline });
+    const source = ns.content.fromCockpitRows(ns.editor.overlay(ns.content.adminRows), cockpitSpace());
     if (!source) return;
     useSource(source, 'database');
     route({ keepScroll: true });
+  }
+
+  /**
+   * fn() uitvoeren met alleen de gepubliceerde inhoud, zoals collega's hem zien (bijv. voor de
+   * nieuwsbrief); daarna staat de inhoud met de werkversies weer zoals hij stond.
+   */
+  function withPublished(fn) {
+    if (!Array.isArray(ns.content.adminRows)) return fn();
+    const space = cockpitSpace();
+    const published = ns.content.fromCockpitRows(ns.content.adminRows.filter((row) => row.status === 'published'), space);
+    if (!published) return fn();
+    ns.content.load(published);
+    try {
+      return fn();
+    } finally {
+      ns.content.load(ns.content.fromCockpitRows(ns.editor.overlay(ns.content.adminRows), space) || undefined);
+    }
   }
 
   /* ---- Thema (licht/donker), per collega onthouden ------------------------------------ */
@@ -384,12 +485,20 @@
   }
 
   /* ---- Kop en voet ----------------------------------------------------------------- */
+  const COUNT_WORDS = ['', 'Eén', 'Twee', 'Drie', 'Vier', 'Vijf', 'Zes', 'Zeven', 'Acht', 'Negen', 'Tien'];
+
   function fillChrome() {
     document.getElementById('brand-title').textContent = config.applicationTitle;
     ns.cockpit.renderSwitcher();
-    document.getElementById('footer-rules').replaceChildren(...(config.rules || []).map((rule, index) =>
+    // De gouden regels uit Beheer → Teksten; de kop telt mee (geen regels: geen blok)
+    const rules = config.rules || [];
+    document.getElementById('footer-rules').replaceChildren(...rules.map((rule, index) =>
       el('li', { className: 'rules__item' }, [el('span', { className: 'rules__number', text: String(index + 1) }), el('span', { text: rule })])
     ));
+    document.getElementById('rules-heading').textContent = rules.length <= 10
+      ? `${COUNT_WORDS[rules.length]} gouden ${rules.length === 1 ? 'regel' : 'regels'}`
+      : 'Gouden regels';
+    document.getElementById('rules-section').hidden = !rules.length;
     document.getElementById('footer-updated').textContent = config.lastUpdated ? 'Laatst bijgewerkt: ' + config.lastUpdated : '';
     document.getElementById('footer-org').textContent = `${config.organizationName} · Alle demo's werken met fictieve gegevens. Copilot ondersteunt; het professionele oordeel blijft bij jou.`;
   }
@@ -432,10 +541,16 @@
           event.returnValue = '';
         }
       });
+      // 'Direct naar de inhoud' zet de focus op de inhoud zonder het adres te veranderen
+      // (#main is geen pagina: na verversen zou de site anders op 'laden' blijven staan)
+      document.getElementById('skip-link').addEventListener('click', (event) => {
+        event.preventDefault();
+        document.getElementById('main').focus();
+      });
       document.documentElement.classList.remove('no-js');
       loadContent().catch((error) => {
         console.error('[AI Cockpit Audit] Inhoud laden mislukt', error);
-        if (!rendered) {
+        if (!contentReady) {
           useSource(null);
           route();
         }
@@ -457,6 +572,7 @@
     refresh: () => route({ keepScroll: true }),
     /** Opnieuw samenstellen met de werkversies erin (na een niet-opgeslagen wijziging). */
     recompose,
+    withPublished,
     config: () => config
   };
 

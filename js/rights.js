@@ -1,8 +1,8 @@
 /* ==========================================================================
    Rechten van de ingelogde beheerder
    --------------------------------------------------------------------------
-   Dezelfde regels als audit_can() in setup/supabase-audit-bewerken.sql; hier
-   alleen om knoppen te tonen of te verbergen. De database bewaakt het echt.
+   Dezelfde regels als audit_can_as() in setup/supabase-audit-beveiligen.sql;
+   hier alleen om knoppen te tonen of te verbergen. De database bewaakt het echt.
 
      hoofdbeheerder  alles, ook beheerders en disciplines (audit_admins)
      beheerder       bewerken, verwijderen en publiceren
@@ -44,13 +44,8 @@
     return matches[0] || null;
   }
 
-  /**
-   * Mag dit? action: 'lezen' | 'bewerken' | 'verwijderen' | 'publiceren'; type: soort inhoud (optioneel).
-   */
-  function can(action, namespace, type) {
-    if (isOwner()) return true;
-    const found = roleFor(namespace);
-    if (!found) return false;
+  /** Staat deze ene rol het toe? */
+  function allows(found, action, type) {
     if (action === 'lezen') return true;
     if (type === 'meta') return false;
     const sections = Array.isArray(found.sections) ? found.sections : [];
@@ -59,6 +54,15 @@
     if (action === 'verwijderen') return found.role === 'beheerder';
     if (action === 'publiceren') return found.role === 'beheerder' || found.role === 'redacteur';
     return false;
+  }
+
+  /**
+   * Mag dit? action: 'lezen' | 'bewerken' | 'verwijderen' | 'publiceren'; type: soort inhoud (optioneel).
+   * Met meerdere rollen (bijv. beheerder van Tips én redacteur van alles) telt iedere rol mee.
+   */
+  function can(action, namespace, type) {
+    if (isOwner()) return true;
+    return current().roles.some((found) => (found.namespace === namespace || found.namespace === '*') && allows(found, action, type));
   }
 
   /** Mag je in deze naamruimte iets bewerken (een of meer onderdelen)? */
@@ -72,5 +76,5 @@
     return ROLES[found.role].label + (sections.length ? ' · ' + sections.join(', ') : '');
   }
 
-  ns.rights = { ROLES, SECTIONS, isOwner, roleFor, can, canEditSomething, describe };
+  ns.rights = { ROLES, SECTIONS, isOwner, can, canEditSomething, describe };
 })(window.AIAudit);

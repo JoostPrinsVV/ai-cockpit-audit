@@ -23,6 +23,7 @@
 
   const { el, icon, toast, formatDate, pageHeader } = ns.ui;
   const view = { status: 'open', kind: 'all', days: 90, reviews: 'todo' };
+  const PLAIN_EMAIL = /^[^\s@?&#%]+@[^\s@?&#%]+$/;
   const TABS = [
     { id: 'inhoud', label: 'Inhoud', icon: 'pencil-line', perDiscipline: true },
     { id: 'basis', label: 'Gedeelde basis', icon: 'globe' },
@@ -167,7 +168,8 @@
         el('dl', { className: 'admin-item__meta' }, [
           el('div', {}, [el('dt', { text: 'Fase' }), el('dd', { text: phase ? phase.label : '–' })]),
           el('div', {}, [el('dt', { text: 'Naam' }), el('dd', { text: item.name || '–' })]),
-          el('div', {}, [el('dt', { text: 'E-mail' }), el('dd', {}, [item.email ? el('a', { attrs: { href: 'mailto:' + item.email }, text: item.email }) : '–'])]),
+          // Alleen een gewoon adres wordt een maillink (geen ?cc= of &bcc= erachter)
+          el('div', {}, [el('dt', { text: 'E-mail' }), el('dd', {}, [item.email ? (PLAIN_EMAIL.test(item.email) ? el('a', { attrs: { href: 'mailto:' + item.email }, text: item.email }) : item.email) : '–'])]),
           el('div', {}, [el('dt', { text: 'Publiceren' }), el('dd', { text: item.allow_public ? 'Mag (zonder naam)' : 'Liever niet' })])
         ]),
         el('p', { className: 'admin-item__text', text: item.body }),
@@ -633,6 +635,8 @@
         el('p', { className: 'admin__user' }, [icon('lock'), el('span', { text: 'Ingelogd als ' + ns.central.signedIn() })]),
         el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: async () => {
           if (canLeave && !canLeave() && !(await ns.ui.confirmDialog('Je hebt wijzigingen die nog niet zijn opgeslagen.', { title: 'Toch uitloggen?', confirmLabel: 'Uitloggen zonder opslaan', cancelLabel: 'Blijven', danger: true }))) return;
+          // Eerst je werk wegzetten (onder je eigen naam) en je afmelden bij wat je open had
+          ns.editor.reset();
           ns.central.signOut();
           canLeave = null;
           window.location.hash = '#/beheer';

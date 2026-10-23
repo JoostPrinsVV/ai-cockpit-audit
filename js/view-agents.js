@@ -199,7 +199,6 @@
   function renderDetail(id) {
     const agent = ns.content.agentById.get(id);
     if (!agent) return null;
-    ns.central.track('view_agent', agent.id);
 
     const usecases = agent.usecases.map((uid) => ns.content.usecaseById.get(uid)).filter(Boolean);
     const trainings = agent.trainings.map((tid) => ns.content.trainingById.get(tid)).filter(Boolean);

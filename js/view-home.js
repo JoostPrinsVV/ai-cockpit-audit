@@ -212,8 +212,16 @@
   }
 
   function render(params, config) {
-    const node = el('div', { className: 'home' }, [hero(config), tiles(), personal(), featuredUsecases(), colleagues(), featuredTips(), recent(), ideasCta()]);
-    return { node, title: '' };
+    // 'Voor jou' werkt zichzelf bij als je hier iets bewaart (bij een uitgelichte usecase of tip)
+    const mineOrMark = () => personal() || document.createComment('voor jou');
+    let mine = mineOrMark();
+    const stopSaved = ns.ui.onSaved(null, null, () => {
+      const next = mineOrMark();
+      mine.replaceWith(next);
+      mine = next;
+    });
+    const node = el('div', { className: 'home' }, [hero(config), tiles(), mine, featuredUsecases(), colleagues(), featuredTips(), recent(), ideasCta()]);
+    return { node, title: '', destroy: stopSaved };
   }
 
   ns.views = ns.views || {};

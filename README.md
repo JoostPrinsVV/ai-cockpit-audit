@@ -35,7 +35,7 @@ assets/branding/      Logo: logo-dark.svg (zonder vierkant, voor de donkere kopb
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …)
-setup/                Het SQL-bestand voor Supabase
+setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde)
 ```
 
 Alle paden zijn relatief binnen deze repository (geen `../`). De pagina zelf linkt niet naar andere sites; links naar
@@ -107,7 +107,8 @@ Na het eenmalig instellen (zie 'Supabase instellen' hieronder) beheer je alle in
 8. **Nieuwe soort in de bestanden:** 'Overzetten' gebeurt maar één keer. Komt er later een soort bij (zoals agents)
    die in de bestanden wél items heeft en in de database nog geen enkele, dan zie je bovenaan Beheer → Inhoud een
    melding, bijvoorbeeld **5 agents uit de bestanden toevoegen**. Na bevestigen staan ze in de database en zijn ze
-   direct zichtbaar. Voer eerst `setup/supabase-audit.sql` opnieuw uit (zie hieronder), anders weigert de database ze.
+   direct zichtbaar. Voer eerst `setup/supabase-audit.sql` opnieuw uit (zie hieronder), anders weigert de database ze;
+   dat laat wat stap 7 en 8 hebben ingesteld gewoon staan.
 
 Je blijft ingelogd zolang het tabblad open is. Als beheerder tel je niet mee in de gebruiksstatistiek.
 
@@ -130,7 +131,10 @@ Na het uitvoeren van `setup/supabase-audit-bewerken.sql` werkt beheer in drie la
    met een label (Gewijzigd, Nieuw, Voorstel, Gepland).
 3. **Gepubliceerd:** met **Publiceren** zie je wat klaarstaat, met aandachtspunten (bijv. een verwijzing naar iets
    dat niet bestaat of een usecase zonder demo). Dat is een hulp, geen blokkade. Publiceer nu, of **plan** een
-   moment: de wijziging gaat live bij het eerstvolgende bezoek na dat moment.
+   moment: de wijziging gaat live bij het eerstvolgende bezoek na dat moment (met pg_cron binnen een minuut, zie
+   stap 8). Je publiceert precies de versie die je in het paneel zag: is het item intussen opnieuw opgeslagen, dan
+   wordt het overgeslagen. Slaat een bijdrager een voorstel op voor een ingepland item, dan vervalt de planning (die
+   versie heeft nog niemand bekeken).
 
 **De bewerkbalk** staat bovenin zodra je bent ingelogd: je rol, **Bewerken**, de status, Ongedaan maken, Opnieuw,
 Opslaan, Publiceren, **Logboek** (wie wat wanneer deed, met per item de eerdere versies om terug te zetten) en
@@ -159,6 +163,23 @@ naar Supabase Storage (map `cockpit-media`, maximaal 50 MB) en zijn openbaar: al
 interne informatie. Langere opnames blijven via een link naar Stream of SharePoint.
 
 Zolang stap 7 niet is uitgevoerd, werkt Beheer zoals voorheen: opslaan in een formulier zet het direct live.
+
+## Beveiligen en betrouwbaar publiceren (stap 8)
+
+`setup/supabase-audit-beveiligen.sql` voer je uit na stap 7. Zet eerst de nieuwe versie van de site live: die werkt
+met én zonder stap 8, de oude versie werkt na stap 8 niet meer voor beheerders. Wat het doet:
+
+- Werkversies, planning en e-mailadressen van beheerders zijn alleen te lezen voor wie een rol heeft in die
+  discipline, niet voor iedere ingelogde gebruiker van het (met de snackbar gedeelde) Supabase-project.
+- Vier ogen ook bij gepland publiceren, en publiceren per versie (zie hierboven).
+- Een rechtstreekse wijziging (back-up terugzetten, definitief verwijderen) komt in het logboek.
+- Een geüpload bestand kan niet meer worden overschreven.
+- Met meerdere rollen telt iedere rol mee (bijv. beheerder van Tips én redacteur van alles).
+- Staat in Supabase de extensie pg_cron aan (Database → Extensions), dan gaat een planning binnen een minuut live.
+
+Stap 1 en 8 kun je later gerust opnieuw uitvoeren. Stap 7 weigert na stap 8 (het zou functies terugzetten naar de
+oude vorm); voer dan alleen stap 8 opnieuw uit. Onderaan het bestand van stap 8 staat een proef die je in de SQL
+Editor kunt draaien (wordt teruggedraaid).
 
 ## Inhoud in de bestanden (startinhoud en terugval)
 
@@ -371,31 +392,45 @@ Er wordt niets automatisch verstuurd en niets in de database opgeslagen. Alle li
 Beheer, de ideeënhub en de tellers gebruiken hetzelfde Supabase-project als de snackbar, met eigen tabellen. Tot die
 er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aangesloten".
 
-1. Open `setup/supabase-audit.sql` en zet bij stap 1 het e-mailadres van de beheerder(s), hetzelfde adres als hun
-   Supabase-gebruiker (Authentication → Users; de gebruiker van de snackbar kan ook).
-2. Supabase → SQL Editor → New query → plak het hele bestand → Run. Opnieuw uitvoeren kan geen kwaad.
-3. Controleer in Authentication dat *Allow new users to sign up* uit staat.
+1. Open `setup/supabase-audit.sql` en zet bij stap 1 het e-mailadres van de eerste hoofdbeheerder, hetzelfde adres
+   als diens Supabase-gebruiker (Authentication → Users; de gebruiker van de snackbar kan ook). Meer beheerders voeg
+   je later toe in Beheer → Beheerders.
+2. Supabase → SQL Editor → New query → plak het hele bestand → Run. Doe daarna hetzelfde met
+   `setup/supabase-audit-bewerken.sql` (stap 7) en `setup/supabase-audit-beveiligen.sql` (stap 8), in die volgorde.
+   Stap 1 en 8 opnieuw uitvoeren kan geen kwaad; stap 7 weigert na stap 8 (zie hierboven).
+3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
+   e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').
 
+Een ander Supabase-project? Zet het adres in `centralUrl` in `js/config.js` én in de Content-Security-Policy bovenin
+`index.html`; die staat alleen verbinding met dit ene project toe.
+
 Rechten in het kort: iedereen kan gepubliceerde inhoud lezen en alleen tóévoegen in de hub (inzending, stem, anonieme
-teller). Inhoud wijzigen kan alleen een ingelogde beheerder uit `audit_admins`. Iedereen ziet in de hub alleen wat een
-beheerder publiceert, en nooit naam of e-mailadres. Een inzender kan aangeven dat de inzending privé moet blijven;
-die kun je dan niet publiceren. Optioneel: zet in `js/config.js` een `ideaFallbackEmail`, dan kan een collega bij een
-storing de inzending ook per mail sturen.
+teller). Inhoud wijzigen gaat via de rollen van stap 7 (opslaan en publiceren, door de database gecontroleerd);
+inzendingen, reviews, gebruik, disciplines en beheerders zijn voor hoofdbeheerders (`audit_admins`). Iedereen ziet in
+de hub alleen wat een beheerder publiceert, en nooit naam of e-mailadres. Een inzender kan aangeven dat de inzending
+privé moet blijven; die kun je dan niet publiceren. Optioneel: zet in `js/config.js` een `ideaFallbackEmail`, dan kan
+een collega bij een storing de inzending ook per mail sturen.
+
+Bewust zo gelaten: de inhoud van een discipline die op slot staat, is technisch op te vragen met de openbare sleutel
+(op slot betekent: nog niet in de wisselaar), en een geüpload bestand is direct openbaar (ook bij een voorstel).
 
 ## Privacy en veiligheid
 
 - Geen klantgegevens op het platform: alle demo's zijn fictief, en wat je in 'Invullen' typt wordt nergens bewaard.
 - In de browser bewaren we alleen wat je bewaard en recent bekeken hebt, het thema, een willekeurige stem-code, de titels
   van je eigen inzendingen, welke usecases en prompts je hebt beoordeeld, de gekozen discipline, de scrollpositie per
-  pagina (alleen in dit tabblad) en de afgevinkte acties uit een naslagwerk.
+  pagina (alleen in dit tabblad), de afgevinkte acties uit een naslagwerk en de laatst bekende inhoud (zodat de site
+  snel opent). Beheerders: ook niet-opgeslagen wijzigingen (`bewerken:<e-mailadres>`), ook na uitloggen, tot je ze
+  opslaat; ouder dan 30 dagen wordt niet meer teruggehaald.
 - De site en de repository zijn openbaar bereikbaar. Alles op het platform is informatie voor gebruikers; zet er nooit
   configuratie, systeemprompts, goedkeuringsdocumenten, interne opnames of klantinformatie op.
 - De tellers in Beheer zijn anoniem (welke usecase, demo, prompt, tip, training of agent), zonder apparaat- of
   persoonsgegevens. Heb je het SQL-bestand al eens uitgevoerd vóór de trainingen of agents er waren? Voer het dan nog
   een keer uit, zodat ook die inhoud en tellers worden geaccepteerd (bestaande gegevens blijven staan).
 - De ideeënhub waarschuwt als een tekst op een BSN of IBAN lijkt.
-- Demo's draaien in een afgeschermd iframe (sandbox); de pagina staat alleen verbinding met Supabase toe (CSP).
+- Demo's draaien in een afgeschermd iframe (sandbox); de pagina staat alleen verbinding met ons eigen Supabase-project
+  toe (CSP).
 - De namen in de browseropslag (`ai-snackbar-audit:…`, ook de inlogsessie `ai-snackbar-audit:sessie`) zijn bij de
   verhuizing bewust gelijk gebleven. Het adres valt onder hetzelfde domein (`joostprinsvv.github.io`), dus favorieten,
   thema, stemmen en een lopende inlog gaan gewoon mee. Verander deze namen niet, anders raakt iedereen dat kwijt.

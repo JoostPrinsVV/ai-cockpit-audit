@@ -47,6 +47,12 @@
     if (!enabled()) return Promise.resolve(null);
     if (!stats || fresh) {
       stats = ns.central.reviewStats().then((result) => {
+        if (result.status === 'failed') {
+          // Even geen verbinding: de volgende keer opnieuw proberen
+          loaded = undefined;
+          stats = null;
+          return null;
+        }
         loaded = result.status === 'ok'
           ? new Map(result.items.map((item) => [key(item.item_type, item.item_id), { reviews: Number(item.reviews), average: Number(item.average) }]))
           : null;
@@ -60,6 +66,8 @@
   const cached = () => loaded;
 
   const averageText = (value) => value.toFixed(1).replace('.', ',');
+  // Een gemiddelde met één decimaal (4,0), een losse beoordeling als heel getal (4)
+  const ratingText = (value) => (Number.isInteger(value) ? String(value) : averageText(value));
 
   /** Klein label met het gemiddelde voor op een kaart: ★ 4,6 (5). Zonder beoordelingen: null. */
   function ratingChip(type, id) {
@@ -85,13 +93,13 @@
   /** Sterren als tekst en icoontjes, bijv. 4,3 → ★★★★☆ (met schermlezertekst). */
   function starRow(value, label) {
     const rounded = Math.round(value);
-    return el('span', { className: 'stars', attrs: { role: 'img', 'aria-label': label || `${String(value).replace('.', ',')} van 5 sterren` } },
+    return el('span', { className: 'stars', attrs: { role: 'img', 'aria-label': label || `${ratingText(value)} van 5 sterren` } },
       [1, 2, 3, 4, 5].map((n) => icon(n <= rounded ? 'star-filled' : 'star', { className: n <= rounded ? 'stars__on' : 'stars__off' })));
   }
 
   function summaryText(entry) {
     if (!entry || !entry.reviews) return 'Nog geen beoordelingen. Wees de eerste.';
-    return `${String(entry.average).replace('.', ',')} gemiddeld · ${entry.reviews} ${entry.reviews === 1 ? 'beoordeling' : 'beoordelingen'}`;
+    return `${averageText(entry.average)} gemiddeld · ${entry.reviews} ${entry.reviews === 1 ? 'beoordeling' : 'beoordelingen'}`;
   }
 
   /**

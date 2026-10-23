@@ -331,7 +331,7 @@
 
   function hubList(mineList) {
     const wrap = el('section', { className: 'section section--tight hub', attrs: { 'aria-labelledby': 'hub-title' } });
-    const listNode = el('div', { className: 'hub__list', attrs: { 'aria-live': 'polite', 'aria-busy': 'true' } });
+    const listNode = el('div', { className: 'hub__list', attrs: { 'aria-busy': 'true' } });
     const status = el('div', { className: 'hub__status' }, [el('p', { className: 'loading', text: 'Inzendingen laden…' })]);
     let items = [];
     let loaded = false;
@@ -353,9 +353,12 @@
       }
     }
 
+    // Na filteren alleen het aantal voorlezen, niet de hele lijst
+    const announceCount = () => ns.ui.announce(listNode.querySelectorAll('.idea').length + ' inzendingen');
     const kindGroup = toggleGroup('Filter op soort', [{ value: 'all', label: 'Alles' }].concat(KINDS.map((k) => ({ value: k.id, label: k.label, icon: k.icon }))), listState.kind, (value) => {
       listState.kind = value;
       update();
+      announceCount();
     }, { className: 'toggles--compact' });
     const sort = el('select', { className: 'field__input field__input--sm', attrs: { id: 'hub-sort', 'aria-label': 'Sorteren' } }, [
       el('option', { attrs: { value: 'new' }, text: 'Nieuwste eerst' }),
@@ -375,27 +378,33 @@
       listNode
     );
 
-    ns.central.listIdeas().then((result) => {
-      listNode.setAttribute('aria-busy', 'false');
-      if (result.status === 'ok') {
-        items = result.items;
-        loaded = true;
-        status.replaceChildren();
-        update();
-        mineList.updateStatuses(items);
-        return;
-      }
-      const message = result.status === 'missing'
-        ? ['De ideeënhub wordt nog aangesloten', 'Zodra de centrale opslag klaarstaat, zie je hier de inzendingen van collega\'s. (Beheer: voer setup/supabase-audit.sql uit.)']
-        : result.status === 'off'
-          ? ['Centrale opslag staat uit', 'In de instellingen (js/config.js) is geen centrale opslag ingesteld.']
-          : ['Inzendingen laden lukte niet', 'Controleer je internetverbinding en probeer het opnieuw.'];
-      status.replaceChildren(el('div', { className: 'notice' }, [
-        icon('info'),
-        el('div', {}, [el('p', { className: 'notice__title', text: message[0] }), el('p', { text: message[1] })]),
-        result.status === 'failed' ? el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: () => window.dispatchEvent(new HashChangeEvent('hashchange')) } }, [icon('refresh'), el('span', { text: 'Opnieuw' })]) : null
-      ]));
-    });
+    // Ophalen; bij 'Opnieuw' alleen deze lijst (een half ingevuld formulier blijft staan)
+    function load() {
+      listNode.setAttribute('aria-busy', 'true');
+      status.replaceChildren(el('p', { className: 'loading', text: 'Inzendingen laden…' }));
+      ns.central.listIdeas().then((result) => {
+        listNode.setAttribute('aria-busy', 'false');
+        if (result.status === 'ok') {
+          items = result.items;
+          loaded = true;
+          status.replaceChildren();
+          update();
+          mineList.updateStatuses(items);
+          return;
+        }
+        const message = result.status === 'missing'
+          ? ['De ideeënhub wordt nog aangesloten', 'Zodra de centrale opslag klaarstaat, zie je hier de inzendingen van collega\'s. (Beheer: voer setup/supabase-audit.sql uit.)']
+          : result.status === 'off'
+            ? ['Centrale opslag staat uit', 'In de instellingen (js/config.js) is geen centrale opslag ingesteld.']
+            : ['Inzendingen laden lukte niet', 'Controleer je internetverbinding en probeer het opnieuw.'];
+        status.replaceChildren(el('div', { className: 'notice' }, [
+          icon('info'),
+          el('div', {}, [el('p', { className: 'notice__title', text: message[0] }), el('p', { text: message[1] })]),
+          result.status === 'failed' ? el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: load } }, [icon('refresh'), el('span', { text: 'Opnieuw' })]) : null
+        ]));
+      });
+    }
+    load();
 
     return wrap;
   }
@@ -419,7 +428,7 @@
             el('span', { className: 'mine__title' }, [item ? el('a', { attrs: { href: '#idea-' + item.id }, text: entry.title, on: { click: (event) => {
               event.preventDefault();
               const target = document.getElementById('idea-' + item.id);
-              if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              if (target) target.scrollIntoView({ behavior: ns.motion.calm() ? 'auto' : 'smooth', block: 'center' });
             } } }) : entry.title]),
             item ? statusBadge(item.status) : el('span', { className: 'status status--neutral', text: 'Ontvangen' }),
             el('span', { className: 'mine__date', text: formatDate(entry.at) })

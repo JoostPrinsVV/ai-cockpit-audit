@@ -114,7 +114,13 @@
     try {
       let response;
       if (asAdmin && drafting !== false) {
-        response = await request('/rest/v1/' + TABLES.content + query(DRAFT_COLUMNS), { headers: await adminHeaders() });
+        // Met stap 8: werkversies alleen in de naamruimtes waar je een rol hebt
+        const namespaces = options && Array.isArray(options.namespaces) && options.namespaces.length ? options.namespaces : [config.namespace];
+        response = await request('/rest/v1/rpc/audit_content_editor', { method: 'POST', headers: await adminHeaders(), body: JSON.stringify({ p_namespaces: namespaces }) });
+        // Stap 8 nog niet uitgevoerd: de kolommen rechtstreeks, zoals daarvoor
+        if (response.status === 404 || (!response.ok && (await errorCode(response)) === 'PGRST202')) {
+          response = await request('/rest/v1/' + TABLES.content + query(DRAFT_COLUMNS), { headers: await adminHeaders() });
+        }
         // 42703: de kolommen van de werkversie bestaan nog niet (stap 7 nog niet uitgevoerd)
         if (!response.ok && response.status === 400 && (await errorCode(response)) === '42703') drafting = false;
         else if (response.ok) drafting = true;
@@ -465,8 +471,13 @@
   /* ---- Beheer: inhoud (namespace: standaard die van de discipline) ------------------------ */
   const contentFilter = (type, id, namespace) => `?namespace=eq.${encodeURIComponent(namespace || config.namespace)}&type=eq.${encodeURIComponent(type)}&id=eq.${encodeURIComponent(id)}`;
 
-  /** Eén of meer rijen opslaan (nieuw of bestaand). rows: [{ type, id, data, position, status }] */
-  async function saveContent(rows, namespace) {
+  /**
+   * Eén of meer rijen opslaan (nieuw of bestaand). rows: [{ type, id, data, position, status }].
+   * options.onlyNew: bestaande rijen met hetzelfde adres blijven zoals ze zijn (bij inrichten en
+   * overzetten: nooit per ongeluk de database overschrijven met de bestanden).
+   */
+  async function saveContent(rows, namespace, options) {
+    const resolution = options && options.onlyNew ? 'ignore-duplicates' : 'merge-duplicates';
     const list = (Array.isArray(rows) ? rows : [rows]).map((row) => ({
       namespace: namespace || config.namespace,
       type: row.type,
@@ -478,7 +489,7 @@
     for (let start = 0; start < list.length; start += 200) {
       const response = await request('/rest/v1/' + TABLES.content + '?on_conflict=namespace,type,id', {
         method: 'POST',
-        headers: await adminHeaders({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+        headers: await adminHeaders({ Prefer: `resolution=${resolution},return=minimal` }),
         body: JSON.stringify(list.slice(start, start + 200))
       });
       if (!response.ok) throw await failure(response, 'opslaan');
@@ -486,9 +497,12 @@
     return true;
   }
 
+  // Wat een wijziging teruggeeft: alleen het adres (meer kolommen mag een ingelogde gebruiker na stap 8 niet lezen)
+  const RETURN_KEY = '&select=namespace,type,id';
+
   /** Alleen bepaalde kolommen aanpassen, bijv. { status } of { position }. */
   async function patchContent(type, id, patch, namespace) {
-    const response = await request('/rest/v1/' + TABLES.content + contentFilter(type, id, namespace), {
+    const response = await request('/rest/v1/' + TABLES.content + contentFilter(type, id, namespace) + RETURN_KEY, {
       method: 'PATCH',
       headers: await adminHeaders({ Prefer: 'return=representation' }),
       body: JSON.stringify(patch)
@@ -501,7 +515,7 @@
 
   /** Definitief verwijderen (de vorige versie blijft in de geschiedenis). */
   async function deleteContent(type, id, namespace) {
-    const response = await request('/rest/v1/' + TABLES.content + contentFilter(type, id, namespace), {
+    const response = await request('/rest/v1/' + TABLES.content + contentFilter(type, id, namespace) + RETURN_KEY, {
       method: 'DELETE',
       headers: await adminHeaders({ Prefer: 'return=representation' })
     });

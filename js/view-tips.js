@@ -9,7 +9,7 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, switchButton, formatDate, saveButton } = ns.ui;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, switchButton, formatDate, saveButton, emptyState } = ns.ui;
 
   // Gekozen thema en filter blijven staan zolang de pagina open is
   const filters = { category: 'all', saved: false };
@@ -22,11 +22,7 @@
 
   /** 'vrijdag 30 oktober' */
   function longDate(date) {
-    try {
-      return new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
-    } catch (error) {
-      return formatDate(date);
-    }
+    return new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   /** 'morgen' of 'over 3 dagen' */
@@ -43,12 +39,12 @@
    * Kaart voor een tip. large = uitgelichte variant. eyebrow = andere bovenregel (bijv. 'Deze week').
    * De hele kaart is klikbaar via de titel; de bewaarknop ligt erboven.
    */
-  function card(tip, headingTag, large, eyebrow, onSaveChange) {
+  function card(tip, headingTag, large, eyebrow) {
     return el('article', { className: 'tip-card ' + accentClass(tip.accent) + (large ? ' tip-card--large' : '') }, [
       el('div', { className: 'tip-card__top' }, [
         el('span', { className: 'tip-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(tip.icon)]),
         el('div', { className: 'tip-card__badges' }, [ns.ui.draftBadge(tip), ns.cockpit.sharedBadge(tip), weekBadge(tip), tip.weekly ? null : newBadge(tip.added), licenseBadge(tip.license, { short: true })]),
-        saveButton('tip', tip.id, tip.title, onSaveChange)
+        saveButton('tip', tip.id, tip.title)
       ]),
       el('p', { className: 'tip-card__category', text: eyebrow || tip.category.label }),
       el(headingTag || 'h3', { className: 'tip-card__title' }, [el('a', { className: 'tip-card__link', attrs: { href: '#/tip/' + tip.id }, text: tip.title })]),
@@ -104,18 +100,24 @@
     const grid = el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } });
     const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
     const savedCount = el('span', { className: 'toggle__count' });
+    const empty = all.length
+      ? emptyState('Geen tips met deze filters', 'Kies een ander thema of zet Bewaard uit.')
+      : emptyState('De eerste tips komen eraan', 'Iedere vrijdag komt er een nieuwe tip bij.', null, 'bulb');
 
     function update() {
       const saved = savedIds();
       savedCount.textContent = String(saved.length);
-      const onSaveChange = () => {
-        if (filters.saved) update();
-        else savedCount.textContent = String(savedIds().length);
-      };
       const items = all.filter((tip) => (filters.category === 'all' || tip.category.label === filters.category) && (!filters.saved || saved.includes(tip.id)));
-      grid.replaceChildren(...items.map((tip) => el('li', {}, [card(tip, 'h3', false, null, onSaveChange)])));
+      grid.replaceChildren(...items.map((tip) => el('li', {}, [card(tip, 'h3', false, null)])));
       count.textContent = items.length === 1 ? '1 tip' : items.length + ' tips';
+      empty.hidden = items.length > 0;
+      grid.hidden = items.length === 0;
     }
+    // Bewaren of niet meer bewaren (ook bij de tip van de week of bij Begin hier): telling en lijst bijwerken
+    const stopSaved = ns.ui.onSaved('tip', grid, () => {
+      if (filters.saved) update();
+      else savedCount.textContent = String(savedIds().length);
+    });
 
     const categories = ns.content.tipCategories
       .map((category) => ({ value: category.label, label: category.label, accent: category.accent, count: all.filter((tip) => tip.category === category).length }))
@@ -153,11 +155,12 @@
             count
           ])
         ]),
-        grid
+        grid,
+        empty
       ])
     ]);
     update();
-    return { node, title: 'Tips & tricks' };
+    return { node, title: 'Tips & tricks', destroy: stopSaved };
   }
 
   /* ---- Tip die nog op slot zit (directe link) --------------------------------------- */
@@ -180,7 +183,6 @@
     const tip = ns.content.tipById.get(id);
     if (!tip) return null;
     if (tip.locked) return renderLocked(tip);
-    ns.central.track('view_tip', tip.id);
     const usecases = tip.usecases.map((uid) => ns.content.usecaseById.get(uid)).filter(Boolean);
     const others = tip.category.tips.filter((t) => t !== tip && !t.locked);
 

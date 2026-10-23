@@ -60,8 +60,15 @@
 
   const isDetail = (parsed) => Boolean(parsed && DETAIL.includes(parsed.name) && parsed.params[0]);
 
+  // Afronden, ook als de overgang werd overgeslagen (snel achter elkaar klikken) of de nieuwe pagina een fout gaf
+  function settle(transition, cleanup) {
+    transition.ready.catch(() => null);
+    transition.updateCallbackDone.catch((error) => console.error('[AI Cockpit Audit]', error));
+    transition.finished.then(cleanup, cleanup);
+  }
+
   function cardFor(href) {
-    const link = document.querySelector(`#view a[href="${href}"]`);
+    const link = document.querySelector(`#view a[href="${CSS.escape(href)}"]`);
     if (!link) return null;
     return link.matches(CARD) ? link : link.closest(CARD);
   }
@@ -109,24 +116,25 @@
       }
       arrived(parsed);
     });
-    // Overgeslagen (bijv. snel achter elkaar klikken): geen fout, de pagina staat er gewoon
-    transition.ready.catch(() => null);
-    transition.finished.finally(() => {
+    settle(transition, () => {
       clearNames();
       root.classList.remove('vt-page');
     });
   }
 
   /* ---- Kaarten komen binnen ------------------------------------------------------------- */
+  // Staat dit element (bijna) in beeld?
+  const inView = (rect, margin) => rect.bottom > -margin && rect.top < window.innerHeight + margin;
+
   function stagger(scope) {
     if (calm()) return;
-    let index = 0;
-    scope.querySelectorAll('.tiles, .card-grid, .p-grid, .recent, .weekly').forEach((list) => {
-      Array.from(list.children).forEach((item) => {
-        if (item.getBoundingClientRect().top > window.innerHeight + 200) return; // alleen wat je meteen ziet
-        item.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: Math.min(index, 12) * 45, easing: EASE, fill: 'backwards' });
-        index++;
-      });
+    const items = [];
+    scope.querySelectorAll('.tiles, .card-grid, .p-grid, .recent, .weekly').forEach((list) => items.push(...list.children));
+    // Eerst alles meten, dan pas animeren (afwisselend meten en animeren laat de browser steeds opnieuw rekenen);
+    // alleen wat je meteen ziet, ook als je terugkomt halverwege een lange lijst
+    const visible = items.filter((item) => inView(item.getBoundingClientRect(), 0));
+    visible.forEach((item, index) => {
+      item.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: Math.min(index, 12) * 45, easing: EASE, fill: 'backwards' });
     });
   }
 
@@ -221,10 +229,18 @@
 
   /* ---- Filteren en sorteren: kaarten schuiven naar hun nieuwe plek ------------------------------ */
   function nameCards() {
+    // Een naam mag maar één keer voorkomen, anders breekt de browser de hele overgang af. Een
+    // uitgelichte tip staat ook in 'Alle tips': alleen de eerste krijgt de naam. Kaarten ver
+    // buiten beeld doen niet mee (scheelt bij lange lijsten veel werk).
+    const used = new Set();
     document.querySelectorAll('#view .card-grid > li, #view .p-grid > li').forEach((item) => {
       const link = item.querySelector('a[href^="#/"]');
       const href = link ? link.getAttribute('href') : '';
-      if (/^#\/(usecase|prompt|tip|training|agent)\/[a-z0-9-]+$/.test(href)) nameIt(item, 'card-' + href.slice(2).replace('/', '-'));
+      if (!/^#\/(usecase|prompt|tip|training|agent)\/[a-z0-9-]+$/.test(href)) return;
+      const name = 'card-' + href.slice(2).replace('/', '-');
+      if (used.has(name) || !inView(item.getBoundingClientRect(), window.innerHeight)) return;
+      used.add(name);
+      nameIt(item, name);
     });
     document.querySelectorAll('#view .p-group__title[id]').forEach((title) => nameIt(title, 'grp-' + title.id));
   }
@@ -243,8 +259,7 @@
       change();
       nameCards();
     });
-    transition.ready.catch(() => null);
-    transition.finished.finally(() => {
+    settle(transition, () => {
       clearNames();
       root.classList.remove('vt-filter');
     });
@@ -271,7 +286,7 @@
     transition.ready.then(() => {
       root.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] }, { duration: 650, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' });
     }).catch(() => null);
-    transition.finished.finally(() => root.classList.remove('vt-theme'));
+    settle(transition, () => root.classList.remove('vt-theme'));
   }, true);
 
   /* ---- Kleine reacties ---------------------------------------------------------------------- */
@@ -288,7 +303,11 @@
       scan.style.setProperty('--scan-to', box.offsetHeight + 'px');
       box.classList.add('motion-scan-host');
       box.append(scan);
-      window.setTimeout(() => scan.remove(), 900);
+      window.setTimeout(() => {
+        scan.remove();
+        // Weer zonder overflow: hidden (anders vallen focusrand en badges voorgoed weg)
+        if (!box.querySelector('.motion-scan')) box.classList.remove('motion-scan-host');
+      }, 900);
     }
     // Bladwijzer, sterren en de wisselaar veren even op
     const pop = event.target.closest('.fav, .review__star, .switcher__button');
@@ -301,5 +320,10 @@
     }
   }, true);
 
-  ns.motion = { swap, filter };
+  ns.motion = {
+    swap,
+    filter,
+    /** Vraagt de computer om minder beweging? (dan ook niet soepel scrollen) */
+    calm
+  };
 })(window.AIAudit);

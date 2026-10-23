@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <!-- Veiligheid: alleen eigen bestanden. De enige verbinding naar buiten is de centrale opslag
-       in Supabase (ideeënhub en anonieme tellers); demo's draaien in een afgeschermd iframe. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://*.supabase.co; media-src 'self' https://*.supabase.co; font-src 'self'; connect-src https://*.supabase.co; object-src 'none'; frame-src 'self'; base-uri 'none'; form-action 'none'">
+       in ons eigen Supabase-project (centralUrl in js/config.js; ander project = ook hier aanpassen);
+       demo's draaien in een afgeschermd iframe. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://czxyhgthbpexxqmudgdu.supabase.co; media-src 'self' https://czxyhgthbpexxqmudgdu.supabase.co; font-src 'self'; connect-src https://czxyhgthbpexxqmudgdu.supabase.co; object-src 'none'; frame-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#101d4f">
@@ -115,16 +116,16 @@
 
   <main id="main" tabindex="-1">
     <!-- Iedere pagina (route) wordt hier opgebouwd door js/view-*.js -->
-    <div class="view" id="view" aria-live="off"></div>
+    <div class="view" id="view"><div class="page container"><p class="loading">Inhoud laden…</p></div></div>
   </main>
 
   <!-- ================= Voet ================= -->
   <footer class="footer" id="footer">
     <div class="container footer__inner">
-      <section class="footer__rules" aria-labelledby="rules-title">
+      <section class="footer__rules" id="rules-section" aria-labelledby="rules-title">
         <h2 class="footer__title" id="rules-title">
           <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-shield"></use></svg>
-          <span>Vier gouden regels</span>
+          <span id="rules-heading">Vier gouden regels</span>
         </h2>
         <ol class="rules" role="list" id="footer-rules"></ol>
       </section>
@@ -139,7 +140,7 @@
   </footer>
 
   <!-- Meldingen en schermlezers -->
-  <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
+  <div class="toast-region" id="toast-region" role="status" aria-live="polite" popover="manual"></div>
   <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Vangnet als het opstarten mislukt -->

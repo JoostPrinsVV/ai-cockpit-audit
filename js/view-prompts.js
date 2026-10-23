@@ -34,7 +34,7 @@
   }
 
   /** Kaart in de lijst: titel, omschrijving, direct kopiëren, prompt uitklappen, bewaren. */
-  function card(prompt, headingTag, onSaveChange, grouped) {
+  function card(prompt, headingTag, grouped) {
     const previewId = 'prev-' + prompt.id;
     const preview = el('div', { className: 'p-card__preview', attrs: { id: previewId, hidden: true } });
     const toggle = el('button', { className: 'btn btn--quiet btn--sm p-card__toggle', attrs: { type: 'button', 'aria-expanded': 'false', 'aria-controls': previewId } }, [
@@ -54,7 +54,7 @@
     return el('article', { className: 'p-card ' + accentClass(prompt.accent) }, [
       el('div', { className: 'p-card__head' }, [
         el('p', { className: 'p-card__phase' }, eyebrow(prompt, grouped)),
-        saveButton('prompt', prompt.id, prompt.title, onSaveChange)
+        saveButton('prompt', prompt.id, prompt.title)
       ]),
       el(headingTag || 'h2', { className: 'p-card__title' }, [el('a', { attrs: { href: '#/prompt/' + prompt.id }, text: prompt.title })]),
       prompt.description ? el('p', { className: 'p-card__desc', text: prompt.description }) : null,
@@ -74,16 +74,15 @@
     const all = ns.content.prompts;
     const list = el('div', { className: 'p-list' });
     const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
-    const empty = emptyState('Geen prompts gevonden', 'Probeer een ander zoekwoord of zet de filters terug op Alle.');
+    // Een lege catalogus (nieuwe discipline) is iets anders dan niets vinden met deze filters
+    const empty = all.length
+      ? emptyState('Geen prompts gevonden', 'Probeer een ander zoekwoord of zet de filters terug op Alle.')
+      : emptyState('De eerste prompts komen eraan', `Hier verschijnen prompts voor Copilot in ${ns.cockpit.active().label} die je direct kunt kopiëren.`, null, 'chat');
     const savedCount = el('span', { className: 'toggle__count' });
 
     function update() {
       const saved = savedIds();
       savedCount.textContent = String(saved.length);
-      const onSaveChange = () => {
-        if (filters.saved) update();
-        else savedCount.textContent = String(savedIds().length);
-      };
       let items = all.filter((p) =>
         (filters.phase === 'all' || p.phase.id === filters.phase) &&
         (filters.license === 'all' || (filters.license === 'yes' ? p.license === true : p.license === false)) &&
@@ -94,7 +93,7 @@
       if (filters.sort === 'rating') {
         // Best beoordeeld: één lijst, zonder kopjes per fase
         items = ns.reviews.rank(items, 'prompt');
-        list.replaceChildren(el('ul', { className: 'p-grid', attrs: { role: 'list' } }, items.map((p) => el('li', {}, [card(p, 'h2', onSaveChange, false)]))));
+        list.replaceChildren(el('ul', { className: 'p-grid', attrs: { role: 'list' } }, items.map((p) => el('li', {}, [card(p, 'h2', false)]))));
       } else {
         // Per fase gegroepeerd, met een kop per fase
         const groups = [];
@@ -112,13 +111,18 @@
               el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase.icon)]),
               el('span', {}, [group.phase.label + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
             ]),
-            el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => el('li', {}, [card(p, 'h3', onSaveChange, true)])))
+            el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => el('li', {}, [card(p, 'h3', true)])))
           ])
         ));
       }
       count.textContent = items.length === 1 ? '1 prompt' : items.length + ' prompts';
       empty.hidden = items.length > 0;
     }
+    // Bewaren of niet meer bewaren: de telling, en met 'Bewaard' aan ook de lijst
+    const stopSaved = ns.ui.onSaved('prompt', list, () => {
+      if (filters.saved) update();
+      else savedCount.textContent = String(savedIds().length);
+    });
 
     // Zoeken (direct tijdens het typen)
     const input = el('input', {
@@ -145,6 +149,8 @@
     const phaseItems = ns.content.phases
       .map((phase, index) => ({ value: phase.id, label: phase.short, accent: phase.accent, step: String(index + 1).padStart(2, '0'), count: all.filter((p) => p.phase.id === phase.id).length }))
       .filter((item) => item.count > 0);
+    // Een fase die er (na een wijziging) niet meer is: terug naar Alle fasen
+    if (filters.phase !== 'all' && !phaseItems.some((item) => item.value === filters.phase)) filters.phase = 'all';
     const phaseGroup = toggleGroup('Filter op fase', [{ value: 'all', label: 'Alle fasen', count: all.length }].concat(phaseItems), filters.phase, (value) => {
       filters.phase = value;
       update();
@@ -197,7 +203,14 @@
       empty
     ]);
     update();
-    return { node, title: 'Promptdatabase' };
+    return {
+      node,
+      title: 'Promptdatabase',
+      destroy: () => {
+        stopSaved();
+        window.clearTimeout(timer);
+      }
+    };
   }
 
   /* ---- Eén prompt ------------------------------------------------------------------ */

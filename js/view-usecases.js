@@ -14,9 +14,9 @@
 
   /**
    * Kaart voor een usecase (ook op de startpagina en bij zoeken). De hele kaart is klikbaar
-   * via de titel; de bewaarknop ligt erboven. onSaveChange: na bewaren of niet meer bewaren.
+   * via de titel; de bewaarknop ligt erboven.
    */
-  function card(usecase, headingTag, onSaveChange) {
+  function card(usecase, headingTag) {
     const meta = [];
     if (usecase.hasDemo) meta.push(el('span', { className: 'meta' }, [icon(usecase.video ? 'film' : 'play-circle'), el('span', { text: (usecase.duration ? usecase.duration + ' ' : '') + 'demo' })]));
     else meta.push(el('span', { className: 'meta meta--muted' }, [icon('clock'), el('span', { text: 'Demo volgt' })]));
@@ -28,7 +28,7 @@
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(usecase.icon)]),
         el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), ns.cockpit.sharedBadge(usecase), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })]),
-        saveButton('usecase', usecase.id, usecase.title, onSaveChange)
+        saveButton('usecase', usecase.id, usecase.title)
       ]),
       el('div', { className: 'uc-card__body' }, [
         el('p', { className: 'uc-card__phase', text: usecase.phase.label }),
@@ -47,32 +47,38 @@
     const all = ns.content.usecases;
     const grid = el('ul', { className: 'card-grid', attrs: { role: 'list' } });
     const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
-    const empty = emptyState('Geen usecases met deze filters', 'Kies een andere fase of zet de filters terug op Alle.');
+    // Een lege catalogus (nieuwe discipline) is iets anders dan niets vinden met deze filters
+    const empty = all.length
+      ? emptyState('Geen usecases met deze filters', 'Kies een andere fase of zet de filters terug op Alle.')
+      : emptyState('De eerste usecases komen eraan', `Hier verschijnen de usecases voor Copilot in ${ns.cockpit.active().label}, met een demo en de prompts erbij.`, null, 'play-circle');
     const savedCount = el('span', { className: 'toggle__count' });
 
     function update() {
       const saved = savedIds();
       savedCount.textContent = String(saved.length);
-      const onSaveChange = () => {
-        if (filters.saved) update();
-        else savedCount.textContent = String(savedIds().length);
-      };
       let items = all.filter((u) =>
         (filters.phase === 'all' || u.phase.id === filters.phase) &&
         (filters.license === 'all' || (filters.license === 'yes' ? u.license === true : u.license === false)) &&
         (!filters.saved || saved.includes(u.id))
       );
       if (filters.sort === 'rating') items = ns.reviews.rank(items, 'usecase');
-      grid.replaceChildren(...items.map((u) => el('li', {}, [card(u, 'h2', onSaveChange)])));
+      grid.replaceChildren(...items.map((u) => el('li', {}, [card(u, 'h2')])));
       count.textContent = items.length === 1 ? '1 usecase' : items.length + ' usecases';
       empty.hidden = items.length > 0;
       grid.hidden = items.length === 0;
     }
+    // Bewaren of niet meer bewaren: de telling, en met 'Bewaard' aan ook de lijst
+    const stopSaved = ns.ui.onSaved('usecase', grid, () => {
+      if (filters.saved) update();
+      else savedCount.textContent = String(savedIds().length);
+    });
 
     // De fasen als route: genummerde waypoints (01 Planning, 02 …) op een stippellijn
     const phases = ns.content.phases
       .map((phase, index) => ({ value: phase.id, label: phase.short, accent: phase.accent, step: String(index + 1).padStart(2, '0'), count: all.filter((u) => u.phase.id === phase.id).length }))
       .filter((item) => item.count > 0);
+    // Een fase die er (na een wijziging) niet meer is: terug naar Alle fasen
+    if (filters.phase !== 'all' && !phases.some((item) => item.value === filters.phase)) filters.phase = 'all';
     const phaseGroup = toggleGroup('Filter op fase', [{ value: 'all', label: 'Alle fasen', count: all.length }].concat(phases), filters.phase, (value) => {
       filters.phase = value;
       update();
@@ -121,14 +127,13 @@
       empty
     ]);
     update();
-    return { node, title: 'Usecases' };
+    return { node, title: 'Usecases', destroy: stopSaved };
   }
 
   /* ---- Eén usecase --------------------------------------------------------------- */
   function renderDetail(id) {
     const usecase = ns.content.usecaseById.get(id);
     if (!usecase) return null;
-    ns.central.track('view_usecase', usecase.id);
     const player = ns.player.create(usecase);
 
     const chips = [
