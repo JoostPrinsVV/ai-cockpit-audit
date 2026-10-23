@@ -19,8 +19,18 @@
     large: { perDeg: 2.4, height: 36 },
     thin: { perDeg: 1.6, height: 14 }
   };
-  // Elk onderdeel zijn eigen koers: wisselen van pagina is een beetje bijsturen
-  const HEADINGS = { usecases: 30, prompts: 60, tips: 90, trainingen: 120, agents: 150, ideeen: 180 };
+  // Elk onderdeel zijn eigen koers, rondom de kompasroos (N = de startpagina). Wisselen van
+  // pagina is een beetje bijsturen; op de startpagina staan ze als koerspunten op de roos.
+  // short: de korte naam op de roos (zoals in het telefoonmenu), label: voor schermlezers
+  const WAYPOINTS = [
+    { id: 'usecases', label: 'Usecases', short: 'Usecases', heading: 30 },
+    { id: 'prompts', label: 'Prompts', short: 'Prompts', heading: 90 },
+    { id: 'tips', label: 'Tips & tricks', short: 'Tips', heading: 150 },
+    { id: 'trainingen', label: 'Trainingen', short: 'Training', heading: 210 },
+    { id: 'agents', label: 'Agents & tools', short: 'Agents', heading: 270 },
+    { id: 'ideeen', label: 'Ideeënhub', short: 'Ideeën', heading: 330 }
+  ];
+  const HEADINGS = Object.fromEntries(WAYPOINTS.map((w) => [w.id, w.heading]));
 
   const tapes = new Set();
   let observer = null;
@@ -104,26 +114,78 @@
     if (tape && tape.placeTape) tape.placeTape(tape);
   }
 
-  /** Kompasroos voor de hero */
+  /** De grote koersband onder de hero naar een koers sturen (0 = terug naar N). */
+  function steerHero(heading) {
+    const tape = document.querySelector('.hero .heading-tape');
+    if (tape) steer(tape, heading, tape.clientWidth / 2);
+  }
+
+  const point = (deg, r) => {
+    const angle = (deg - 90) * Math.PI / 180;
+    return { x: r * Math.cos(angle), y: r * Math.sin(angle) };
+  };
+
+  /**
+   * Kompasroos voor de hero, met de zes onderdelen als koerspunten. Aanwijzen (of tabben):
+   * de naald draait naar die koers, het punt licht op en de koersband stuurt mee. Klikken: erheen.
+   */
   function rose() {
-    const root = svg('svg', { class: 'hero__rose', viewBox: '-280 -280 560 560', 'aria-hidden': 'true', focusable: 'false' });
-    [95, 175, 250].forEach((r) => root.append(svg('circle', { class: 'rose__ring', r })));
-    root.append(svg('line', { class: 'rose__cross', x1: -250, x2: 250, y1: 0, y2: 0 }));
-    root.append(svg('line', { class: 'rose__cross', x1: 0, x2: 0, y1: -250, y2: 250 }));
+    const root = svg('svg', { class: 'hero__rose', viewBox: '-280 -280 560 560', role: 'group', 'aria-label': 'Kompas: kies een onderdeel', focusable: 'false' });
+    const decor = svg('g', { 'aria-hidden': 'true' });
+    [95, 175, 250].forEach((r) => decor.append(svg('circle', { class: 'rose__ring', r })));
+    decor.append(svg('line', { class: 'rose__cross', x1: -250, x2: 250, y1: 0, y2: 0 }));
+    decor.append(svg('line', { class: 'rose__cross', x1: 0, x2: 0, y1: -250, y2: 250 }));
+    const taken = new Set(WAYPOINTS.map((w) => w.heading));
     for (let deg = 0; deg < 360; deg += 5) {
       const major = deg % 30 === 0;
-      const angle = (deg - 90) * Math.PI / 180;
-      const outer = major ? 266 : deg % 10 === 0 ? 260 : 256;
-      root.append(svg('line', { class: major ? 'rose__tick rose__tick--major' : 'rose__tick', x1: 250 * Math.cos(angle), y1: 250 * Math.sin(angle), x2: outer * Math.cos(angle), y2: outer * Math.sin(angle) }));
-      if (major) {
-        const label = svg('text', { class: deg === 0 ? 'rose__label rose__label--north' : 'rose__label', x: 230 * Math.cos(angle), y: 230 * Math.sin(angle) + 4.5, 'text-anchor': 'middle' });
+      const a = point(deg, 250);
+      const b = point(deg, major ? 266 : deg % 10 === 0 ? 260 : 256);
+      decor.append(svg('line', { class: major ? 'rose__tick rose__tick--major' : 'rose__tick', x1: a.x, y1: a.y, x2: b.x, y2: b.y }));
+      // Cijfers alleen waar geen onderdeel staat
+      if (major && !taken.has(deg)) {
+        const at = point(deg, 230);
+        const label = svg('text', { class: deg === 0 ? 'rose__label rose__label--north' : 'rose__label', x: at.x, y: at.y + 4.5, 'text-anchor': 'middle' });
         label.textContent = LABELS[deg];
-        root.append(label);
+        decor.append(label);
       }
     }
-    // Koerslijn naar het noorden, met het logo in het midden
-    root.append(svg('line', { class: 'rose__course', x1: 0, y1: -60, x2: 0, y2: -214 }));
-    root.append(svg('image', { href: 'assets/branding/logo-dark.svg', x: -46, y: -46, width: 92, height: 92 }));
+    root.append(decor);
+
+    // De naald: koerslijn en logo, draaien samen naar het aangewezen onderdeel
+    const needle = svg('g', { class: 'rose__needle', 'aria-hidden': 'true' });
+    needle.append(svg('circle', { r: 250, fill: 'none', stroke: 'none' })); // midden van de roos = draaipunt
+    needle.append(svg('line', { class: 'rose__course', x1: 0, y1: -60, x2: 0, y2: -214 }));
+    needle.append(svg('image', { href: 'assets/branding/logo-dark.svg', x: -46, y: -46, width: 92, height: 92 }));
+
+    const points = svg('g', { class: 'rose__waypoints' });
+    WAYPOINTS.forEach((w) => {
+      const marker = point(w.heading, 250);
+      const text = point(w.heading, 222);
+      const side = text.x > 20 ? 'end' : text.x < -20 ? 'start' : 'middle';
+      const link = svg('a', { class: 'rose__waypoint', href: '#/' + w.id, 'aria-label': w.label });
+      link.append(svg('circle', { class: 'rose__marker', cx: marker.x, cy: marker.y, r: 7 }));
+      const label = svg('text', { class: 'rose__waypoint-label', x: text.x, y: text.y + 5, 'text-anchor': side, 'aria-hidden': 'true' });
+      label.textContent = w.short;
+      link.append(label);
+      const on = () => {
+        points.querySelectorAll('.is-active').forEach((node) => node.classList.remove('is-active'));
+        link.classList.add('is-active');
+        needle.style.transform = `rotate(${w.heading}deg)`;
+        steerHero(w.heading);
+      };
+      const off = () => {
+        link.classList.remove('is-active');
+        if (points.querySelector('.is-active')) return;
+        needle.style.transform = '';
+        steerHero(0);
+      };
+      link.addEventListener('mouseenter', on);
+      link.addEventListener('focus', on);
+      link.addEventListener('mouseleave', off);
+      link.addEventListener('blur', off);
+      points.append(link);
+    });
+    root.append(points, needle);
     return root;
   }
 
@@ -141,5 +203,5 @@
     window.addEventListener('resize', update);
   }
 
-  ns.instruments = { init, update, heroTape, rose };
+  ns.instruments = { init, update, heroTape, rose, steerHero };
 })(window.AIAudit);

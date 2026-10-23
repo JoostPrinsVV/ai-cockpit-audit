@@ -452,12 +452,13 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 /* Kompasroos (js/instruments.js): licht, rechts naast de tekst; op een smal scherm niet */
 .hero__rose {
   position: absolute;
-  top: calc(50% - 16px);
-  right: max(-40px, calc((100vw - var(--page-max)) / 2 - 40px));
-  width: 400px;
-  height: 400px;
+  z-index: 2;
+  top: calc(50% - 19px);
+  right: max(-20px, calc((100vw - var(--page-max)) / 2 - 20px));
+  width: 440px;
+  height: 440px;
   transform: translateY(-50%);
-  pointer-events: none;
+  pointer-events: none; /* alleen de koerspunten zijn aan te klikken */
 }
 
 .rose__ring { fill: none; stroke: rgba(255, 255, 255, 0.075); stroke-width: 1.2; }
@@ -468,7 +469,19 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .rose__label--north { fill: rgba(46, 230, 200, 0.75); }
 .rose__course { stroke: rgba(0, 180, 156, 0.55); stroke-width: 2; stroke-dasharray: 6 6; }
 
-@media (max-width: 1099px) {
+/* De naald (koerslijn en logo) draait naar het aangewezen onderdeel */
+.rose__needle { transform-box: fill-box; transform-origin: center; transition: transform 550ms var(--ease-out); }
+
+/* Koerspunten: de zes onderdelen op de roos */
+.rose__waypoint { pointer-events: auto; cursor: pointer; outline: none; }
+.rose__marker { fill: var(--awning-a); stroke: rgba(46, 230, 200, 0.7); stroke-width: 2.5; transform-box: fill-box; transform-origin: center; transition: transform var(--duration) var(--ease-out), fill var(--duration) var(--ease-out); }
+.rose__waypoint-label { fill: rgba(255, 255, 255, 0.62); font-family: var(--font-mono); font-size: 15px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; transition: fill var(--duration) var(--ease-out); }
+.rose__waypoint:hover .rose__marker, .rose__waypoint.is-active .rose__marker, .rose__waypoint:focus-visible .rose__marker { fill: #2ee6c8; stroke: #ffffff; transform: scale(1.45); filter: drop-shadow(0 0 6px rgba(46, 230, 200, 0.9)); }
+.rose__waypoint:hover .rose__waypoint-label, .rose__waypoint.is-active .rose__waypoint-label, .rose__waypoint:focus-visible .rose__waypoint-label { fill: #2ee6c8; }
+.rose__waypoint:focus-visible .rose__waypoint-label { text-decoration: underline; }
+
+/* Alleen als er naast de tekst ruimte is */
+@media (max-width: 1239px) {
   .hero__rose { display: none; }
 }
 
