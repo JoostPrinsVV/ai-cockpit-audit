@@ -2,9 +2,9 @@
    Beweging: overgangen en kleine animaties
    --------------------------------------------------------------------------
    Subtiel en kort (0,2 tot 0,4 seconde, de opstart op de startpagina iets
-   langer en één keer per bezoek). Vraagt je computer om minder beweging
-   (Windows: Instellingen → Toegankelijkheid → Visuele effecten), dan staat
-   alles uit. Werkt het mooist in Edge en Chrome; andere browsers krijgen
+   langer, één keer per bezoek en opnieuw als je de pagina herlaadt). Vraagt
+   je computer om minder beweging (Windows: Instellingen → Toegankelijkheid →
+   Visuele effecten), dan staat alles uit. Werkt het mooist in Edge en Chrome; andere browsers krijgen
    dezelfde site zonder de overgangen.
 
    - Paginaovergang: de pagina faadt rustig in; de titel van de kaart loopt
@@ -89,7 +89,7 @@
     }
     if (mode === 'first' || !canTransition()) {
       commit();
-      arrived(parsed);
+      arrived(parsed, mode === 'first');
       return;
     }
     clearNames();
@@ -130,7 +130,13 @@
     });
   }
 
-  function arrived(parsed) {
+  // Is de pagina herladen (F5 of Ctrl+F5)? Doorklikken binnen de site telt niet.
+  function reloaded() {
+    const entries = window.performance && window.performance.getEntriesByType ? window.performance.getEntriesByType('navigation') : [];
+    return Boolean(entries[0] && entries[0].type === 'reload');
+  }
+
+  function arrived(parsed, first) {
     const view = document.getElementById('view');
     if (view) stagger(view);
     if (parsed && parsed.name === '' && !calm()) {
@@ -140,11 +146,12 @@
       } catch (error) {
         done = false;
       }
+      if (first && reloaded()) done = false;
       if (!done) window.setTimeout(boot, 60);
     }
   }
 
-  /* ---- Instrumenten opstarten (startpagina, één keer per bezoek) -------------------------------- */
+  /* ---- Instrumenten opstarten (startpagina, één keer per bezoek en bij herladen) ---------------- */
   function boot() {
     try {
       window.sessionStorage.setItem(BOOT_KEY, 'ja');
