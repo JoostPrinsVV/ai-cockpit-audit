@@ -325,12 +325,11 @@ Bij iedere prompt staat **Kopieer en open Copilot** (op de kaart: **Copilot**). 
 bij 'Invullen' hebt ingevuld, en opent Copilot Chat met je zakelijke account (`copilotUrl` in `js/config.js`) in een
 nieuw tabblad. Daar plak je hem met Ctrl+V.
 
-Microsoft heeft geen officiële manier om een prompt al in het typveld van Microsoft 365 Copilot te zetten. Wil je
-testen of het in jullie omgeving toch kan: open in Edge (ingelogd) bijvoorbeeld
-`https://m365.cloud.microsoft/chat/?prompt=Dit%20is%20een%20test`. Staat de tekst in het typveld en is hij níet
-meteen verstuurd, zet dan `copilotPromptParam: 'prompt'` in `js/config.js`. Het kopiëren blijft dan gewoon werken,
-voor het geval Microsoft dit later verandert. Gebruik nooit de gratis consumentenversie (copilot.microsoft.com):
-die heeft niet de bescherming van je zakelijke account.
+Microsoft heeft geen officiële manier om een prompt al in het typveld van Microsoft 365 Copilot te zetten. Getest op
+23 oktober 2026: `https://m365.cloud.microsoft/chat/?prompt=…` laat het typveld in onze omgeving leeg, dus het blijft
+bij kopiëren en openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromptParam` in
+`js/config.js`; het kopiëren blijft dan als reserve werken. Gebruik nooit de gratis consumentenversie
+(copilot.microsoft.com): die heeft niet de bescherming van je zakelijke account.
 
 ## Bewaren en recent bekeken
 
