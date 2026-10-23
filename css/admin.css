@@ -2,7 +2,7 @@
    AI COCKPIT AUDIT — BEHEER
    --------------------------------------------------------------------------
    Alleen voor wie beheert: Beheer (inhoud, disciplines, inzendingen, reviews,
-   nieuwsbrief, gebruik, beheerders), de bewerkbalk, de bewerkmodus en de
+   nieuwsbrief, gebruik, Copilot-gebruik, beheerders), de bewerkbalk, de bewerkmodus en de
    zijpanelen. Wordt pas geladen bij inloggen of op #/beheer (js/app.js), na
    css/audit.css; bezoekers laden dit niet. Kleuren en maten: css/variables.css.
    ========================================================================== */
@@ -499,3 +499,104 @@
 .table thead th { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
 .table tbody th { color: var(--color-text); font-weight: var(--fw-medium); }
 .table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---- Copilot-gebruik (js/admin-copilot.js) ----------------------------------------------
+   Grafieken: dunne lijnen (2px), punten van 8px met een rand in de kleur van het vlak, een rustig
+   raster van haarlijnen en tekst in de tekstkleuren (nooit in de kleur van een reeks). */
+.copilot, .copilot__dashboard { display: grid; gap: var(--space-5); }
+.copilot__intro { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5); }
+.copilot__intro .field__hint { flex: 1 1 28rem; max-width: 72ch; }
+.copilot__status { display: grid; gap: var(--space-3); }
+.copilot__status:empty { display: none; }
+.copilot__pending { align-items: center; flex-wrap: wrap; }
+.copilot__pending > div { flex: 1 1 22rem; }
+.copilot__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.copilot__head { display: grid; gap: var(--space-1); }
+.copilot__meta { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.copilot__kpis { grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); }
+
+.kpi__delta { display: inline-flex; align-items: center; gap: var(--space-1); margin-top: var(--space-1); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.kpi__delta .icon { flex: none; width: 0.9rem; height: 0.9rem; }
+.kpi__delta--up { color: var(--color-success); }
+.kpi__delta--down { color: var(--color-danger); }
+.kpi__delta--flat { color: var(--color-text-muted); }
+
+.copilot__insights, .copilot__definitions { padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.copilot__insights ul { display: grid; gap: var(--space-2); max-width: 80ch; padding-left: 1.2rem; color: var(--color-text-body); }
+.copilot__caption { caption-side: bottom; padding-top: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-xs); text-align: left; }
+.copilot__total th, .copilot__total td { border-bottom: 0; font-weight: var(--fw-semibold); }
+.copilot__note { display: block; color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-regular); }
+.copilot__period { white-space: nowrap; }
+.copilot__definitions summary { color: var(--color-text); font-weight: var(--fw-semibold); cursor: pointer; }
+.copilot__definitions dl { display: grid; gap: var(--space-2); margin: var(--space-3) 0 0; }
+.copilot__definitions dl > div { display: grid; grid-template-columns: minmax(7rem, 10rem) minmax(0, 1fr); gap: var(--space-3); }
+.copilot__definitions dt { color: var(--color-text); font-weight: var(--fw-semibold); }
+.copilot__definitions dd { margin: 0; color: var(--color-text-body); }
+
+.copilot__charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: var(--space-5); }
+.chart { display: grid; align-content: start; gap: var(--space-2); min-width: 0; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.chart__title { font-size: var(--fs-md); }
+.chart__sub { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.chart__legend { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); color: var(--color-text-body); font-size: var(--fs-sm); }
+.chart__legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
+/* Een kort lijnstuk in de kleur van de reeks (legenda en uitleesvak) */
+.chart__key { display: inline-block; flex: none; width: 1rem; height: 2px; border-radius: 1px; }
+.chart__key--basic { background: var(--series-basic); }
+.chart__key--premium { background: var(--series-premium); }
+.chart__plot { position: relative; min-width: 0; margin-top: var(--space-2); }
+.chart__svg { display: block; overflow: visible; touch-action: pan-y; }
+.chart__svg:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); border-radius: var(--radius-sm); }
+.chart__grid line { stroke: var(--color-border); stroke-width: 1; shape-rendering: crispEdges; }
+.chart__grid .chart__baseline { stroke: var(--color-border-strong); }
+.chart__grid text, .chart__end { fill: var(--color-text-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chart__end { font-size: 13px; }
+.chart__end-value { fill: var(--color-text); font-weight: var(--fw-semibold); }
+.chart__line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart__line--basic { stroke: var(--series-basic); }
+.chart__line--premium { stroke: var(--series-premium); }
+.chart__dot { stroke: var(--color-surface); stroke-width: 2; }
+.chart__dot--basic { fill: var(--series-basic); }
+.chart__dot--premium { fill: var(--series-premium); }
+.chart__leader, .chart__cross { stroke: var(--color-text-muted); stroke-width: 1; shape-rendering: crispEdges; }
+.chart__hit { fill: transparent; }
+.chart__readout {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 9rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--fs-sm);
+  transform: translateX(var(--x, 0));
+  pointer-events: none;
+}
+.chart__readout-date { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.chart__readout-row { display: flex; align-items: center; gap: var(--space-2); }
+.chart__readout-row strong { color: var(--color-text); font-variant-numeric: tabular-nums; }
+.chart__readout-row span:last-child { color: var(--color-text-muted); }
+.chart__table summary { color: var(--color-link); font-size: var(--fs-sm); font-weight: var(--fw-semibold); cursor: pointer; }
+.chart__table-scroll { max-height: 20rem; margin-top: var(--space-2); overflow: auto; }
+
+/* Liggende balken: één reeks, de waarde direct achter de balk */
+.bars { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); margin-top: var(--space-3); }
+/* Iedere rij in dezelfde kolommen (subgrid): alle balken beginnen op dezelfde plek */
+.bars__row { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; font-size: var(--fs-sm); }
+.bars__label { max-width: 10rem; color: var(--color-text); overflow-wrap: anywhere; }
+.bars__track { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+/* De langste balk laat ruimte voor zijn waarde (bijv. '2.780 · 86%') */
+.bars__bar { flex: none; width: calc(var(--share, 0) * (100% - 6.5rem)); height: 14px; border-radius: 0 4px 4px 0; background: var(--series-basic); }
+.bars__value { color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+@media (max-width: 600px) {
+  .copilot__definitions dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+/* Hoge-contrastmodus: de kleuren van de reeksen blijven, Premium krijgt een gestippelde lijn erbij */
+@media (forced-colors: active) {
+  .chart__key, .chart__line, .chart__dot, .bars__bar { forced-color-adjust: none; }
+  .chart__line--premium { stroke-dasharray: 6 4; }
+}

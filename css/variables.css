@@ -132,6 +132,12 @@
   --copilot-bg: var(--color-surface);
   --star-color: var(--vv-amber-600);
 
+  /* Reeksen in grafieken (Beheer → Copilot-gebruik): Basic in turquoise en Premium in amber, net als
+     de labels 'gratis' en 'licentie'. Getoetst op het vlak van beide thema's: helderheid, verzadiging,
+     onderscheid bij kleurenblindheid en minstens 3:1 contrast. Tekst krijgt nooit deze kleuren. */
+  --series-basic: var(--vv-teal-deep);
+  --series-premium: var(--vv-amber-600);
+
   /* ---- Accentkleuren per onderdeel ----------------------------------------
      accent  = decoratieve kleur (vlakken, iconen)
      ink     = tekstveilige variant (min. 4,5:1 op wit); ook het vlak onder tekst,
@@ -314,6 +320,7 @@
   --prompt-bg: #0e1a49;
   --copilot-bg: transparent;
   --star-color: var(--vv-amber-400);
+  --series-basic: #00a894;                 /* de amber van Premium past op beide vlakken */
 
   /* Tekstveilige accentvarianten op een donkere ondergrond (navy erop: 6:1 of meer) */
   --color-on-ink: var(--vv-navy);

@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Beheer (#/beheer/inhoud, /basis, /disciplines, /inzendingen, /gebruik)
+   Beheer (#/beheer/inhoud, /basis, /disciplines, /inzendingen, /gebruik, /copilot)
    --------------------------------------------------------------------------
    Voor het AI-team: inloggen met een Supabase-gebruiker van wie het
    e-mailadres in audit_admins staat (zie setup/supabase-audit.sql).
@@ -16,6 +16,8 @@
    - Nieuwsbrief: weekupdate of maandnieuwsbrief als PDF of e-mail
      (js/admin-newsletter.js).
    - Gebruik: anonieme tellers per usecase, demo, prompt, tip, training en agent.
+   - Copilot-gebruik: de export van het Copilot-gebruik inlezen en vergelijken
+     met de vorige periode; alleen totalen worden bewaard (js/admin-copilot.js).
    De sessie blijft bewaard zolang dit tabblad open is.
    ========================================================================== */
 (function (ns) {
@@ -35,6 +37,7 @@
     { id: 'reviews', label: 'Reviews', icon: 'star', perDiscipline: true },
     { id: 'nieuwsbrief', label: 'Nieuwsbrief', icon: 'mail', perDiscipline: true },
     { id: 'gebruik', label: 'Gebruik', icon: 'chart', perDiscipline: true },
+    { id: 'copilot', label: 'Copilot-gebruik', icon: 'sparkle', perDiscipline: true },
     { id: 'beheerders', label: 'Beheerders', icon: 'users' }
   ];
 
@@ -579,7 +582,7 @@
   /* ---- Pagina ------------------------------------------------------------------------ */
   /**
    * Welke onderdelen zie je? Inhoud en Gedeelde basis met een rol voor die omgeving; de rest
-   * (disciplines, inzendingen, reviews, nieuwsbrief, gebruik, beheerders) alleen als hoofdbeheerder.
+   * (disciplines, inzendingen, reviews, nieuwsbrief, gebruik, Copilot-gebruik, beheerders) alleen als hoofdbeheerder.
    */
   function visibleTabs() {
     if (ns.rights.isOwner()) return TABS;
@@ -639,6 +642,7 @@
     if (!allowedTabs.length) {
       panel.append(notice({ tone: 'warning', icon: 'lock', text: `Je hebt geen rol in ${disciplineName}. Kies een andere discipline of vraag een hoofdbeheerder om rechten.` }));
     } else if (tab === 'gebruik') usageTab(panel);
+    else if (tab === 'copilot') panel.append(ns.adminCopilot.render().node);
     else if (tab === 'beheerders') adminsTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);
     else if (tab === 'reviews') reviewsTab(panel);

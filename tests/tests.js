@@ -1,7 +1,9 @@
 /* ==========================================================================
    Tests voor de kern: placeholders, zoeken, controles op adressen en paden,
    inhoud laden, rechten, het soortenregister, de verzoeken naar Supabase
-   (fetch nagebootst), de werkversies en het gereedschap van Beheer.
+   (fetch nagebootst), de werkversies, het gereedschap van Beheer en het
+   inlezen van het Copilot-gebruik (met een verzonnen bestand uit
+   fixture-copilot.js).
    Draait in de browser (tests/index.html), zonder build of npm.
    ========================================================================== */
 (function (ns) {
@@ -244,6 +246,155 @@
       equal(ns.adminKit.fileName('Rapport Q3 (definitief).PDF'), 'rapport-q3-definitief.pdf');
       equal(ns.adminKit.fileName('…'), 'bestand');
     });
+
+    /* ---- admin-sheets ---- */
+    describe('Spreadsheets lezen (js/admin-sheets.js, verzonnen bestand)');
+    const sheets = ns.adminSheets;
+    const fixture = window.AIAuditTest;
+    const small = {
+      people: [
+        { id: 'p1', licence: 'Basic', basicTotal: 100, premiumTotal: 0, total: 100, recent: 10, activeWeeks: 4 },
+        { id: 'p2', licence: 'Basic', basicTotal: 50, premiumTotal: 0, total: 50, recent: 0, activeWeeks: 1 },
+        { id: 'p3', licence: 'Basic', basicTotal: 0, premiumTotal: 0, total: 0, recent: 0, activeWeeks: 0 },
+        { id: 'p4', licence: 'Premium', basicTotal: 0, premiumTotal: 300, total: 300, recent: 40, activeWeeks: 8 },
+        { id: 'p5', licence: 'Premium', basicTotal: 20, premiumTotal: 180, total: 200, recent: 20, activeWeeks: 3 },
+        { id: 'p6', licence: undefined, basicTotal: 5, premiumTotal: 0, total: 5, recent: 5, activeWeeks: 1 }
+      ],
+      weekly: [1, 1, 1, 1, 2, 2, 1, 1].map((basic, w) => ({
+        week: new Date(Date.UTC(2026, 0, 4 + w * 7)).toISOString().slice(0, 10),
+        active: { basic, premium: 2 },
+        volume: { basic: w < 4 ? 5 : 10, premium: w < 4 ? 20 : 30 }
+      })),
+      channels: [{ name: 'Copilot-app', volume: 8 }, { name: 'Teams', volume: 2 }]
+    };
+    const fileOf = (bytes, name) => new File([bytes], name || 'test.xlsx');
+    await test('readXlsx: tabbladen (ook verborgen), gedeelde en losse teksten, opmaak per stukje, getallen', async () => {
+      const book = await sheets.read(fileOf(await fixture.copilotWorkbook(small)));
+      equal(book.sheets.map((sheet) => [sheet.name, sheet.hidden]), [['Analyse', false], ['Gebruikers', false], ['Chart Data', true]]);
+      equal(book.sheets[0].rows[0][0], 'COPILOT-GEBRUIK (VERZONNEN TESTBESTAND)', 'losse tekst');
+      equal(book.sheets[1].rows[0].slice(0, 2), ['PersonId', 'Huidige licentie'], 'tekst met opmaak');
+      equal(book.sheets[1].rows[4][4], 300, 'getal');
+    });
+    await test('findTable: op de namen van de kolommen, ook met tabellen naast elkaar; tot de eerste lege rij', async () => {
+      const book = await sheets.read(fileOf(await fixture.copilotWorkbook(small)));
+      const weeks = sheets.findTable(book, ['week', 'Basic-prompts']);
+      equal([weeks.sheet, weeks.rows.length, weeks.rows[0]['Basic-prompts']], ['Chart Data', 8, 5]);
+      equal(sheets.findTable(book, ['Basic-kanaal', 'Prompts laatste 4 weken']).rows.length, 2, 'kortere tabel ernaast');
+      equal(sheets.findTable(book, ['Bestaat niet']), null);
+    });
+    await test('excelDate en number: Excel-getal, ISO en dag-maand-jaar; onzin geeft niets', () => {
+      equal([sheets.excelDate(46089), sheets.excelDate('2026-03-08'), sheets.excelDate('8-3-2026'), sheets.excelDate('31-2-2026'), sheets.excelDate('morgen')], ['2026-03-08', '2026-03-08', '2026-03-08', '', '']);
+      equal([sheets.number(12), sheets.number(' 12,5 '), sheets.number('12.5')], [12, 12.5, 12.5]);
+      ok(Number.isNaN(sheets.number('twaalf')), 'geen getal');
+    });
+    await test('readCsv: puntkomma, aanhalingstekens, puntkomma en regeleinde in een veld', () => {
+      const book = sheets.readCsv('﻿Naam;Tekst;Aantal\r\n"A";"met ; en ""quote""";3\r\n"B";"twee\nregels";\r\n', 'x.csv');
+      equal(book.sheets[0].rows, [['Naam', 'Tekst', 'Aantal'], ['A', 'met ; en "quote"', '3'], ['B', 'twee\nregels', undefined]]);
+    });
+    await test('geen Excel-bestand of een oud .xls: een duidelijke fout', async () => {
+      const fails = async (file) => {
+        try {
+          await sheets.read(file);
+          return '';
+        } catch (error) {
+          return error.message;
+        }
+      };
+      ok((await fails(fileOf(new TextEncoder().encode('geen zip')))).includes('geen Excel'), 'geen zip');
+      ok((await fails(fileOf(new Uint8Array(4), 'oud.xls'))).includes('.xlsx'), '.xls');
+      const onlyText = await fixture.zip({ 'leesmij.txt': 'hallo' });
+      ok((await fails(fileOf(onlyText))).includes('werkmap'), 'zip zonder werkmap');
+    });
+
+    /* ---- admin-copilot ---- */
+    describe('Copilot-gebruik (js/admin-copilot.js)');
+    const copilot = ns.adminCopilot;
+    let snapshot = null;
+    await test('readExport: totalen per licentie en week; rij zonder licentie overgeslagen', async () => {
+      snapshot = await copilot.readExport(fileOf(await fixture.copilotWorkbook(small)));
+      equal([snapshot.periodStart, snapshot.periodEnd, snapshot.weeks, snapshot.people, snapshot.skipped], ['2026-01-04', '2026-02-22', 8, 5, 1]);
+      equal(snapshot.licences.basic, { people: 3, active4w: 1, volume4w: 10, volumeTotal: 150, frequency: { wekelijks: 0, regelmatig: 1, soms: 1, nooit: 1 } });
+      equal(snapshot.licences.premium, { people: 2, active4w: 2, volume4w: 60, volumeTotal: 500, frequency: { wekelijks: 1, regelmatig: 1, soms: 0, nooit: 0 } });
+      equal(snapshot.channels, [{ name: 'Copilot-app', volume4w: 8 }, { name: 'Teams', volume4w: 2 }]);
+      equal(snapshot.top10Share, 1, 'top 10 bij minder dan 10 personen');
+    });
+    await test('readExport: niets per persoon in wat wordt opgeslagen', () => {
+      const stored = JSON.stringify(snapshot);
+      ok(!/p[1-6]"|PersonId/.test(stored), 'geen id of kolom per persoon');
+      equal(Object.keys(snapshot).sort(), ['channels', 'licences', 'people', 'periodEnd', 'periodStart', 'skipped', 'source', 'top10Share', 'version', 'weekly', 'weeks']);
+    });
+    await test('measures: adoptie, per actieve gebruiker, actief per week en groei t.o.v. de 4 weken ervoor', () => {
+      const m = copilot.measures(snapshot);
+      equal([m.basic.adoption, m.basic.perActive, m.basic.wau, m.basic.growth], [1 / 3, 10, 1.5, 1]);
+      equal([m.premium.adoption, m.premium.perActive, m.premium.wau, m.premium.growth], [1, 30, 2, 0.5]);
+      equal([m.total.people, m.total.active, m.total.volume, m.total.growth], [5, 3, 70, 160 / 100 - 1]);
+    });
+    await test('readExport: onbekende licentie of onbekend bestand geeft uitleg', async () => {
+      const wrong = { people: [{ id: 'x', licence: 'Gratis', basicTotal: 1, premiumTotal: 0, total: 1, recent: 1, activeWeeks: 1 }], weekly: small.weekly, channels: [] };
+      const message = async (file) => {
+        try {
+          await copilot.readExport(file);
+          return '';
+        } catch (error) {
+          return error.message;
+        }
+      };
+      ok((await message(fileOf(await fixture.copilotWorkbook(wrong)))).includes("onbekende licentie 'Gratis'"), 'licentie');
+      ok((await message(fileOf(new TextEncoder().encode('Naam;Aantal\nA;1'), 'x.csv'))).includes('herken ik niet'), 'onbekend bestand');
+    });
+    await test('timeline: weken van alle imports op een rij; de nieuwste import telt bij een overlap', () => {
+      const older = { weekly: [{ week: '2026-01-04', n: 1 }, { week: '2026-01-11', n: 1 }] };
+      const newer = { weekly: [{ week: '2026-01-11', n: 2 }, { week: '2026-01-18', n: 2 }] };
+      equal(copilot.timeline([older, newer]).map((week) => week.week + ':' + week.n), ['2026-01-04:1', '2026-01-11:2', '2026-01-18:2']);
+    });
+    await test('niceTicks: ronde stappen tot minstens het maximum', () => {
+      equal(copilot.niceTicks(57), [0, 20, 40, 60]);
+      equal(copilot.niceTicks(2021), [0, 500, 1000, 1500, 2000, 2500]);
+      equal(copilot.niceTicks(0), [0]);
+    });
+    await test('verzonnen voorbeeld: altijd dezelfde cijfers, en goed te lezen', async () => {
+      const sample = fixture.copilotSample({ seed: 3 });
+      equal(sample, fixture.copilotSample({ seed: 3 }), 'zelfde seed');
+      const read = await copilot.readExport(fileOf(await fixture.copilotWorkbook(sample)));
+      equal([read.weeks, read.people, read.licences.premium.people], [27, 104, 24]);
+    });
+
+    describe('Copilot-gebruik opslaan (js/central.js, fetch nagebootst)');
+    const SESSION = 'ai-snackbar-audit:sessie';
+    const before = window.sessionStorage.getItem(SESSION);
+    window.sessionStorage.setItem(SESSION, JSON.stringify({ token: 'test-token', refresh: 'r', email: 'test@example.nl', expiresAt: Date.now() + 3600000, isAdmin: true, rights: { owner: true, roles: [] } }));
+    ns.central.init({ config: { centralUrl: 'https://voorbeeld.supabase.co', centralKey: 'sb_publishable_test', namespace: 'ai-test' } });
+    try {
+      await test('opslaan: één rij per naamruimte en einddatum (vervangt), met de sessie van de beheerder', async () => {
+        const net = fakeFetch([[201, [{ id: 7, period_end: '2026-02-22' }]]]);
+        try {
+          const row = await ns.central.saveCopilotUsage(snapshot);
+          equal(row.id, 7);
+          const url = new URL(net.calls[0].url);
+          equal([url.pathname, url.searchParams.get('on_conflict')], ['/rest/v1/audit_copilot_usage', 'namespace,period_end']);
+          equal(net.calls[0].init.headers.Prefer, 'resolution=merge-duplicates,return=representation');
+          equal(net.calls[0].init.headers.Authorization, 'Bearer test-token');
+          const body = JSON.parse(net.calls[0].init.body);
+          equal([body.namespace, body.period_start, body.period_end, body.source], ['ai-test', '2026-01-04', '2026-02-22', 'analyse']);
+        } finally {
+          net.restore();
+        }
+      });
+      await test('lezen: zonder tabel (stap 9 nog niet uitgevoerd) null, geen fout', async () => {
+        const net = fakeFetch([[404, { code: 'PGRST205' }], [200, [{ id: 1 }]]]);
+        try {
+          equal(await ns.central.listCopilotUsage(), null);
+          equal(await ns.central.listCopilotUsage(), [{ id: 1 }]);
+          equal(new URL(net.calls[1].url).searchParams.get('namespace'), 'eq.ai-test', 'alleen deze discipline');
+        } finally {
+          net.restore();
+        }
+      });
+    } finally {
+      if (before === null) window.sessionStorage.removeItem(SESSION);
+      else window.sessionStorage.setItem(SESSION, before);
+      ns.central.init({ config: {} });
+    }
 
     render();
   }

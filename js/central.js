@@ -9,6 +9,8 @@
      audit_idea_votes   'Ik ook'-stemmen (één per apparaat per inzending)
      audit_reviews      sterren en toelichting bij usecases en prompts (één per apparaat per item)
      audit_events       anonieme tellers: bekeken, afgespeeld, gekopieerd
+     audit_copilot_usage totalen van het Copilot-gebruik per periode (stap 9,
+                        setup/supabase-audit-copilot.sql; alleen hoofdbeheerders)
 
    Rechten (Row Level Security):
    - Iedereen mag gepubliceerde inhoud lezen.
@@ -35,7 +37,8 @@
 (function (ns) {
   'use strict';
 
-  const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content', reviews: 'audit_reviews', log: 'audit_log', history: 'audit_content_history' };
+  const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content', reviews: 'audit_reviews', log: 'audit_log', history: 'audit_content_history', copilot: 'audit_copilot_usage' };
+  const COPILOT_COLUMNS = 'id,period_start,period_end,source,summary,imported_at,imported_by';
   // Kolommen die iedereen mag lezen (geen naam of e-mailadres).
   const PUBLIC_COLUMNS = 'id,ref,created_at,kind,title,body,phase,status,answer,answered_at,votes';
   const CONTENT_COLUMNS = 'namespace,type,id,data,position,status,updated_at';
@@ -545,6 +548,31 @@
     return readAll(TABLES.events, { select: 'kind,item_id,occurred_at', occurred_at: 'gte.' + since, order: 'id.asc' }, 'tellers lezen');
   }
 
+  /* ---- Beheer: Copilot-gebruik per periode (stap 9) ---------------------------------------- */
+  /** De opgeslagen periodes van deze discipline, oudste eerst; null zolang stap 9 niet is uitgevoerd. */
+  async function listCopilotUsage() {
+    const response = await request(tablePath(TABLES.copilot, { select: COPILOT_COLUMNS, namespace: inNamespace(), order: 'period_end.asc', limit: 500 }), { headers: await adminHeaders() });
+    if (await isMissingTable(response)) return null;
+    if (!response.ok) throw await failure(response, 'Copilot-gebruik lezen');
+    return response.json();
+  }
+
+  /** Totalen van één periode opslaan; een periode met dezelfde einddatum wordt vervangen. Geeft de rij. */
+  async function saveCopilotUsage(snapshot) {
+    const response = await request(tablePath(TABLES.copilot, { on_conflict: 'namespace,period_end', select: COPILOT_COLUMNS }), {
+      method: 'POST',
+      headers: await adminHeaders({ Prefer: 'resolution=merge-duplicates,return=representation' }),
+      body: JSON.stringify({ namespace: config.namespace, period_start: snapshot.periodStart, period_end: snapshot.periodEnd, source: snapshot.source, summary: snapshot })
+    });
+    if (await isMissingTable(response)) throw new Error('de tabel ontbreekt nog: voer setup/supabase-audit-copilot.sql (stap 9) uit');
+    if (!response.ok) throw await failure(response, 'opslaan');
+    return (await response.json())[0];
+  }
+
+  function deleteCopilotUsage(id) {
+    return changeOne(tablePath(TABLES.copilot, { id: 'eq.' + id, select: 'id' }));
+  }
+
   /* ---- Beheer: werkversies, publiceren, logboek, beheerders, media (stap 7) ------------------ */
   /** Staan de werkversies in de database (stap 7 uitgevoerd)? null = nog onbekend. */
   const draftingAvailable = () => drafting;
@@ -688,6 +716,9 @@
     adminListReviews,
     adminUpdateReview,
     adminDeleteReview,
-    adminEvents
+    adminEvents,
+    listCopilotUsage,
+    saveCopilotUsage,
+    deleteCopilotUsage
   };
 })(window.AIAudit);

@@ -43,7 +43,7 @@ assets/branding/      Logo: logo-dark.svg (zonder vierkant, voor de donkere kopb
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …)
-setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde)
+setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), en stap 9 (Copilot-gebruik)
 ```
 
 Alle paden zijn relatief binnen deze repository (geen `../`). De pagina zelf linkt niet naar andere sites; links naar
@@ -61,7 +61,7 @@ buiten staan alleen in de inhoud (bijv. de opname van een training of een agent)
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
 | `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; gepubliceerde inzendingen met antwoord en 'Ik ook' |
 | `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk |
-| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, de nieuwsbrief maken, gebruik bekijken |
+| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, de nieuwsbrief maken, gebruik bekijken, het Copilot-gebruik per periode volgen |
 
 Ieder adres is deelbaar, bijvoorbeeld in Teams: `https://joostprinsvv.github.io/ai-cockpit-audit/#/tip/facilitator`.
 Met `#/ideeen/vraag` (of `idee`, `verzoek`, `prompt`) staat de soort in de ideeënhub alvast goed.
@@ -78,8 +78,8 @@ De cockpit is er per discipline (Audit, Accountancy, Belastingadvies, Salarisadm
   kunnen er niet in (wie het adres toch opent, komt in Audit); beheerders wel, met bovenaan een balk 'Op slot'. Zo
   zet je de inhoud alvast klaar en zet je de discipline open als hij af is. Hier pas je ook naam, omschrijving,
   volgorde, icoon en kleur aan, en voeg je een discipline toe. Zolang je hier niets opslaat, geldt `data/disciplines.js`.
-- **Wisselen in Beheer:** bovenaan Beheer kies je de discipline. *Inhoud*, *Inzendingen* en *Gebruik* gaan over de
-  discipline waarin je zit.
+- **Wisselen in Beheer:** bovenaan Beheer kies je de discipline. *Inhoud*, *Inzendingen*, *Gebruik* en
+  *Copilot-gebruik* gaan over de discipline waarin je zit.
 - **Gedeelde basis** (Beheer → Gedeelde basis): wat in iedere cockpit staat, zoals de tips (met de tip van de week),
   agents & tools, trainingen en een paar algemene usecases en prompts. Eenmalig inrichten vanuit Audit: je vinkt aan
   wat voor iedereen is (het voorstel komt uit `sharedBasis` in `data/disciplines.js`), en die items verhuizen naar de
@@ -397,6 +397,33 @@ onderwerp, inleiding, afsluiting en ondertekening aan. Dat onthoudt de browser p
 Er wordt niets automatisch verstuurd en niets in de database opgeslagen. Alle links gaan naar `siteUrl` uit
 `js/config.js` (de live cockpit), ook als je de nieuwsbrief lokaal maakt.
 
+## Copilot-gebruik (Beheer → Copilot-gebruik, stap 9)
+
+Hoe het gebruik van Copilot zich ontwikkelt, van periode tot periode. Alleen voor hoofdbeheerders.
+
+1. Eenmalig: voer `setup/supabase-audit-copilot.sql` uit (stap 9, na stap 1; stap 7 en 8 zijn er niet voor nodig).
+   Zonder deze stap kun je een bestand al wel inlezen en bekijken, maar niet opslaan.
+2. Iedere periode (bijvoorbeeld maandelijks): **Export inlezen** en kies het Excel-bestand met het Copilot-gebruik. Je
+   ziet eerst wat er is gelezen en hoe het eruitziet; **Opslaan** bewaart de totalen. Een import met dezelfde
+   einddatum vervangt de vorige.
+3. De pagina vergelijkt de laatste periode met de vorige import: tegels met het verschil, een tabel per licentie (Basic
+   en Premium), de weken van alle imports in twee grafieken (de cijfers ook als tabel), de kanalen van Basic, hoe vaak
+   mensen actief zijn en 'Wat valt op'. Onder **Alle imports** staan de kerncijfers per periode; daar verwijder je ook
+   een import.
+
+Welk bestand: nu het analysebestand (`Copilot gebruik analyse.xlsx`). De pagina zoekt de tabellen op de namen van de
+kolommen, niet op de plek: per persoon `Huidige licentie`, `Totaal volume`, `Volume laatste 4 weken` en `Actieve
+weken`; per week `Week`, `Actieve gebruikers Basic`, `Actieve gebruikers Premium`, `Basic-prompts` en
+`Premium-acties`; per kanaal (mag ontbreken) `Basic-kanaal` en `Prompts laatste 4 weken`. Een kolom of tabblad erbij
+maakt niet uit, een andere kolomnaam wel. Voor een ander soort export (bijvoorbeeld rechtstreeks uit Copilot) komt er
+een lezer bij in `FORMATS` in `js/admin-copilot.js`; de rest blijft gelijk.
+
+Privacy: het bestand wordt in de browser gelezen en nergens heen gestuurd. Alleen totalen per periode gaan naar de
+database (`audit_copilot_usage`): aantallen personen en actieve gebruikers per licentie, volume per week en per kanaal,
+hoe vaak mensen actief zijn en het aandeel van de tien meest actieve personen samen. Geen PersonId's, geen cijfers per
+persoon en geen bestandsnaam. Is een groep heel klein (een licentie met een of twee personen), dan liggen de totalen
+dicht bij cijfers per persoon; houd daar rekening mee. Een echte export hoort nooit in deze (openbare) repository.
+
 ## Supabase instellen (eenmalig, voor beheer en ideeënhub)
 
 Beheer, de ideeënhub en de tellers gebruiken hetzelfde Supabase-project als de snackbar, met eigen tabellen. Tot die
@@ -407,7 +434,8 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    je later toe in Beheer → Beheerders.
 2. Supabase → SQL Editor → New query → plak het hele bestand → Run. Doe daarna hetzelfde met
    `setup/supabase-audit-bewerken.sql` (stap 7) en `setup/supabase-audit-beveiligen.sql` (stap 8), in die volgorde.
-   Stap 1 en 8 opnieuw uitvoeren kan geen kwaad; stap 7 weigert na stap 8 (zie hierboven).
+   Stap 1 en 8 opnieuw uitvoeren kan geen kwaad; stap 7 weigert na stap 8 (zie hierboven). Voor Beheer →
+   Copilot-gebruik ook `setup/supabase-audit-copilot.sql` (stap 9, mag op ieder moment na stap 1).
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').
@@ -417,7 +445,7 @@ Een ander Supabase-project? Zet het adres in `centralUrl` in `js/config.js` én 
 
 Rechten in het kort: iedereen kan gepubliceerde inhoud lezen en alleen tóévoegen in de hub (inzending, stem, anonieme
 teller). Inhoud wijzigen gaat via de rollen van stap 7 (opslaan en publiceren, door de database gecontroleerd);
-inzendingen, reviews, gebruik, disciplines en beheerders zijn voor hoofdbeheerders (`audit_admins`). Iedereen ziet in
+inzendingen, reviews, gebruik, Copilot-gebruik, disciplines en beheerders zijn voor hoofdbeheerders (`audit_admins`). Iedereen ziet in
 de hub alleen wat een beheerder publiceert, en nooit naam of e-mailadres. Een inzender kan aangeven dat de inzending
 privé moet blijven; die kun je dan niet publiceren. Optioneel: zet in `js/config.js` een `ideaFallbackEmail`, dan kan
 een collega bij een storing de inzending ook per mail sturen.
@@ -462,14 +490,19 @@ Het doel is WCAG 2.2 niveau AA. Wat daarvoor in de code zit (en wat je bij nieuw
   (filters, 'Bewaard', het thema) hebben een vaste naam met `aria-pressed`.
 - **Kleur en contrast:** tekst haalt minimaal 4,5:1, randen van invoervelden 3:1, in beide thema's (de waarden staan
   bij de tokens in `css/variables.css`). Gekozen sterren zijn gevuld, de andere omlijnd: niet alleen kleur.
+- **Grafieken** (Beheer → Copilot-gebruik): een legenda en de laatste waarde met naam aan iedere lijn, dus niet alleen
+  kleur; de kleuren van de reeksen zijn getoetst op kleurenblindheid en 3:1 contrast in beide thema's. Met Tab kom je
+  op de grafiek, met de pijltjes ga je per week (het uitleesvak wordt voorgelezen), en alle cijfers staan ook in een
+  tabel ('Als tabel').
 - **Hoog contrast** (Windows-contrastthema's), **minder beweging** (alle animaties uit) en **afdrukken** (alleen de
   inhoud, prompts helemaal, in het lichte thema) staan onderaan `css/audit.css` en `css/motion.css`.
 
 ## Tests
 
 `tests/index.html` test de kern zonder build of npm: plaatshouders, zoeken, de controles op adressen en paden, inhoud
-laden, rechten, het soortenregister, de verzoeken naar Supabase (met een nagebootste verbinding), de werkversies en het
-gereedschap van Beheer. Open hem via een lokale webserver (`/tests/`) of op de live site
+laden, rechten, het soortenregister, de verzoeken naar Supabase (met een nagebootste verbinding), de werkversies, het
+gereedschap van Beheer en het inlezen van het Copilot-gebruik. Dat laatste met een verzonnen Excel-bestand dat de test
+zelf maakt (`tests/fixture-copilot.js`, zelfde opbouw als het echte bestand), nooit met een echte export. Open hem via een lokale webserver (`/tests/`) of op de live site
 (`…/ai-cockpit-audit/tests/`). De uitkomst staat bovenaan en in de titel van het tabblad (✓ of ✗); er wordt niets
 opgeslagen of verstuurd. Een nieuwe test zet je in `tests/tests.js` (`await test('…', () => equal(…))`).
 
