@@ -1,10 +1,16 @@
 /* ==========================================================================
    AI COCKPIT AUDIT — DESIGN TOKENS
    --------------------------------------------------------------------------
-   Overgenomen van de AI Snackbar; dit is een eigen kopie, los van de
-   snackbar. Alle kleuren, lettergroottes, afstanden, rondingen, schaduwen
-   en animatietijden staan hier. Pas je hier iets aan, dan verandert het
-   overal op het platform. Platformspecifieke aanvullingen: css/audit.css.
+   Alle kleuren, maten, lettertypes, rondingen, schaduwen en animatietijden
+   van het platform, voor het lichte en het donkere thema. Componenten
+   gebruiken de betekenisnamen (--color-…, --badge-…); de merkkleuren (--vv-…)
+   alleen als iets in beide thema's hetzelfde moet blijven (bijv. de
+   nieuwsbrief, die altijd licht is). Een kleur die maar op één plek voorkomt
+   (bijv. een lijntje in de kompasroos) staat bij die plek in css/audit.css.
+
+   Breekpunten (variabelen werken niet in media queries; vaste schaal):
+   360 · 390 · 480 · 600 · 720 · 1020 · 1080 · 1190 · 1240 · 1380 px.
+   600 gebruikt ook js/disciplines.js (de kopbalk op een telefoon).
    ========================================================================== */
 
 :root {
@@ -13,14 +19,16 @@
   --vv-navy-900: #0a1232;
   --vv-navy: #101d4f;
   --vv-navy-800: #16255e;
-  --vv-navy-700: #28335f;
-  --vv-navy-600: #444f78;
   --vv-crimson: #ef174d;
   --vv-crimson-600: #d2123f;
   --vv-crimson-700: #b50e35;
+  --vv-crimson-800: #960b2c;
   --vv-teal: #00b49c;
   --vv-teal-700: #007a69;
   --vv-teal-deep: #008f8e;
+  --vv-teal-50: #e8f6f3;
+  --vv-teal-300: #5ff0d6;   /* uitleesvenster en signaal op donker */
+  --vv-teal-400: #2ee6c8;   /* lampjes en koerspunten die oplichten */
   --vv-steel: #28899f;
   --vv-steel-700: #1f6c80;
   --vv-rose: #ae3255;
@@ -28,57 +36,111 @@
 
   --vv-white: #ffffff;
   --vv-gray-50: #f4f5f8;
-  --vv-gray-100: #eceef2;
+  --vv-gray-75: #f1f3f7;
   --vv-gray-200: #dde0e8;
   --vv-gray-300: #c3c8d4;
-  --vv-gray-400: #9aa1b3;
+  --vv-gray-500: #858ca1;   /* rand van invoervelden: 3,3:1 op wit */
   --vv-gray-600: #4c5269;
   --vv-gray-700: #343b52;
 
+  /* Amber: waarschuwingen, licenties, beoordelingen en plaatshouders */
+  --vv-amber-50: #fdf1dc;
+  --vv-amber-100: #fff1c7;
+  --vv-amber-200: #f1d9a6;
+  --vv-amber-300: #ffd98a;  /* tekst op donker */
+  --vv-amber-400: #ffc24d;  /* iconen en sterren op donker */
+  --vv-amber-500: #e9b949;
+  --vv-amber-600: #c47f00;  /* sterren op licht: 3,3:1 op wit */
+  --vv-amber-800: #7a4f00;  /* tekst op licht: 6,3:1 op de zachte vlakken */
+
   /* ---- Betekenis (gebruik deze in componenten) -------------------------- */
   --color-page: var(--vv-gray-50);
+  --color-page-dot: rgba(16, 29, 79, 0.12);  /* het stippenraster van de pagina */
   --color-surface: var(--vv-white);
-  --color-surface-muted: #f1f3f7;
+  --color-surface-muted: var(--vv-gray-75);
   --color-surface-sunken: #e9ecf2;
+  --color-surface-raised: var(--vv-white);  /* rondje op een kaart (licht: niet te zien, donker wel) */
   --color-text: var(--vv-navy);            /* koppen en sterke tekst: 15,5:1 op wit */
   --color-text-body: var(--vv-gray-700);   /* lopende tekst: 11:1 op wit */
   --color-text-muted: var(--vv-gray-600);  /* bijzaak: 7,7:1 op wit */
   --color-border: var(--vv-gray-200);
   --color-border-strong: var(--vv-gray-300);
+  --color-border-input: var(--vv-gray-500); /* invoervelden: 3:1 nodig (WCAG 1.4.11) */
+  --color-frame: var(--color-border);      /* rand om afbeeldingen (slides) */
   --color-link: var(--vv-link);
 
+  /* Donkere vlakken (kopbalk, hero, oproep, voet, bewerkbalk) */
+  --color-chrome: var(--vv-navy);
+  --color-chrome-deep: var(--vv-navy-950);
+  --color-footer: var(--vv-navy-900);
   --color-on-dark: var(--vv-white);
   --color-on-dark-muted: #c9cede;          /* 10:1 op navy */
+  --color-on-dark-subtle: #aab2c8;         /* kleine lettertjes in de voet: 8:1 */
   --color-highlight-on-dark: var(--vv-teal); /* 6,1:1 op navy */
+  --on-dark-line: rgba(255, 255, 255, 0.26);
+  --on-dark-line-strong: rgba(255, 255, 255, 0.52);
+  --on-dark-fill: rgba(255, 255, 255, 0.07);
+  --on-dark-fill-strong: rgba(255, 255, 255, 0.14);
+  --color-readout: var(--vv-teal-300);     /* cijfers in een uitleesvenster: 11:1 op navy */
+  --color-glow: var(--vv-teal-400);
 
   --color-primary: var(--vv-crimson-600);  /* witte tekst: 5,4:1 */
   --color-primary-hover: var(--vv-crimson-700);
   --color-primary-text: var(--vv-white);
   --color-secondary: var(--vv-navy);
   --color-secondary-hover: var(--vv-navy-800);
-  --color-selected: var(--vv-navy);        /* gekozen schakelaar/filter; witte tekst 15,5:1 */
-  --color-on-selected: var(--vv-white);
+  /* Effen vlak met de tekst omgekeerd: kopieerknop, op slot, gekozen schakelaar */
+  --color-inverse: var(--vv-navy);
+  --color-inverse-hover: var(--vv-navy-800);
+  --color-on-inverse: var(--vv-white);
+  --color-selected: var(--color-inverse);  /* witte tekst 15,5:1 */
+  --color-on-selected: var(--color-on-inverse);
+  --color-signal: var(--vv-teal-700);      /* bewaard, Copilot: 5,3:1 op wit */
   --color-success: var(--vv-teal-700);
-  --color-success-fill: var(--vv-teal);
-  --color-warning: #8a5a00;
-  --color-warning-fill: #fdf1dc;
+  --color-on-success: var(--vv-white);
+  --color-warning: var(--vv-amber-800);
+  --color-warning-fill: var(--vv-amber-50);
+  --color-warning-border: var(--vv-amber-200);
   --color-danger: var(--vv-crimson-700);
+  --color-danger-hover: var(--vv-crimson-800);
+  --color-on-danger: var(--vv-white);
   --color-danger-fill: #fde4ea;
+  --color-danger-border: #f3b6c4;
+  --color-toast: var(--vv-navy);
+  /* Achter vensters en over afbeeldingen */
+  --color-scrim: rgba(7, 13, 38, 0.55);
+  --color-scrim-strong: rgba(7, 13, 38, 0.86);
+  --color-scrim-pill: rgba(7, 13, 38, 0.75);
 
   --color-focus: var(--vv-crimson-600);
   --color-focus-on-dark: var(--vv-teal);
 
-  /* Luifel (gestreepte kop, zoals bij een marktkraam) */
-  --awning-a: var(--vv-navy);
-  --awning-b: #14245c;
-  --awning-stripe: 56px;
+  /* Labels en markeringen */
+  --badge-license-bg: var(--vv-amber-50);
+  --badge-license-ink: var(--vv-amber-800);
+  --badge-free-bg: #dcf4f0;
+  --badge-free-ink: #005c50;
+  --badge-new-bg: #fde4ea;
+  --badge-new-ink: #a00d31;
+  --badge-demo-bg: #e3e6f0;
+  --badge-demo-ink: var(--vv-navy);
+  --highlight-bg: var(--vv-amber-100);     /* plaatshouders, wijzigingen, jouw inzendingen */
+  --highlight-ink: var(--vv-amber-800);
+  --ph-filled-bg: #dcf4f0;
+  --ph-filled-ink: #00574c;
+  --prompt-bg: #f6f7fa;
+  --copilot-bg: var(--color-surface);
+  --star-color: var(--vv-amber-600);
 
-  /* ---- Accentkleuren per snack ------------------------------------------
-     accent  = decoratieve kleur
-     ink     = tekstveilige variant (min. 4,5:1 op wit)
-     tint    = zachte achtergrond (iconentegel)
+  /* ---- Accentkleuren per onderdeel ----------------------------------------
+     accent  = decoratieve kleur (vlakken, iconen)
+     ink     = tekstveilige variant (min. 4,5:1 op wit); ook het vlak onder tekst,
+               met --color-on-ink erop (wit op licht, navy op donker)
+     tint    = zachte achtergrond (iconentegel, in beide thema's licht)
      on      = kleur van iconen bovenop het accent
-     wash    = optioneel: zacht vlak in het donkere thema (valt anders terug op tint) */
+     wash    = zacht vlak dat in het donkere thema donker wordt */
+  --color-on-ink: var(--vv-white);
+
   --accent-teal: var(--vv-teal);
   --accent-teal-ink: var(--vv-teal-700);
   --accent-teal-tint: #dcf4f0;
@@ -109,24 +171,12 @@
   --accent-navy-tint: #e3e6f0;
   --accent-navy-on: var(--vv-white);
 
-  /* ---- Grafieken (dashboard) ----------------------------------------------
-     Beoordeling = diverging: positief / neutraal (grijs) / negatief.
-     Gevalideerd op kleurenblindheid (protan/deutan ΔE ≥ 16,8) en onderling
-     onderscheid (ΔE ≥ 21,5) op wit. Het grijs zit onder 3:1; de aantallen
-     staan daarom altijd als getal in de tabel. Eén reeks = één kleur (series). */
-  --chart-positive: #007a69;
-  --chart-neutral: #9aa1b3;
-  --chart-negative: #d2123f;
-  --chart-series: #28899f;
-  --chart-grid: #e3e6ed;
-  --chart-surface: var(--vv-white);
-
   /* ---- Typografie -------------------------------------------------------- */
   --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono: 'IBM Plex Mono', Consolas, 'SF Mono', ui-monospace, monospace;
 
-  /* Basisgrootte schaalt mee met het scherm: ca. 16px (portrait) tot 20px (groot scherm) */
-  --font-size-root: clamp(1rem, 0.45vw + 0.75rem, 1.25rem);
+  /* Je leest dit platform aan je bureau: 16px (telefoon, laptop) tot maximaal 17px (groot scherm) */
+  --font-size-root: clamp(1rem, 0.2vw + 0.85rem, 1.0625rem);
 
   --fs-xs: 0.8125rem;
   --fs-sm: 0.9rem;
@@ -147,9 +197,11 @@
   --lh-normal: 1.5;
 
   --ls-tight: -0.022em;
-  --ls-eyebrow: 0.14em;
+  --ls-eyebrow: 0.14em;     /* kapitalen boven een kop */
+  --ls-caps: 0.08em;        /* kleine kapitalen in labels */
+  --ls-instrument: 0.12em;  /* mono-labels in de stijl van een instrumentenpaneel */
 
-  /* ---- Afstanden ----------------------------------------------------------- */
+  /* ---- Afstanden en indeling ---------------------------------------------- */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -159,19 +211,16 @@
   --space-7: 2rem;
   --space-8: 2.5rem;
   --space-9: 3rem;
-  --space-10: 4rem;
 
   --gutter: clamp(1rem, 3vw, 3rem);
-  --container-max: 1640px;
+  --page-max: 1400px;       /* ruim genoeg voor de kopbalk met iconen, volledige labels en de discipline */
   --grid-gap: clamp(0.9rem, 1.6vw, 1.5rem);
-  --card-min-width: 300px;                 /* gebruikt voor het automatisch kiezen van het aantal kolommen */
-  --card-min-height: 12rem;                /* kaarten worden nooit lager dan dit... */
-  --card-max-height: 19rem;                /* ...en rekken nooit verder op dan dit */
   --card-padding: clamp(1.1rem, 1.6vw, 1.5rem);
+  --topbar-height: 4rem;
+  /* --sticky-top: hoogte van de kopbalk zolang die bovenaan blijft staan (js/disciplines.js) */
 
   /* ---- Aanraakdoelen -------------------------------------------------------- */
-  --touch-min: 3rem;                       /* 48px bij 16px basis */
-  --touch-lg: 4rem;
+  --touch-min: 3rem;        /* 48px bij 16px basis */
 
   /* ---- Rondingen ------------------------------------------------------------ */
   --radius-sm: 10px;
@@ -186,6 +235,7 @@
   --shadow-card-hover: 0 2px 4px rgba(16, 29, 79, 0.06), 0 16px 36px rgba(16, 29, 79, 0.13);
   --shadow-lg: 0 10px 30px rgba(16, 29, 79, 0.14), 0 4px 10px rgba(16, 29, 79, 0.06);
   --shadow-xl: 0 24px 64px rgba(7, 13, 38, 0.32);
+  --shadow-float: 0 6px 18px rgba(7, 13, 38, 0.28); /* knopjes op een afbeelding of kaart */
   --shadow-button: 0 6px 16px rgba(210, 18, 63, 0.28);
 
   /* ---- Focus ---------------------------------------------------------------- */
@@ -198,41 +248,75 @@
   --duration-slow: 420ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 
   /* ---- Lagen ---------------------------------------------------------------- */
   --z-topbar: 20;
-  --z-theater: 800;   /* schermvullende video: boven de pagina, onder meldingen */
   --z-toast: 1000;
+  --z-fatal: 2000;
 }
 
 /* ==========================================================================
-   THEMA 'donker' — voor een groot scherm of een schemerige ruimte.
-   Activeer via js/config.js: theme: 'donker'
+   THEMA 'donker' — de knop in de kopbalk, of theme: 'donker' in js/config.js
    ========================================================================== */
 :root[data-theme='donker'] {
   --color-page: var(--vv-navy-950);
+  --color-page-dot: rgba(255, 255, 255, 0.07);
   --color-surface: #121f52;
   --color-surface-muted: #1a2a66;
   --color-surface-sunken: #0c1640;
+  --color-surface-raised: var(--color-surface-muted);
   --color-text: var(--vv-white);
   --color-text-body: #dde1ec;
   --color-text-muted: #b9c0d4;
   --color-border: #28366f;
   --color-border-strong: #3b4a85;
+  --color-border-input: #6a79b4;           /* 3,7:1 op het vlak */
+  --color-frame: var(--color-border-strong);
   --color-link: #6fd6c8;
-  --color-focus: var(--vv-teal);
-  --color-selected: var(--vv-teal);
-  --color-on-selected: var(--vv-navy);
 
-  --awning-a: #0d1845;
-  --awning-b: #112057;
+  --color-chrome: #0d1845;
+  --color-footer: #050a1f;
+  --color-focus: var(--vv-teal);
+  --color-inverse: var(--vv-teal);
+  --color-inverse-hover: var(--vv-teal-400);
+  --color-on-inverse: var(--vv-navy);
+  --color-signal: var(--vv-teal-300);
+  --color-success: #3fd6bf;
+  --color-on-success: var(--vv-navy);
+  --color-warning: var(--vv-amber-300);
+  --color-warning-fill: rgba(255, 184, 77, 0.1);
+  --color-warning-border: rgba(255, 207, 133, 0.35);
+  --color-danger: #ff8fa9;
+  --color-danger-hover: #ffa8bc;           /* lichter: er staat donkere tekst op */
+  --color-on-danger: var(--vv-navy);
+  --color-danger-fill: rgba(239, 23, 77, 0.14);
+  --color-danger-border: rgba(255, 143, 169, 0.4);
+  --color-toast: #1a2a66;
 
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 22px rgba(0, 0, 0, 0.28);
   --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.3), 0 18px 40px rgba(0, 0, 0, 0.42);
   --shadow-lg: 0 12px 34px rgba(0, 0, 0, 0.4);
 
-  /* Tekstveilige accentvarianten op een donkere ondergrond */
+  --badge-license-bg: rgba(255, 184, 77, 0.16);
+  --badge-license-ink: var(--vv-amber-300);
+  --badge-free-bg: rgba(0, 180, 156, 0.16);
+  --badge-free-ink: #6fe0cd;
+  --badge-new-bg: rgba(239, 23, 77, 0.2);
+  --badge-new-ink: #ff9ab3;
+  --badge-demo-bg: rgba(90, 109, 184, 0.3);
+  --badge-demo-ink: #c9d2f5;
+  --highlight-bg: rgba(255, 207, 133, 0.18);
+  --highlight-ink: var(--vv-amber-300);
+  --ph-filled-bg: rgba(0, 180, 156, 0.22);
+  --ph-filled-ink: #7fe6d4;
+  --prompt-bg: #0e1a49;
+  --copilot-bg: transparent;
+  --star-color: var(--vv-amber-400);
+
+  /* Tekstveilige accentvarianten op een donkere ondergrond (navy erop: 6:1 of meer) */
+  --color-on-ink: var(--vv-navy);
   --accent-teal-ink: #3fd6bf;
   --accent-crimson-ink: #ff6f8f;
   --accent-steel-ink: #6cc3d8;
@@ -240,14 +324,6 @@
   --accent-deepteal-ink: #4fd0cf;
   --accent-navy-ink: #aab7ea;
   --accent-navy: #5a6db8;
-
-  /* Grafieken op donker (gevalideerd op #121f52: CVD ΔE ≥ 8,4, contrast ≥ 3,35:1) */
-  --chart-positive: #00b49c;
-  --chart-neutral: #6c7489;
-  --chart-negative: #ff6f8f;
-  --chart-series: #28899f;
-  --chart-grid: #28366f;
-  --chart-surface: #121f52;
 
   /* Zachte accentvlakken (chips, promptvlak). Iconentegels houden de lichte tint. */
   --accent-teal-wash: rgba(0, 180, 156, 0.18);

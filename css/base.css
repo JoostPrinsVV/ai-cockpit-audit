@@ -40,15 +40,17 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background: var(--color-page);
-  /* Geen 'trek om te verversen' en geen veeg-terug-gebaar op touchscreens */
-  overscroll-behavior: none;
   color-scheme: light;
+  scrollbar-width: thin;
+  /* Een anker of focus komt niet onder de kopbalk terecht (--sticky-top: js/disciplines.js) */
+  scroll-padding-top: calc(var(--sticky-top, 0px) + var(--space-4));
 }
 
 :root[data-theme='donker'] {
   color-scheme: dark;
 }
 
+/* Pagina: lichtgrijs met een fijn stippenraster, net als het Lab (samenhang tussen beide) */
 body {
   margin: 0;
   min-height: 100vh;
@@ -58,7 +60,7 @@ body {
   font-weight: var(--fw-regular);
   line-height: var(--lh-normal);
   color: var(--color-text-body);
-  background: var(--color-page);
+  background: var(--color-page) radial-gradient(var(--color-page-dot) 1px, transparent 1.5px) 0 0 / 24px 24px;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -129,21 +131,18 @@ a {
   display: none !important;
 }
 
-/* ---- Focus -------------------------------------------------------------- */
-:focus {
-  outline: none;
-}
-
+/* ---- Focus: alleen bij toetsenbordgebruik een ring ----------------------- */
 :focus-visible {
   outline: var(--focus-width) solid var(--color-focus);
   outline-offset: var(--focus-offset);
 }
 
+/* Op een donker vlak een ring in turquoise */
 .on-dark {
   --color-focus: var(--color-focus-on-dark);
 }
 
-/* Koppen die programmatisch focus krijgen na navigatie: geen ring nodig */
+/* Koppen en vlakken die programmatisch focus krijgen na navigatie: geen ring nodig */
 [tabindex='-1']:focus-visible {
   outline: none;
 }
@@ -158,7 +157,7 @@ a {
 /* ---- Hulpklassen ---------------------------------------------------------- */
 .container {
   width: 100%;
-  max-width: var(--container-max);
+  max-width: var(--page-max);
   margin-inline: auto;
   padding-inline: max(var(--gutter), env(safe-area-inset-left)) max(var(--gutter), env(safe-area-inset-right));
 }
@@ -198,30 +197,4 @@ a {
 ::selection {
   background: var(--vv-teal);
   color: var(--vv-navy);
-}
-
-/* Kiosk (touch): geen scrollbalk die de indeling laat verspringen; scrollen blijft werken.
-   Buiten kioskmodus een smalle scrollbalk. */
-html {
-  scrollbar-width: thin;
-}
-
-html.is-kiosk {
-  scrollbar-width: none;
-}
-
-html.is-kiosk::-webkit-scrollbar {
-  display: none;
-}
-
-/* Kiosk: geen per ongeluk geselecteerde interfacetekst (prompt blijft selecteerbaar) */
-.is-kiosk .app,
-.is-kiosk dialog {
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-.is-kiosk .is-selectable {
-  -webkit-user-select: text;
-  user-select: text;
 }

@@ -13,9 +13,9 @@ Het platform stond eerst in de map `audit/` van de AI Snackbar (repository `AI-s
 
 ```
 index.html            De pagina (kopbalk, voet, iconen) en de beveiligingsregels (CSP)
-css/variables.css     Huisstijl: kleuren, maten, lettertypes (eigen kopie, overgenomen van de snackbar)
-css/base.css          Lettertypes, reset en hulpklassen (eigen kopie)
-css/audit.css         De opmaak van dit platform
+css/variables.css     Alle tokens, voor het lichte én het donkere thema: kleuren, maten, lettertypes, beweging
+css/base.css          Lettertypes, reset, focus en hulpklassen
+css/audit.css         De opmaak van dit platform, ook voor hoog contrast (Windows) en afdrukken
 css/admin.css         De opmaak van Beheer, de bewerkbalk en de bewerkmodus (alleen geladen voor wie beheert)
 js/vroeg.js           Vóór de eerste weergave: het gekozen thema (geen witte flits) en een vangnet bij fouten
 js/config.js          Instellingen: titel, gouden regels, Supabase

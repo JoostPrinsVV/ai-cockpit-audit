@@ -1,15 +1,16 @@
 /* ==========================================================================
    Beweging (zie js/motion.js)
-   Kort en subtiel. Bij 'minder beweging' staat alles uit: de regel onderaan
-   en de controles in js/motion.js.
+   Kort en subtiel. Bij 'minder beweging' staat alles uit: het blok onderaan
+   en de controles in js/motion.js. De tijden zijn per beweging gekozen;
+   de versnelling komt uit de tokens (css/variables.css).
    ========================================================================== */
 
 /* ---- Paginaovergang (View Transitions; Edge en Chrome) ---- */
 .topbar { view-transition-name: topbar; } /* de kopbalk blijft staan */
 html.vt-page::view-transition-old(root) { animation: 160ms ease-in both motion-fade-out; }
-html.vt-page::view-transition-new(root) { animation: 300ms cubic-bezier(0.2, 0.8, 0.2, 1) 60ms both motion-rise-in; }
+html.vt-page::view-transition-new(root) { animation: 300ms var(--ease-out) 60ms both motion-rise-in; }
 html.vt-page::view-transition-group(item-title),
-html.vt-page::view-transition-group(item-icon) { animation-duration: 420ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+html.vt-page::view-transition-group(item-icon) { animation-duration: var(--duration-slow); animation-timing-function: var(--ease-out); }
 html.vt-page::view-transition-old(item-title),
 html.vt-page::view-transition-new(item-title) { width: auto; height: 100%; object-fit: contain; object-position: left top; }
 @keyframes motion-fade-out { to { opacity: 0; } }
@@ -18,19 +19,19 @@ html.vt-page::view-transition-new(item-title) { width: auto; height: 100%; objec
 /* ---- Filteren en sorteren: alleen de kaarten bewegen ---- */
 html.vt-filter::view-transition-old(root),
 html.vt-filter::view-transition-new(root) { animation: none; }
-html.vt-filter::view-transition-group(*) { animation-duration: 380ms; animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1); }
+html.vt-filter::view-transition-group(*) { animation-duration: 380ms; animation-timing-function: var(--ease-out); }
 html.vt-filter::view-transition-old(*):only-child { animation: 200ms ease-in both motion-shrink-out; }
-html.vt-filter::view-transition-new(*):only-child { animation: 320ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms both motion-grow-in; }
+html.vt-filter::view-transition-new(*):only-child { animation: 320ms var(--ease-out) 80ms both motion-grow-in; }
 @keyframes motion-shrink-out { to { opacity: 0; transform: scale(0.94); } }
 @keyframes motion-grow-in { from { opacity: 0; transform: scale(0.94); } }
 
-/* ---- Thema: de nieuwe kleuren openen als een cirkel ---- */
+/* ---- Thema: de nieuwe kleuren openen als een cirkel (ns.motion.reveal) ---- */
 html.vt-theme::view-transition-old(root),
 html.vt-theme::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 html.vt-theme::view-transition-new(root) { z-index: 2; }
 
 /* ---- Opstarten: lampentest in het menu ---- */
-.nav__link.lamp-test::before { background: #2ee6c8; box-shadow: 0 0 0 3px rgba(0, 180, 156, 0.25), 0 0 10px rgba(46, 230, 200, 0.9); }
+.nav__link.lamp-test::before { background: var(--color-glow); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-teal) 25%, transparent), 0 0 10px color-mix(in srgb, var(--color-glow) 90%, transparent); }
 
 /* ---- Uitklappers en panelen ---- */
 /* Alleen voor uitklappers: van 0 naar 'auto' kunnen animeren (niet voor de hele pagina) */
@@ -38,12 +39,12 @@ details { interpolate-size: allow-keywords; }
 details::details-content {
   block-size: 0;
   overflow-y: clip;
-  transition: block-size 320ms cubic-bezier(0.2, 0.8, 0.2, 1), content-visibility 320ms allow-discrete;
+  transition: block-size 320ms var(--ease-out), content-visibility 320ms allow-discrete;
 }
 details[open]::details-content { block-size: auto; }
-.switcher__panel:not([hidden]) { animation: motion-drop 200ms cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: top left; }
-.p-card__preview:not([hidden]) { animation: motion-unfold 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.drawer[open] .drawer__panel { animation: motion-slide-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.switcher__panel:not([hidden]) { animation: motion-drop 200ms var(--ease-out) both; transform-origin: top left; }
+.p-card__preview:not([hidden]) { animation: motion-unfold 260ms var(--ease-out) both; }
+.drawer[open] .drawer__panel { animation: motion-slide-in 320ms var(--ease-out) both; }
 .drawer[open]::backdrop { animation: motion-fade-in 260ms ease-out both; }
 @keyframes motion-drop { from { opacity: 0; transform: translateY(-6px) scale(0.97); } }
 @keyframes motion-unfold { from { opacity: 0; transform: translateY(-8px); } }
@@ -59,12 +60,12 @@ details[open]::details-content { block-size: auto; }
   right: 0;
   height: 60px;
   pointer-events: none;
-  background: linear-gradient(to bottom, transparent, rgba(0, 180, 156, 0.22) 70%, rgba(46, 230, 200, 0.6) 98%, transparent);
-  animation: motion-scan 800ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--vv-teal) 22%, transparent) 70%, color-mix(in srgb, var(--color-glow) 60%, transparent) 98%, transparent);
+  animation: motion-scan 800ms var(--ease-standard) both;
 }
 @keyframes motion-scan { from { transform: translateY(-60px); } to { transform: translateY(var(--scan-to, 600px)); opacity: 0.2; } }
-.motion-pop { animation: motion-pop 380ms cubic-bezier(0.34, 1.6, 0.64, 1); }
-@keyframes motion-pop { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
+/* Bladwijzer, sterren en de wisselaar veren op: dezelfde 'pop' als de kopieerknop, met meer uitslag */
+.motion-pop { --pop-scale: 1.22; animation: pop 380ms var(--ease-spring); }
 
 /* ---- Scrollen (scroll-driven animations; Edge en Chrome) ---- */
 @supports (animation-timeline: scroll()) {
@@ -72,14 +73,15 @@ details[open]::details-content { block-size: auto; }
   .hero__rose { animation: motion-rose-turn linear both; animation-timeline: scroll(root); animation-range: 0 520px; }
   @keyframes motion-rose-turn { to { rotate: 45deg; opacity: 0.25; } }
   /* Kaarten verderop verschijnen zodra ze in beeld komen */
-  #view .section .card-grid > li,
-  #view .recent > li { animation: motion-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+  .view .section .card-grid > li,
+  .view .recent > li { animation: motion-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
   @keyframes motion-reveal { from { opacity: 0; transform: translateY(24px); } }
 }
 
-/* ---- Minder beweging: alles uit ---- */
+/* ---- Minder beweging: alles uit (ook de overgangen in css/audit.css en css/admin.css) ---- */
 @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
   details::details-content { transition: none; }
-  .hero__rose, #view .section .card-grid > li, #view .recent > li { animation: none; }
+  .hero__rose, .view .section .card-grid > li, .view .recent > li { animation: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

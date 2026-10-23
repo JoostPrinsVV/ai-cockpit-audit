@@ -119,7 +119,7 @@
    * o: accent, icon, title, text, pending (gedempt: nog niet beschikbaar), action (knop)
    */
   function statusPanel(o) {
-    return el('div', { className: 'recording' + (o.pending ? ' recording--pending' : '') + ' ' + accentClass(o.accent) }, [
+    return el('div', { className: 'recording' + (o.pending ? ' recording--pending' : ' on-dark') + ' ' + accentClass(o.accent) }, [
       el('span', { className: 'recording__icon', attrs: { 'aria-hidden': 'true' } }, [icon(o.icon)]),
       el('div', { className: 'recording__body' }, [
         el('p', { className: 'recording__title', text: o.title }),

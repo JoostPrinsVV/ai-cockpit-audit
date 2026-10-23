@@ -540,6 +540,16 @@
       ns.motion.reveal(button, () => applyTheme(next));
       storage.set('theme', next);
     });
+    // Afdrukken altijd in het lichte thema (lichte tekst zou op wit papier wegvallen); daarna terug
+    let printedFrom = '';
+    window.addEventListener('beforeprint', () => {
+      printedFrom = document.documentElement.dataset.theme;
+      if (printedFrom === 'donker') applyTheme('licht');
+    });
+    window.addEventListener('afterprint', () => {
+      if (printedFrom === 'donker') applyTheme('donker');
+      printedFrom = '';
+    });
   }
 
   /* ---- Kop en voet ----------------------------------------------------------------- */

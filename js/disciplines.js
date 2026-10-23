@@ -285,13 +285,24 @@
         topbar.dataset.squeeze = String(level);
         if (actions.offsetTop <= brand.offsetTop + 4) break;
       }
-      return;
+    } else {
+      delete topbar.dataset.squeeze;
+      for (let level = 0; level <= 3; level++) {
+        topbar.dataset.fit = String(level);
+        if (level === 3 || list.scrollWidth <= nav.clientWidth) break;
+      }
     }
-    delete topbar.dataset.squeeze;
-    for (let level = 0; level <= 3; level++) {
-      topbar.dataset.fit = String(level);
-      if (level === 3 || list.scrollWidth <= nav.clientWidth) break;
-    }
+    stickyTop(topbar);
+  }
+
+  /**
+   * --sticky-top: hoe hoog de kopbalk is zolang hij bovenaan blijft staan (0 als hij meescrolt).
+   * De CSS houdt daarmee ankers, de inhoudsopgave van het naslagwerk en het voorbeeld van de
+   * nieuwsbrief eronder vrij, ook met de bewerkbalk van een beheerder erbij.
+   */
+  function stickyTop(topbar) {
+    const sticky = window.getComputedStyle(topbar).position === 'sticky';
+    document.documentElement.style.setProperty('--sticky-top', sticky ? Math.round(topbar.getBoundingClientRect().height) + 'px' : '0px');
   }
 
   function setupFit() {
@@ -303,15 +314,20 @@
     };
     window.addEventListener('resize', later);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(later);
-    // Ook als alleen de breedte van de kopbalk verandert (zoomen, schuifbalk, lettertype)
+    // Ook als alleen de breedte van de kopbalk verandert (zoomen, schuifbalk, lettertype);
+    // verandert alleen de hoogte (de bewerkbalk verschijnt), dan alleen --sticky-top bijwerken
     const topbar = document.getElementById('topbar');
     if (topbar && 'ResizeObserver' in window) {
       let width = 0;
+      let height = 0;
       new window.ResizeObserver((entries) => {
-        const next = Math.round(entries[0].contentRect.width);
-        if (next === width) return;
-        width = next;
-        later();
+        const box = entries[0].contentRect;
+        const nextWidth = Math.round(box.width);
+        const nextHeight = Math.round(box.height);
+        if (nextWidth !== width) later();
+        else if (nextHeight !== height) stickyTop(topbar);
+        width = nextWidth;
+        height = nextHeight;
       }).observe(topbar);
     }
     later();
