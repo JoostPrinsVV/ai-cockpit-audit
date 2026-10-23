@@ -30,10 +30,10 @@
   const BOOT_KEY = 'ai-snackbar-audit:opgestart';
 
   /* ---- Paginaovergang, met de kaart die doorloopt naar de detailpagina ------------------------- */
-  const CARD = '.uc-card, .tip-card, .p-card, .tr-card, .recent__item';
+  // Een kaart of regel voor één item (de views zetten data-kind en data-id, zie js/kinds.js)
+  const CARD = '[data-kind][data-id]';
   const TITLE = '.uc-card__title, .tip-card__title, .p-card__title, .tr-card__title, .recent__title';
   const ICON = '.uc-card__icon, .tip-card__icon, .recent__icon';
-  const DETAIL = ['usecase', 'prompt', 'tip', 'training', 'agent'];
   let lastParsed = null;
   let clicked = null; // { href, card }: de kaart waarop je net klikte
   const named = new Set();
@@ -41,7 +41,7 @@
   document.addEventListener('click', (event) => {
     const link = event.target.closest && event.target.closest('a[href^="#/"]');
     if (!link) return;
-    const card = link.matches(CARD) ? link : link.closest(CARD);
+    const card = link.closest(CARD);
     clicked = card ? { href: link.getAttribute('href'), card } : null;
   }, true);
 
@@ -58,7 +58,7 @@
     named.clear();
   }
 
-  const isDetail = (parsed) => Boolean(parsed && DETAIL.includes(parsed.name) && parsed.params[0]);
+  const isDetail = (parsed) => Boolean(parsed && ns.kinds.byRoute(parsed.name) && parsed.params[0]);
 
   // Afronden, ook als de overgang werd overgeslagen (snel achter elkaar klikken) of de nieuwe pagina een fout gaf
   function settle(transition, cleanup) {
@@ -67,11 +67,7 @@
     transition.finished.then(cleanup, cleanup);
   }
 
-  function cardFor(href) {
-    const link = document.querySelector(`#view a[href="${CSS.escape(href)}"]`);
-    if (!link) return null;
-    return link.matches(CARD) ? link : link.closest(CARD);
-  }
+  const cardFor = (kind, id) => document.querySelector(`#view [data-kind="${CSS.escape(kind)}"][data-id="${CSS.escape(id)}"]`);
 
   function nameCard(card) {
     nameIt(card.querySelector(TITLE), 'item-title');
@@ -111,7 +107,7 @@
       commit();
       if (fromCard) nameDetail();
       else if (backFromDetail) {
-        const card = cardFor(`#/${prev.name}/${prev.params[0]}`);
+        const card = cardFor(ns.kinds.byRoute(prev.name).type, prev.params[0]);
         if (card) nameCard(card);
       }
       arrived(parsed);
@@ -234,10 +230,9 @@
     // buiten beeld doen niet mee (scheelt bij lange lijsten veel werk).
     const used = new Set();
     document.querySelectorAll('#view .card-grid > li, #view .p-grid > li').forEach((item) => {
-      const link = item.querySelector('a[href^="#/"]');
-      const href = link ? link.getAttribute('href') : '';
-      if (!/^#\/(usecase|prompt|tip|training|agent)\/[a-z0-9-]+$/.test(href)) return;
-      const name = 'card-' + href.slice(2).replace('/', '-');
+      const card = item.querySelector(CARD);
+      if (!card || !/^[a-z0-9-]+$/.test(card.dataset.id)) return;
+      const name = `card-${card.dataset.kind}-${card.dataset.id}`;
       if (used.has(name) || !inView(item.getBoundingClientRect(), window.innerHeight)) return;
       used.add(name);
       nameIt(item, name);

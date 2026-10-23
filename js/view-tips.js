@@ -9,16 +9,12 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, switchButton, formatDate, saveButton, emptyState } = ns.ui;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, formatDate, saveButton, emptyState } = ns.ui;
+  const B = ns.blocks;
+  const { detailHeader, relatedList, itemLinks, stepsList, infoNote } = B;
 
-  // Gekozen thema en filter blijven staan zolang de pagina open is
+  // Gekozen thema en filter blijven staan zolang de site open is
   const filters = { category: 'all', saved: false };
-
-  /** Id's van de bewaarde tips (die open zijn) */
-  const savedIds = () => ns.ui.saved.list().filter((key) => key.startsWith('tip:')).map((key) => key.slice(4)).filter((id) => {
-    const tip = ns.content.tipById.get(id);
-    return tip && !tip.locked;
-  });
 
   /** 'vrijdag 30 oktober' */
   function longDate(date) {
@@ -40,7 +36,7 @@
    * De hele kaart is klikbaar via de titel; de bewaarknop ligt erboven.
    */
   function card(tip, headingTag, large, eyebrow) {
-    return el('article', { className: 'tip-card ' + accentClass(tip.accent) + (large ? ' tip-card--large' : '') }, [
+    return el('article', { className: 'tip-card ' + accentClass(tip.accent) + (large ? ' tip-card--large' : ''), dataset: { kind: 'tip', id: tip.id } }, [
       el('div', { className: 'tip-card__top' }, [
         el('span', { className: 'tip-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(tip.icon)]),
         el('div', { className: 'tip-card__badges' }, [ns.ui.draftBadge(tip), ns.cockpit.sharedBadge(tip), weekBadge(tip), tip.weekly ? null : newBadge(tip.added), licenseBadge(tip.license, { short: true })]),
@@ -98,33 +94,25 @@
     const all = open.filter((tip) => tip.weekly).sort((a, b) => (a.release < b.release ? 1 : -1)).concat(open.filter((tip) => !tip.weekly));
     const featured = open.filter((t) => t.featured);
     const grid = el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } });
-    const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
-    const savedCount = el('span', { className: 'toggle__count' });
+    const count = B.resultCount();
     const empty = all.length
       ? emptyState('Geen tips met deze filters', 'Kies een ander thema of zet Bewaard uit.')
       : emptyState('De eerste tips komen eraan', 'Iedere vrijdag komt er een nieuwe tip bij.', null, 'bulb');
 
-    // Iedere kaart één keer bouwen; filteren zet alleen de bestaande kaarten op hun plek
-    const cards = new Map();
-    const cardFor = (tip) => {
-      if (!cards.has(tip.id)) cards.set(tip.id, el('li', {}, [card(tip, 'h3', false, null)]));
-      return cards.get(tip.id);
-    };
+    const cardFor = B.cardCache((tip) => card(tip, 'h3', false, null));
+    // Alleen tips die open zijn
+    const saved = B.savedFilter('tip', filters, update, (id) => all.some((tip) => tip.id === id));
 
     function update() {
-      const saved = savedIds();
-      savedCount.textContent = String(saved.length);
-      const items = all.filter((tip) => (filters.category === 'all' || tip.category.label === filters.category) && (!filters.saved || saved.includes(tip.id)));
-      grid.replaceChildren(...items.map(cardFor));
-      count.textContent = items.length === 1 ? '1 tip' : items.length + ' tips';
+      const savedIds = saved.ids();
+      const items = all.filter((tip) => (filters.category === 'all' || tip.category.label === filters.category) && (!filters.saved || savedIds.includes(tip.id)));
+      grid.replaceChildren(...items.map((tip) => cardFor(tip)));
+      count.textContent = B.countText(items.length, 'tip', 'tips');
       empty.hidden = items.length > 0;
       grid.hidden = items.length === 0;
     }
-    // Bewaren of niet meer bewaren (ook bij de tip van de week of bij Begin hier): telling en lijst bijwerken
-    const stopSaved = ns.ui.onSaved('tip', grid, () => {
-      if (filters.saved) update();
-      else savedCount.textContent = String(savedIds().length);
-    });
+    // Ook bij (niet meer) bewaren bij de tip van de week of bij Begin hier
+    const stopSaved = saved.watch(grid);
 
     const categories = ns.content.tipCategories
       .map((category) => ({ value: category.label, label: category.label, accent: category.accent, count: all.filter((tip) => tip.category === category).length }))
@@ -150,17 +138,7 @@
       el('section', { className: 'section', attrs: { 'aria-labelledby': 'tips-all' } }, [
         el('h2', { className: 'section__title', text: 'Alle tips', attrs: { id: 'tips-all' } }),
         el('div', { className: 'filters' }, [
-          el('div', { className: 'filters__row' }, [
-            el('span', { className: 'filters__label', text: 'Thema' }),
-            themeGroup,
-            el('div', { className: 'toggles toggles--compact', attrs: { role: 'group', 'aria-label': 'Extra filters' } }, [
-              switchButton('Bewaard', 'bookmark', filters.saved, (on) => {
-                filters.saved = on;
-                update();
-              }, savedCount)
-            ]),
-            count
-          ])
+          B.filterRow('Thema', themeGroup, B.extraFilters(saved.button), count)
         ]),
         grid,
         empty
@@ -194,43 +172,35 @@
     const others = tip.category.tips.filter((t) => t !== tip && !t.locked);
 
     const node = el('article', { className: 'page container detail detail--narrow ' + accentClass(tip.accent) }, [
-      el('header', { className: 'detail__header' }, [
-        el('a', { className: 'btn btn--back btn--sm', attrs: { href: '#/tips' } }, [icon('arrow-left'), el('span', { text: 'Alle tips & tricks' })]),
-        el('p', { className: 'detail__eyebrow' }, [icon(tip.icon), el('span', { text: tip.weekly ? `Tip van de week · ${tip.category.label}` : tip.category.label })]),
-        el('div', { className: 'detail__title-row' }, [
-          el('h1', { className: 'detail__title', text: tip.title, attrs: { tabindex: '-1' } }),
-          saveButton('tip', tip.id, tip.title)
-        ]),
-        tip.summary ? el('p', { className: 'detail__subtitle', text: tip.summary }) : null,
-        el('div', { className: 'chips' }, [
+      detailHeader({
+        back: ['#/tips', 'Alle tips & tricks'],
+        icon: tip.icon,
+        eyebrow: tip.weekly ? `Tip van de week · ${tip.category.label}` : tip.category.label,
+        title: tip.title,
+        save: ['tip', tip.id],
+        subtitle: tip.summary,
+        chips: [
           tip.weekly ? chip('Vrijdag ' + formatDate(tip.release), { icon: 'calendar' }) : null,
           licenseBadge(tip.license),
           tip.minutes ? chip(tip.minutes + ' om in te stellen', { icon: 'clock' }) : null,
           newBadge(tip.added)
-        ].filter(Boolean))
-      ]),
+        ]
+      }),
       tip.why ? el('section', { className: 'why', attrs: { 'aria-labelledby': 'tip-why' } }, [
         el('h2', { className: 'why__title', attrs: { id: 'tip-why' } }, [icon('sparkle'), el('span', { text: `Waarom handig in ${ns.cockpit.active().label}` })]),
         el('p', { text: tip.why })
       ]) : null,
       el('section', { className: 'block', attrs: { 'aria-labelledby': 'tip-steps' } }, [
         el('h2', { className: 'block__title', text: 'Zo doe je het', attrs: { id: 'tip-steps' } }),
-        el('ol', { className: 'steps steps--large', attrs: { role: 'list' } }, tip.steps.map((step, index) =>
-          el('li', { className: 'steps__item' }, [el('span', { className: 'steps__number', text: String(index + 1) }), el('span', { text: step })])
-        ))
+        stepsList(tip.steps, 'large')
       ]),
       tip.example ? ns.promptBox.create({ text: tip.example.text, label: tip.example.label, headingTag: 'h2', copyLabel: 'Kopieer', onCopy: () => ns.central.track('copy_tip', tip.id) }) : null,
-      tip.note ? el('p', { className: 'takeaway__note' }, [icon('info'), el('span', { text: tip.note })]) : null,
+      infoNote(tip.note),
       usecases.length ? el('section', { className: 'section section--tight', attrs: { 'aria-labelledby': 'tip-usecases' } }, [
         el('h2', { className: 'section__title', text: 'Zie het in de praktijk', attrs: { id: 'tip-usecases' } }),
         el('ul', { className: 'card-grid card-grid--2', attrs: { role: 'list' } }, usecases.map((u) => el('li', {}, [ns.views.usecases.card(u, 'h3')])))
       ]) : null,
-      others.length ? el('section', { className: 'related', attrs: { 'aria-labelledby': 'tip-more' } }, [
-        el('h2', { className: 'related__title', text: 'Meer over ' + tip.category.label.toLowerCase(), attrs: { id: 'tip-more' } }),
-        el('ul', { className: 'related__list', attrs: { role: 'list' } }, others.map((t) =>
-          el('li', {}, [el('a', { className: 'related__link', attrs: { href: '#/tip/' + t.id } }, [icon(t.icon), el('span', { text: t.title }), icon('arrow-right', { className: 'related__go' })])])
-        ))
-      ]) : null
+      relatedList('tip-more', 'Meer over ' + tip.category.label.toLowerCase(), itemLinks('tip', others.map((t) => t.id), true))
     ]);
     return { node, title: tip.title };
   }

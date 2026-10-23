@@ -22,8 +22,8 @@
   const UNDO_MAX = 50;
   const PING_EVERY = 30000;
   const KEEP_DAYS = 30; // niet-opgeslagen werk dat ouder is, wordt bij de volgende keer niet meer teruggehaald
-  const TYPE_LABEL = { usecase: 'Usecase', prompt: 'Prompt', tip: 'Tip', training: 'Training', agent: 'Agent', phase: 'Fase', setting: 'Teksten' };
-  const ROUTE = { usecase: 'usecase', prompt: 'prompt', tip: 'tip', training: 'training', agent: 'agent' };
+  // Adres van een item op de site (fasen en teksten hebben er geen)
+  const pageOf = (type, id) => (ns.kinds.byRoute(type) ? ns.kinds.href(type, id) : '');
 
   const keyOf = (namespace, type, id) => namespace + '|' + type + '|' + id;
   const clone = (value) => (value == null ? value : JSON.parse(JSON.stringify(value)));
@@ -523,7 +523,7 @@
     const list = el('ul', { className: 'publish-list', attrs: { role: 'list' } }, items.map((item) => {
       const box = el('input', { attrs: { type: 'checkbox', checked: item.canPublish, disabled: !item.canPublish, 'aria-label': 'Publiceren: ' + item.title } });
       checks.set(item, box);
-      const route = ROUTE[item.type];
+      const page = pageOf(item.type, item.id);
       const discardButton = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Weggooien' })]);
       discardButton.addEventListener('click', async () => {
         if (await discard(item)) {
@@ -551,10 +551,10 @@
             el('span', { className: 'badge badge--change', text: KIND_TEXT[item.kind] }),
             item.proposal ? el('span', { className: 'badge badge--mine', text: 'Voorstel van ' + shortName(item.by) }) : null,
             item.publishAt ? el('span', { className: 'badge badge--week' }, [icon('calendar'), 'Gepland: ' + when(item.publishAt)]) : null,
-            el('span', { text: `${TYPE_LABEL[item.type] || item.type}${item.namespace === ns.cockpit.GENERAL_NAMESPACE ? ' · gedeelde basis' : ''} · ${shortName(item.by)}, ${when(item.at)}` })
+            el('span', { text: `${ns.kinds.label(item.type)}${item.namespace === ns.cockpit.GENERAL_NAMESPACE ? ' · gedeelde basis' : ''} · ${shortName(item.by)}, ${when(item.at)}` })
           ]),
           el('p', { className: 'publish-item__title' }, [
-            route && item.kind !== 'verwijderen' ? el('a', { attrs: { href: `#/${route}/${item.id}` }, text: item.title }) : el('span', { text: item.title })
+            page && item.kind !== 'verwijderen' ? el('a', { attrs: { href: page }, text: item.title }) : el('span', { text: item.title })
           ]),
           item.warnings.length ? el('ul', { className: 'publish-item__warnings' }, item.warnings.map((w) => el('li', {}, [icon('alert'), el('span', { text: w })]))) : null,
           !item.canPublish ? el('p', { className: 'field__hint', text: 'Wacht op iemand die mag publiceren.' }) : null,
@@ -640,15 +640,15 @@
     body.replaceChildren(...Array.from(days.entries()).map(([day, list]) => el('section', { className: 'log-day' }, [
       el('h3', { className: 'log-day__title', text: day }),
       el('ul', { className: 'log-list', attrs: { role: 'list' } }, list.map((entry) => {
-        const route = ROUTE[entry.type];
+        const page = entry.item_id ? pageOf(entry.type, entry.item_id) : '';
         const versions = entry.type && entry.item_id ? el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Versies' })]) : null;
         if (versions) versions.addEventListener('click', () => openVersions(entry.namespace, entry.type, entry.item_id, entry.title));
         return el('li', { className: 'log-item' }, [
           el('span', { className: 'log-item__time', text: new Date(entry.at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) }),
           el('span', { className: 'log-item__text' }, [
             el('strong', { text: shortName(entry.actor) }), ' ', entry.action, entry.title ? ' · ' : '',
-            entry.title ? (route && entry.item_id ? el('a', { attrs: { href: `#/${route}/${entry.item_id}` }, text: entry.title }) : el('span', { text: entry.title })) : null,
-            entry.type ? el('span', { className: 'log-item__type', text: ' (' + (TYPE_LABEL[entry.type] || entry.type) + ')' }) : null
+            entry.title ? (page ? el('a', { attrs: { href: page }, text: entry.title }) : el('span', { text: entry.title })) : null,
+            entry.type ? el('span', { className: 'log-item__type', text: ' (' + ns.kinds.label(entry.type) + ')' }) : null
           ]),
           versions
         ]);

@@ -17,20 +17,16 @@
   const { el, icon } = ns.ui;
   const MODE_KEY = 'ai-snackbar-audit:bewerkmodus';
 
-  // Kaarten op de pagina: waar staat het adres, welke tekst is de titel en welke de korte tekst
-  const CARDS = [
-    { sel: '.uc-card:not(.ag-card)', type: 'usecase', link: 'a[href^="#/usecase/"]', title: '.uc-card__link', text: '.uc-card__subtitle', textKey: 'subtitle' },
-    { sel: '.ag-card', type: 'agent', self: true, title: '.uc-card__title', text: '.uc-card__subtitle', textKey: 'summary' },
-    { sel: '.tip-card:not(.tip-card--locked)', type: 'tip', link: 'a[href^="#/tip/"]', title: '.tip-card__link', text: '.tip-card__summary', textKey: 'summary' },
-    { sel: '.p-card', type: 'prompt', link: '.p-card__title a', title: '.p-card__title a', text: '.p-card__desc', textKey: 'description' },
-    { sel: '.tr-card', type: 'training', self: true, title: '.tr-card__title', text: '.tr-card__subtitle', textKey: 'subtitle' }
-  ];
-  const MAPS = { usecase: 'usecaseById', prompt: 'promptById', tip: 'tipById', training: 'trainingById', agent: 'agentById' };
-  const ORDERED = { usecase: true, prompt: true, tip: true, agent: true };
-  const ADD_LABEL = { usecase: 'Nieuwe usecase', prompt: 'Nieuwe prompt', tip: 'Nieuwe tip', training: 'Nieuwe training', agent: 'Nieuwe agent' };
-  // Lijstpagina's: daar kun je ook toevoegen en verslepen
-  const LIST_PAGES = { usecases: 'usecase', prompts: 'prompt', tips: 'tip', trainingen: 'training', agents: 'agent' };
-  const DETAIL_TEXT = { usecase: 'subtitle', tip: 'summary', prompt: 'description', training: 'subtitle', agent: 'summary' };
+  // Kaarten op de pagina (data-kind en data-id, zie js/kinds.js): welke tekst is de titel en welke
+  // de korte tekst. Alleen deze kaarten; de regels op de startpagina zijn geen kaart.
+  const CARD_PARTS = {
+    usecase: { title: '.uc-card__link', text: '.uc-card__subtitle' },
+    agent: { title: '.uc-card__title', text: '.uc-card__subtitle' },
+    tip: { title: '.tip-card__link', text: '.tip-card__summary' },
+    prompt: { title: '.p-card__title a', text: '.p-card__desc' },
+    training: { title: '.tr-card__title', text: '.tr-card__subtitle' }
+  };
+  const CARDS = ':is(.uc-card, .tip-card, .p-card, .tr-card)[data-kind][data-id]';
 
   let on = false;
   try {
@@ -60,7 +56,7 @@
 
   /** Item achter een kaart: { type, id, namespace, derived } of null. */
   function target(type, id) {
-    const item = ns.content[MAPS[type]] && ns.content[MAPS[type]].get(id);
+    const item = ns.kinds.item(type, id);
     if (!item) return null;
     // Een prompt uit een usecase bewerk je via die usecase
     if (type === 'prompt' && item.usecase) {
@@ -69,17 +65,14 @@
     return { type, id, namespace: item.shared ? ns.cockpit.GENERAL_NAMESPACE : own(), derived: false };
   }
 
-  const idFromHref = (href) => decodeURIComponent(String(href || '').split('/').pop() || '');
-
   /* ---- Zijpaneel ------------------------------------------------------------------ */
   function openPanel(type, namespace, id) {
-    const schema = ns.adminContent.SCHEMAS[type];
-    const what = schema ? schema.one : 'item';
+    const kind = ns.kinds.get(type);
     let handle = null;
     const panel = ns.adminContent.quickForm(type, namespace, id, () => handle && handle.close(), () => handle && handle.tryClose());
     // Iets ingevuld maar niet toegepast: eerst vragen (ook bij Escape of een klik naast het paneel)
     const canClose = () => !panel.isDirty() || ns.ui.confirmDialog('Wat je in dit paneel hebt ingevuld, is nog niet toegepast.', { title: 'Paneel sluiten?', confirmLabel: 'Sluiten zonder toepassen', cancelLabel: 'Verder invullen', danger: true });
-    handle = ns.editor.drawer(id ? `${what.charAt(0).toUpperCase() + what.slice(1)} bewerken` : (ADD_LABEL[type] || 'Nieuw'), panel.node, null, { canClose });
+    handle = ns.editor.drawer(id ? `${kind.label} bewerken` : kind.add, panel.node, null, { canClose });
     const first = panel.node.querySelector('input, textarea, select');
     if (first) first.focus();
   }
@@ -152,21 +145,20 @@
     return button;
   }
 
-  function decorateCard(card, spec, listPage) {
+  function decorateCard(card, listPage) {
     const slot = card.parentElement;
-    if (!slot || slot.dataset.editSlot) return;
-    const link = spec.self ? card : card.querySelector(spec.link);
-    const id = link ? idFromHref(link.getAttribute('href')) : '';
-    const t = id ? target(spec.type, id) : null;
+    const parts = CARD_PARTS[card.dataset.kind];
+    if (!slot || slot.dataset.editSlot || !parts) return;
+    const t = target(card.dataset.kind, card.dataset.id);
     if (!t) return;
     const canEdit = ns.rights.can('bewerken', t.namespace, t.type);
     if (!canEdit) return;
     const canDelete = !t.derived && ns.rights.can('verwijderen', t.namespace, t.type);
-    const orderable = listPage && !t.derived && ORDERED[t.type];
+    const orderable = listPage && !t.derived && ns.kinds.get(t.type).ordered;
     slot.dataset.editSlot = [t.namespace, t.type, t.id].join('|');
     slot.classList.add('edit-slot');
 
-    const title = card.querySelector(spec.title);
+    const title = card.querySelector(parts.title);
     const label = title ? title.textContent.trim() : t.id;
     const tools = [];
     if (orderable) {
@@ -194,7 +186,7 @@
     // Titel en korte tekst direct aanpassen (niet bij een prompt uit een usecase)
     if (!t.derived) {
       inline(title, editField(t, 'title'), false, 'Titel');
-      inline(card.querySelector(spec.text), editField(t, spec.textKey), true, 'Korte tekst');
+      inline(card.querySelector(parts.text), editField(t, ns.kinds.get(t.type).textKey), true, 'Korte tekst');
     }
     if (orderable) enableDrop(slot, t);
   }
@@ -252,7 +244,7 @@
     if (list.querySelector(':scope > .edit-add')) return;
     const namespace = own();
     if (!ns.rights.can('bewerken', namespace, type)) return;
-    const button = el('button', { className: 'edit-add__btn', attrs: { type: 'button' } }, [icon('plus'), el('span', { text: ADD_LABEL[type] })]);
+    const button = el('button', { className: 'edit-add__btn', attrs: { type: 'button' } }, [icon('plus'), el('span', { text: ns.kinds.get(type).add })]);
     button.addEventListener('click', () => openPanel(type, namespace, ''));
     list.append(el('li', { className: 'edit-add' }, [button]));
   }
@@ -273,12 +265,12 @@
 
   /* ---- Detailpagina: titel en ondertitel -------------------------------------------------- */
   function decorateDetail(view, parsed) {
-    const type = parsed.name;
-    if (!MAPS[type]) return;
-    const t = target(type, parsed.params[0]);
+    const kind = ns.kinds.byRoute(parsed.name);
+    if (!kind) return;
+    const t = target(kind.type, parsed.params[0]);
     if (!t || t.derived || !ns.rights.can('bewerken', t.namespace, t.type)) return;
     inline(view.querySelector('.detail__title'), editField(t, 'title'), false, 'Titel');
-    inline(view.querySelector('.detail__subtitle'), editField(t, DETAIL_TEXT[type]), true, 'Ondertitel');
+    inline(view.querySelector('.detail__subtitle'), editField(t, kind.textKey), true, 'Ondertitel');
   }
 
   let lastParsed = null;
@@ -303,8 +295,10 @@
     if (!isOn() || !parsed) return;
     const view = document.getElementById('view');
     if (!view || parsed.name === 'beheer') return;
-    const listType = LIST_PAGES[parsed.name];
-    CARDS.forEach((spec) => view.querySelectorAll(spec.sel).forEach((card) => decorateCard(card, spec, Boolean(listType))));
+    // Op een overzicht (#/tips) kun je ook toevoegen en verslepen
+    const listKind = ns.kinds.byList(parsed.name);
+    const listType = listKind ? listKind.type : '';
+    view.querySelectorAll(CARDS).forEach((card) => decorateCard(card, Boolean(listType)));
     if (listType) {
       // Plusknop aan het eind van iedere lijst met kaarten van deze soort
       view.querySelectorAll('ul.card-grid, ul.p-grid').forEach((list) => {

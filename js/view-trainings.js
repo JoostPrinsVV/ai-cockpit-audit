@@ -12,7 +12,8 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, formatDate, storage } = ns.ui;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, formatDate, storage, emptyState } = ns.ui;
+  const { detailHeader, relatedList, itemLinks, stepsList, askCard, notice, linkButton, statusPanel, openButton, filterRow, resultCount, countText } = ns.blocks;
   const filters = { category: 'all' };
 
   const isUpcoming = (training) => !training.available && training.date >= ns.content.today();
@@ -42,7 +43,7 @@
       img.addEventListener('error', () => img.remove(), { once: true });
       thumb.prepend(img);
     }
-    return el('a', { className: 'tr-card ' + accentClass(training.accent), attrs: { href: '#/training/' + training.id } }, [
+    return el('a', { className: 'tr-card ' + accentClass(training.accent), attrs: { href: '#/training/' + training.id }, dataset: { kind: 'training', id: training.id } }, [
       thumb,
       el('div', { className: 'tr-card__body' }, [
         el('p', { className: 'tr-card__meta', text: [formatDate(training.date), training.trainer].filter(Boolean).join(' · ') }),
@@ -60,16 +61,13 @@
     ]);
   }
 
-  function requestCta() {
-    return el('div', { className: 'notice notice--cta' }, [
-      icon('cap'),
-      el('div', {}, [
-        el('p', { className: 'notice__title', text: 'Een training of sessie voor je team?' }),
-        el('p', { text: 'Laat weten waar je behoefte aan hebt, bijvoorbeeld een demo van Analyst of een sessie over prompts voor de planning.' })
-      ]),
-      el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#/ideeen/verzoek' } }, [icon('flag'), el('span', { text: 'Doe een verzoek' })])
-    ]);
-  }
+  const requestCta = () => notice({
+    tone: 'cta',
+    icon: 'cap',
+    title: 'Een training of sessie voor je team?',
+    text: 'Laat weten waar je behoefte aan hebt, bijvoorbeeld een demo van Analyst of een sessie over prompts voor de planning.',
+    action: linkButton('#/ideeen/verzoek', 'flag', 'Doe een verzoek', 'btn--secondary btn--sm')
+  });
 
   /* ---- Overzicht ---------------------------------------------------------------- */
   function renderList() {
@@ -83,12 +81,8 @@
     if (!all.length) {
       const node = el('div', { className: 'page container' }, [
         head,
-        el('div', { className: 'empty' }, [
-          el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('cap')]),
-          el('p', { className: 'empty__title', text: 'De eerste opnames komen eraan' }),
-          el('p', { className: 'empty__text', text: `Hier verschijnen de opnames van trainingen en sessies over Copilot in ${ns.cockpit.active().label}, met de slides en de prompts die erin aan bod komen.` }),
-          el('a', { className: 'btn btn--primary', attrs: { href: '#/ideeen/verzoek' } }, [icon('flag'), el('span', { text: 'Vraag een training aan' })])
-        ])
+        emptyState('De eerste opnames komen eraan', `Hier verschijnen de opnames van trainingen en sessies over Copilot in ${ns.cockpit.active().label}, met de slides en de prompts die erin aan bod komen.`,
+          linkButton('#/ideeen/verzoek', 'flag', 'Vraag een training aan', 'btn--primary'), 'cap')
       ]);
       return { node, title: 'Trainingen' };
     }
@@ -96,28 +90,24 @@
     const planned = all.filter(isUpcoming).sort((a, b) => (a.date > b.date ? 1 : -1));
     const archive = all.filter((training) => !isUpcoming(training));
     const grid = el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } });
-    const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
+    const count = resultCount();
 
     function update() {
       const items = archive.filter((training) => filters.category === 'all' || training.category === filters.category);
       grid.replaceChildren(...items.map((training) => el('li', {}, [card(training)])));
-      count.textContent = items.length === 1 ? '1 training' : items.length + ' trainingen';
+      count.textContent = countText(items.length, 'training', 'trainingen');
     }
 
     const categories = ns.content.trainingCategories.filter((category) => archive.some((training) => training.category === category));
     // Een soort die er niet meer is, of geen filterbalk (één soort): dan alles tonen
     if (categories.length < 2 || !categories.includes(filters.category)) filters.category = 'all';
     const filterBlock = categories.length > 1 ? el('div', { className: 'filters' }, [
-      el('div', { className: 'filters__row' }, [
-        el('span', { className: 'filters__label', text: 'Soort' }),
-        toggleGroup('Filter op soort training', [{ value: 'all', label: 'Alles', count: archive.length }].concat(
-          categories.map((category) => ({ value: category, label: category, count: archive.filter((training) => training.category === category).length }))
-        ), filters.category, (value) => {
-          filters.category = value;
-          update();
-        }),
-        count
-      ])
+      filterRow('Soort', toggleGroup('Filter op soort training', [{ value: 'all', label: 'Alles', count: archive.length }].concat(
+        categories.map((category) => ({ value: category, label: category, count: archive.filter((training) => training.category === category).length }))
+      ), filters.category, (value) => {
+        filters.category = value;
+        update();
+      }), count)
     ]) : null;
 
     const node = el('div', { className: 'page container' }, [
@@ -144,34 +134,27 @@
       return { node: player.node, video: player.video, destroy: player.destroy };
     }
     if (training.link) {
-      const open = el('a', { className: 'btn btn--primary btn--lg', attrs: { href: training.link, target: '_blank', rel: 'noopener noreferrer' } }, [
-        icon('play'),
-        el('span', { text: 'Open de opname' }),
-        icon('external')
-      ]);
-      open.addEventListener('click', () => ns.central.track('play_training', training.id));
       return {
-        node: el('div', { className: 'recording ' + accentClass(training.accent) }, [
-          el('span', { className: 'recording__icon', attrs: { 'aria-hidden': 'true' } }, [icon('play-circle')]),
-          el('div', { className: 'recording__body' }, [
-            el('p', { className: 'recording__title', text: training.duration ? `Opname · ${training.duration}` : 'Opname' }),
-            el('p', { className: 'recording__text', text: 'De opname staat in Microsoft 365 en opent in een nieuw tabblad. Log in met je Visser & Visser-account.' })
-          ]),
-          open
-        ])
+        node: statusPanel({
+          accent: training.accent,
+          icon: 'play-circle',
+          title: training.duration ? `Opname · ${training.duration}` : 'Opname',
+          text: 'De opname staat in Microsoft 365 en opent in een nieuw tabblad. Log in met je Visser & Visser-account.',
+          action: openButton(training.link, 'Open de opname', { icon: 'play', onOpen: () => ns.central.track('play_training', training.id) })
+        })
       };
     }
     // Geen opname, wel naslagwerk: dan geen 'Opname volgt' (de slides staan op die plek)
     if (training.hasNaslag) return { node: null };
     const upcoming = isUpcoming(training);
     return {
-      node: el('div', { className: 'recording recording--pending ' + accentClass(training.accent) }, [
-        el('span', { className: 'recording__icon', attrs: { 'aria-hidden': 'true' } }, [icon(upcoming ? 'calendar' : 'clock')]),
-        el('div', { className: 'recording__body' }, [
-          el('p', { className: 'recording__title', text: upcoming ? 'Gepland op ' + formatDate(training.date) : 'Opname volgt' }),
-          el('p', { className: 'recording__text', text: upcoming ? 'De opname verschijnt hier na de training.' : 'De opname wordt binnenkort toegevoegd.' })
-        ])
-      ])
+      node: statusPanel({
+        accent: training.accent,
+        icon: upcoming ? 'calendar' : 'clock',
+        pending: true,
+        title: upcoming ? 'Gepland op ' + formatDate(training.date) : 'Opname volgt',
+        text: upcoming ? 'De opname verschijnt hier na de training.' : 'De opname wordt binnenkort toegevoegd.'
+      })
     };
   }
 
@@ -332,9 +315,7 @@
       el('div', { className: 'checklist__details-body' }, [
         ...action.howto.map((part) => el('div', { className: 'howto' }, [
           part.title ? el('p', { className: 'howto__title', text: part.title }) : null,
-          el('ol', { className: 'steps steps--small', attrs: { role: 'list' } }, part.steps.map((step, index) =>
-            el('li', { className: 'steps__item' }, [el('span', { className: 'steps__number', text: String(index + 1) }), el('span', { text: step })])
-          ))
+          stepsList(part.steps, 'small')
         ])),
         action.note ? el('p', { className: 'howto__note', text: action.note }) : null,
         ...action.prompts.map((prompt) => ns.promptBox.create({ text: prompt.text, label: prompt.label, headingTag: 'p', collapsed: true }))
@@ -509,52 +490,32 @@
       }))
     ]) : null;
 
-    const usecases = training.usecases.map((uid) => ns.content.usecaseById.get(uid)).filter(Boolean);
-    const tips = training.tips.map((tid) => ns.content.tipById.get(tid)).filter((tip) => tip && !tip.locked);
-    const relatedLinks = [
-      ...usecases.map((u) => ({ href: '#/usecase/' + u.id, icon: 'play-circle', text: u.title })),
-      ...tips.map((t) => ({ href: '#/tip/' + t.id, icon: 'bulb', text: t.title }))
-    ];
-
     const aside = el('aside', { className: 'detail__aside', attrs: { 'aria-label': 'Bij deze training' } }, [
-      training.materials.length ? el('section', { className: 'related', attrs: { 'aria-labelledby': 'tr-materials' } }, [
-        el('h2', { className: 'related__title', text: 'Materiaal', attrs: { id: 'tr-materials' } }),
-        el('ul', { className: 'related__list', attrs: { role: 'list' } }, training.materials.map((material) => {
-          const external = /^https?:\/\//.test(material.href);
-          return el('li', {}, [el('a', {
-            className: 'related__link',
-            attrs: external ? { href: material.href, target: '_blank', rel: 'noopener noreferrer' } : { href: material.href, download: true }
-          }, [icon(external ? 'document' : 'download'), el('span', { text: material.label }), icon(external ? 'external' : 'arrow-right', { className: 'related__go' })])]);
-        }))
-      ]) : null,
-      relatedLinks.length ? el('section', { className: 'related', attrs: { 'aria-labelledby': 'tr-related' } }, [
-        el('h2', { className: 'related__title', text: 'Zelf aan de slag', attrs: { id: 'tr-related' } }),
-        el('ul', { className: 'related__list', attrs: { role: 'list' } }, relatedLinks.map((link) =>
-          el('li', {}, [el('a', { className: 'related__link', attrs: { href: link.href } }, [icon(link.icon), el('span', { text: link.text }), icon('arrow-right', { className: 'related__go' })])])
-        ))
-      ]) : null,
-      el('div', { className: 'side-card' }, [
-        el('h2', { className: 'side-card__title' }, [icon('question'), el('span', { text: 'Vraag over deze training?' })]),
-        el('p', { className: 'side-card__text', text: 'Stel hem in de ideeënhub. Het antwoord helpt vaak ook anderen.' }),
-        el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#/ideeen/vraag' } }, [icon('message-plus'), el('span', { text: 'Stel een vraag' })])
-      ])
+      // Een link (Stream, SharePoint) opent in een nieuw tabblad; een eigen bestand wordt gedownload
+      relatedList('tr-materials', 'Materiaal', training.materials.map((material) => {
+        const external = /^https?:\/\//.test(material.href);
+        return { href: material.href, icon: external ? 'document' : 'download', text: material.label, external, download: !external };
+      })),
+      relatedList('tr-related', 'Zelf aan de slag', [...itemLinks('usecase', training.usecases), ...itemLinks('tip', training.tips)]),
+      askCard('deze training')
     ]);
 
     const node = el('article', { className: 'page container detail ' + accentClass(training.accent) }, [
-      el('header', { className: 'detail__header' }, [
-        el('a', { className: 'btn btn--back btn--sm', attrs: { href: '#/trainingen' } }, [icon('arrow-left'), el('span', { text: 'Alle trainingen' })]),
-        el('p', { className: 'detail__eyebrow' }, [icon('cap'), el('span', { text: training.category })]),
-        el('h1', { className: 'detail__title', text: training.title, attrs: { tabindex: '-1' } }),
-        training.subtitle ? el('p', { className: 'detail__subtitle', text: training.subtitle }) : null,
-        el('div', { className: 'chips' }, [
+      detailHeader({
+        back: ['#/trainingen', 'Alle trainingen'],
+        icon: 'cap',
+        eyebrow: training.category,
+        title: training.title,
+        subtitle: training.subtitle,
+        chips: [
           chip(formatDate(training.date), { icon: 'calendar' }),
           training.duration ? chip(training.duration, { icon: 'clock' }) : null,
           training.trainer ? chip(training.trainer, { icon: 'users' }) : null,
           training.level ? chip(training.level, { icon: 'sparkle' }) : null,
           licenseBadge(training.license),
           newBadge(training.added)
-        ].filter(Boolean))
-      ]),
+        ]
+      }),
       el('div', { className: 'detail__layout' }, [
         el('div', { className: 'detail__main' }, [
           recording.node,

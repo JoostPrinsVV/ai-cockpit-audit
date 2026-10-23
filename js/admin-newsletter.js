@@ -207,8 +207,8 @@
     // Ook bijgewerkt (standaard uit: ook kleine correcties tellen mee)
     const added = new Set(sections.flatMap((section) => section.items.map((item) => item.key)));
     const updated = (c.adminRows || [])
-      .filter((row) => ['usecase', 'prompt', 'tip', 'training', 'agent'].includes(row.type) && row.status === 'published' && inPeriod(row.updated_at) && !added.has(row.type + ':' + row.id))
-      .map((row) => ({ row, item: { usecase: c.usecaseById, prompt: c.promptById, tip: c.tipById, training: c.trainingById, agent: c.agentById }[row.type].get(row.id) }))
+      .filter((row) => ns.kinds.byRoute(row.type) && row.status === 'published' && inPeriod(row.updated_at) && !added.has(row.type + ':' + row.id))
+      .map((row) => ({ row, item: ns.kinds.item(row.type, row.id) }))
       .filter((entry) => entry.item && !entry.item.locked);
     add('bijgewerkt', 'Ook bijgewerkt', 'refresh', 'compact', updated.map(({ row, item }) => ({
       key: 'upd:' + row.type + ':' + row.id, title: item.title, href: siteLink(row.type + '/' + row.id)

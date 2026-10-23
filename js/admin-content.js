@@ -61,7 +61,6 @@
   /* ---- Velden per soort ---------------------------------------------------------- */
   const SCHEMAS = {
     usecase: {
-      label: 'Usecases', one: 'usecase', many: 'usecases', add: 'Nieuwe usecase', route: 'usecase', ordered: true,
       meta: (data) => (ns.content.phaseById.get(data.phase) || {}).label || data.phase || '',
       fields: [
         { key: 'title', label: 'Titel', type: 'text', required: true },
@@ -90,7 +89,6 @@
       ]
     },
     prompt: {
-      label: 'Prompts', one: 'prompt', many: 'prompts', add: 'Nieuwe prompt', route: 'prompt', ordered: true,
       meta: (data) => (ns.content.phaseById.get(data.phase) || {}).label || data.phase || '',
       note: 'Prompts uit een usecase pas je aan bij die usecase.',
       fields: [
@@ -109,7 +107,6 @@
       ]
     },
     tip: {
-      label: 'Tips', one: 'tip', many: 'tips', add: 'Nieuwe tip', route: 'tip', ordered: true,
       meta: (data) => [data.category, data.release ? 'vrijdag ' + formatDate(data.release) : 'altijd open'].filter(Boolean).join(' · '),
       fields: [
         { key: 'title', label: 'Titel', type: 'text', required: true },
@@ -133,7 +130,6 @@
       ]
     },
     training: {
-      label: 'Trainingen', one: 'training', many: 'trainingen', add: 'Nieuwe training', route: 'training', ordered: false,
       meta: (data) => [data.date ? formatDate(data.date) : '', data.category].filter(Boolean).join(' · '),
       fields: [
         { key: 'title', label: 'Titel', type: 'text', required: true },
@@ -202,7 +198,6 @@
       ]
     },
     agent: {
-      label: 'Agents & tools', one: 'agent', many: 'agents', add: 'Nieuwe agent', route: 'agent', ordered: true,
       meta: (data) => [data.kind, data.status].filter(Boolean).join(' · '),
       warning: PUBLIC_WARNING,
       fields: [
@@ -227,7 +222,6 @@
       ]
     },
     phase: {
-      label: 'Fasen', one: 'fase', many: 'fasen', add: 'Nieuwe fase', ordered: true,
       meta: (data) => data.short || '',
       note: 'De volgorde van de fasen is de volgorde van de filters. Een fase die nog gebruikt wordt, kun je niet verwijderen.',
       fields: [
@@ -239,7 +233,7 @@
       ]
     },
     setting: {
-      label: 'Teksten', one: 'teksten', single: 'site',
+      single: 'site',
       note: 'De naam van de discipline (turquoise, achter de naam) pas je aan bij Beheer → Disciplines. Leeg = de tekst uit de gedeelde basis of uit js/config.js.',
       fields: [
         { key: 'applicationTitle', label: 'Naam van het platform', type: 'text', half: true },
@@ -249,7 +243,11 @@
       ]
     }
   };
-  const ORDER = ['usecase', 'prompt', 'tip', 'training', 'agent', 'phase', 'setting'];
+  // Naam, adres en volgorde per soort komen uit js/kinds.js; hierboven staan alleen de velden
+  Object.keys(SCHEMAS).forEach((type) => {
+    const kind = ns.kinds.get(type);
+    Object.assign(SCHEMAS[type], { label: kind.title, one: kind.one, many: kind.many, add: kind.add, route: ns.kinds.byRoute(type) ? type : undefined, ordered: Boolean(kind.ordered) });
+  });  const ORDER = ['usecase', 'prompt', 'tip', 'training', 'agent', 'phase', 'setting'];
   const view = { type: '', status: 'live', query: '' }; // filters in de lijst
 
   /* ---- Rijen uit de database ------------------------------------------------------- */

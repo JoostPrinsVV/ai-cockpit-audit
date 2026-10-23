@@ -4,13 +4,12 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, switchButton, emptyState, copyButton, copilotButton, saveButton, matches } = ns.ui;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, switchButton, emptyState, copyButton, copilotButton, saveButton, matches } = ns.ui;
+  const B = ns.blocks;
+  const { detailHeader, relatedList, infoNote, tipCallout } = B;
 
-  // Zoekterm, filters en volgorde blijven staan zolang de pagina open is
+  // Zoekterm, filters en volgorde blijven staan zolang de site open is
   const filters = { query: '', phase: 'all', license: 'all', demo: false, saved: false, sort: 'phase' };
-
-  /** Id's van de bewaarde prompts */
-  const savedIds = () => ns.ui.saved.list().filter((key) => key.startsWith('prompt:')).map((key) => key.slice(7)).filter((id) => ns.content.promptById.has(id));
 
   /** withTask: false als de taak al bovenaan de kaart staat. */
   function chipsFor(prompt, withTask) {
@@ -51,7 +50,7 @@
       toggle.querySelector('span').textContent = open ? 'Verberg' : 'Bekijk';
     });
 
-    return el('article', { className: 'p-card ' + accentClass(prompt.accent) }, [
+    return el('article', { className: 'p-card ' + accentClass(prompt.accent), dataset: { kind: 'prompt', id: prompt.id } }, [
       el('div', { className: 'p-card__head' }, [
         el('p', { className: 'p-card__phase' }, eyebrow(prompt, grouped)),
         saveButton('prompt', prompt.id, prompt.title)
@@ -73,34 +72,28 @@
   function renderList() {
     const all = ns.content.prompts;
     const list = el('div', { className: 'p-list' });
-    const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
+    const count = B.resultCount();
     // Een lege catalogus (nieuwe discipline) is iets anders dan niets vinden met deze filters
     const empty = all.length
       ? emptyState('Geen prompts gevonden', 'Probeer een ander zoekwoord of zet de filters terug op Alle.')
       : emptyState('De eerste prompts komen eraan', `Hier verschijnen prompts voor Copilot in ${ns.cockpit.active().label} die je direct kunt kopiëren.`, null, 'chat');
-    const savedCount = el('span', { className: 'toggle__count' });
-    // Iedere kaart één keer bouwen; filteren en zoeken zetten alleen de bestaande kaarten op hun plek
-    const cards = new Map();
-    const cardFor = (p, grouped) => {
-      const key = p.id + (grouped ? '|groep' : '|lijst');
-      if (!cards.has(key)) cards.set(key, el('li', {}, [card(p, grouped ? 'h3' : 'h2', grouped)]));
-      return cards.get(key);
-    };
+    // In een fasegroep een iets andere kaart (de fase staat dan al in de kop)
+    const cardFor = B.cardCache((p, variant) => card(p, variant === 'groep' ? 'h3' : 'h2', variant === 'groep'));
+    const saved = B.savedFilter('prompt', filters, update, (id) => ns.content.promptById.has(id));
 
     function update() {
-      const saved = savedIds();
-      savedCount.textContent = String(saved.length);
+      const savedIds = saved.ids();
       let items = all.filter((p) =>
         (filters.phase === 'all' || p.phase.id === filters.phase) &&
-        (filters.license === 'all' || (filters.license === 'yes' ? p.license === true : p.license === false)) &&
+        B.licenseMatch(filters.license, p.license) &&
         (!filters.demo || (p.usecase && p.usecase.hasDemo)) &&
-        (!filters.saved || saved.includes(p.id)) &&
+        (!filters.saved || savedIds.includes(p.id)) &&
         matches(p.haystack, filters.query)
       );
       if (filters.sort === 'rating') {
         // Best beoordeeld: één lijst, zonder kopjes per fase
         items = ns.reviews.rank(items, 'prompt');
-        list.replaceChildren(el('ul', { className: 'p-grid', attrs: { role: 'list' } }, items.map((p) => cardFor(p, false))));
+        list.replaceChildren(el('ul', { className: 'p-grid', attrs: { role: 'list' } }, items.map((p) => cardFor(p, 'lijst'))));
       } else {
         // Per fase gegroepeerd, met een kop per fase
         const groups = [];
@@ -118,18 +111,14 @@
               el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase.icon)]),
               el('span', {}, [group.phase.label + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
             ]),
-            el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => cardFor(p, true)))
+            el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => cardFor(p, 'groep')))
           ])
         ));
       }
-      count.textContent = items.length === 1 ? '1 prompt' : items.length + ' prompts';
+      count.textContent = B.countText(items.length, 'prompt', 'prompts');
       empty.hidden = items.length > 0;
     }
-    // Bewaren of niet meer bewaren: de telling, en met 'Bewaard' aan ook de lijst
-    const stopSaved = ns.ui.onSaved('prompt', list, () => {
-      if (filters.saved) update();
-      else savedCount.textContent = String(savedIds().length);
-    });
+    const stopSaved = saved.watch(list);
 
     // Zoeken (direct tijdens het typen)
     const input = el('input', {
@@ -152,46 +141,17 @@
     ]);
     search.addEventListener('submit', (event) => event.preventDefault());
 
-    // De fasen als route: genummerde waypoints op een stippellijn
-    const phaseItems = ns.content.phases
-      .map((phase, index) => ({ value: phase.id, label: phase.short, accent: phase.accent, step: String(index + 1).padStart(2, '0'), count: all.filter((p) => p.phase.id === phase.id).length }))
-      .filter((item) => item.count > 0);
-    // Een fase die er (na een wijziging) niet meer is: terug naar Alle fasen
-    if (filters.phase !== 'all' && !phaseItems.some((item) => item.value === filters.phase)) filters.phase = 'all';
-    const phaseGroup = toggleGroup('Filter op fase', [{ value: 'all', label: 'Alle fasen', count: all.length }].concat(phaseItems), filters.phase, (value) => {
-      filters.phase = value;
+    const withDemo = switchButton('Met demo', 'play-circle', filters.demo, (on) => {
+      filters.demo = on;
       update();
-    }, { className: 'toggles--route' });
-    const licenseGroup = toggleGroup('Filter op licentie', [
-      { value: 'all', label: 'Alle' },
-      { value: 'no', label: 'Zonder licentie', icon: 'check' },
-      { value: 'yes', label: 'Met licentie', icon: 'key' }
-    ], filters.license, (value) => {
-      filters.license = value;
-      update();
-    }, { className: 'toggles--compact' });
-
-    const toggleFilter = (key) => (on) => {
-      filters[key] = on;
-      update();
-    };
-
-    // Volgorde: per fase, of best beoordeeld door collega's (de gemiddelden komen uit de database)
-    const sortGroup = ns.reviews.enabled() ? toggleGroup('Volgorde', [
-      { value: 'phase', label: 'Per fase' },
-      { value: 'rating', label: 'Best beoordeeld', icon: 'star' }
-    ], filters.sort, (value) => {
-      filters.sort = value;
-      update();
-    }, { className: 'toggles--compact' }) : null;
+    });
     // De gemiddelden komen later binnen: dan de kaarten opnieuw bouwen (met de sterren erop)
-    if (ns.reviews.enabled() && ns.reviews.cached() === undefined) {
-      ns.reviews.stats().then(() => {
-        if (!list.isConnected) return;
-        cards.clear();
-        update();
-      });
-    }
+    ns.reviews.whenLoaded(() => {
+      if (!list.isConnected) return;
+      cardFor.reset();
+      update();
+    });
+    const sort = B.ratingSort(filters, update, { value: 'phase', label: 'Per fase' });
 
     const node = el('div', { className: 'page container' }, [
       pageHeader({
@@ -201,17 +161,9 @@
       }),
       el('div', { className: 'filters' }, [
         search,
-        el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Fase' }), phaseGroup]),
-        el('div', { className: 'filters__row' }, [
-          el('span', { className: 'filters__label', text: 'Toon' }),
-          licenseGroup,
-          el('div', { className: 'toggles toggles--compact', attrs: { role: 'group', 'aria-label': 'Extra filters' } }, [
-            switchButton('Met demo', 'play-circle', filters.demo, toggleFilter('demo')),
-            switchButton('Bewaard', 'bookmark', filters.saved, toggleFilter('saved'), savedCount)
-          ]),
-          count
-        ]),
-        sortGroup ? el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Volgorde' }), sortGroup]) : null
+        B.filterRow('Fase', B.phaseFilter(all, filters, update)),
+        B.filterRow('Toon', B.licenseFilter(filters, update), B.extraFilters(withDemo, saved.button), count),
+        sort ? B.filterRow('Volgorde', sort) : null
       ]),
       list,
       empty
@@ -236,17 +188,17 @@
     const others = ns.content.prompts.filter((p) => p.phase === prompt.phase && p !== prompt && (!usecase || p.usecase !== usecase)).slice(0, 4);
     const siblings = usecase ? usecase.promptIds.filter((pid) => pid !== prompt.id).map((pid) => ns.content.promptById.get(pid)).filter(Boolean) : [];
 
+    const promptLink = (p, text) => ({ href: ns.kinds.href('prompt', p.id), icon: 'chat', text });
     const node = el('article', { className: 'page container detail detail--narrow ' + accentClass(prompt.accent) }, [
-      el('header', { className: 'detail__header' }, [
-        el('a', { className: 'btn btn--back btn--sm', attrs: { href: '#/prompts' } }, [icon('arrow-left'), el('span', { text: 'Alle prompts' })]),
-        el('p', { className: 'detail__eyebrow' }, [icon(prompt.phase.icon), el('span', { text: prompt.phase.label })]),
-        el('div', { className: 'detail__title-row' }, [
-          el('h1', { className: 'detail__title', text: prompt.title, attrs: { tabindex: '-1' } }),
-          saveButton('prompt', prompt.id, prompt.title)
-        ]),
-        prompt.description ? el('p', { className: 'detail__subtitle', text: prompt.description }) : null,
-        el('div', { className: 'chips' }, chipsFor(prompt))
-      ]),
+      detailHeader({
+        back: ['#/prompts', 'Alle prompts'],
+        icon: prompt.phase.icon,
+        eyebrow: prompt.phase.label,
+        title: prompt.title,
+        save: ['prompt', prompt.id],
+        subtitle: prompt.description,
+        chips: chipsFor(prompt)
+      }),
 
       usecase ? el('a', { className: 'usecase-link', attrs: { href: '#/usecase/' + usecase.id } }, [
         el('span', { className: 'usecase-link__icon', attrs: { 'aria-hidden': 'true' } }, [icon(usecase.hasDemo ? 'play' : 'grid')]),
@@ -259,26 +211,12 @@
       ]) : null,
 
       ns.promptBox.create({ text: prompt.prompt, label: 'De prompt', headingTag: 'h2', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
-      prompt.note ? el('p', { className: 'takeaway__note' }, [icon('info'), el('span', { text: prompt.note })]) : null,
-      prompt.tip ? el('div', { className: 'tip' }, [
-        el('span', { className: 'tip__icon', attrs: { 'aria-hidden': 'true' } }, [icon('bulb')]),
-        el('p', {}, [el('strong', { text: 'Tip ' }), prompt.tip])
-      ]) : null,
+      infoNote(prompt.note),
+      tipCallout(prompt.tip),
       prompt.author ? el('p', { className: 'detail__credit', text: 'Aangedragen door ' + prompt.author }) : null,
       ns.reviews.block('prompt', prompt),
-
-      siblings.length ? el('section', { className: 'related', attrs: { 'aria-labelledby': 'pr-steps' } }, [
-        el('h2', { className: 'related__title', text: 'De andere stappen', attrs: { id: 'pr-steps' } }),
-        el('ul', { className: 'related__list', attrs: { role: 'list' } }, siblings.map((p) =>
-          el('li', {}, [el('a', { className: 'related__link', attrs: { href: '#/prompt/' + p.id } }, [icon('chat'), el('span', { text: `Stap ${p.step}: ${p.title}` }), icon('arrow-right', { className: 'related__go' })])])
-        ))
-      ]) : null,
-      others.length ? el('section', { className: 'related', attrs: { 'aria-labelledby': 'pr-more' } }, [
-        el('h2', { className: 'related__title', text: 'Meer in ' + prompt.phase.label, attrs: { id: 'pr-more' } }),
-        el('ul', { className: 'related__list', attrs: { role: 'list' } }, others.map((p) =>
-          el('li', {}, [el('a', { className: 'related__link', attrs: { href: '#/prompt/' + p.id } }, [icon('chat'), el('span', { text: p.title }), icon('arrow-right', { className: 'related__go' })])])
-        ))
-      ]) : null
+      relatedList('pr-steps', 'De andere stappen', siblings.map((p) => promptLink(p, `Stap ${p.step}: ${p.title}`))),
+      relatedList('pr-more', 'Meer in ' + prompt.phase.label, others.map((p) => promptLink(p, p.title)))
     ]);
     return { node, title: prompt.title };
   }

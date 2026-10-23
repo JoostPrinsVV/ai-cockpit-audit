@@ -101,29 +101,21 @@
   }
 
   /* ---- Lijstjes: één regel per item (bewaard, recent bekeken, favoriet, toegevoegd) ---- */
-  const KIND = {
-    usecase: { label: 'Usecase', href: '#/usecase/', icon: 'play-circle', map: 'usecaseById' },
-    prompt: { label: 'Prompt', href: '#/prompt/', icon: 'chat', map: 'promptById' },
-    tip: { label: 'Tip', href: '#/tip/', icon: 'bulb', map: 'tipById' },
-    training: { label: 'Training', href: '#/training/', icon: 'cap', map: 'trainingById' },
-    agent: { label: 'Agent', href: '#/agent/', icon: 'robot', map: 'agentById' }
-  };
   const MIN_REVIEWS = 3; // 'Favoriet bij collega's' vanaf zoveel beoordelingen
 
   /** 'prompt:notulen' → { kind, item }; null als het item er niet (meer) is of op slot zit. */
   function resolve(key) {
     const split = key.indexOf(':');
     const kind = key.slice(0, split);
-    const info = KIND[kind];
-    const item = info ? ns.content[info.map].get(key.slice(split + 1)) : null;
+    const item = ns.kinds.item(kind, key.slice(split + 1));
     return item && !item.locked ? { kind, item } : null;
   }
 
   /** Eén regel: icoon, soort (eventueel met extra's), titel en pijltje. */
   function itemRow(kind, item, kicker) {
-    const info = KIND[kind];
+    const info = ns.kinds.get(kind);
     return el('li', {}, [
-      el('a', { className: 'recent__item ' + ns.ui.accentClass(item.accent), attrs: { href: info.href + item.id } }, [
+      el('a', { className: 'recent__item ' + ns.ui.accentClass(item.accent), attrs: { href: ns.kinds.href(kind, item.id) }, dataset: { kind, id: item.id } }, [
         el('span', { className: 'recent__icon', attrs: { 'aria-hidden': 'true' } }, [icon(info.icon)]),
         el('span', { className: 'recent__body' }, [
           el('span', { className: 'recent__kind' }, kicker || [info.label]),
@@ -170,7 +162,7 @@
         .slice(0, 4);
       if (!entries.length) return;
       list.replaceChildren(...entries.map((entry) => itemRow(entry.kind, entry.item, [
-        KIND[entry.kind].label + ' · ',
+        ns.kinds.label(entry.kind) + ' · ',
         el('span', { className: 'recent__stars', attrs: { 'aria-hidden': 'true' } }, [
           ns.reviews.starRow(entry.stats.average),
           ` ${ns.reviews.averageText(entry.stats.average)} (${entry.stats.reviews})`
@@ -188,7 +180,7 @@
     return el('section', { className: 'section container', attrs: { 'aria-labelledby': 'home-recent' } }, [
       sectionHead('Recent toegevoegd', 'home-recent'),
       el('ul', { className: 'recent', attrs: { role: 'list' } }, entries.map((entry) =>
-        itemRow(entry.kind, entry.item, [KIND[entry.kind].label + ' · ' + ns.ui.formatDate(entry.added)])
+        itemRow(entry.kind, entry.item, [ns.kinds.label(entry.kind) + ' · ' + ns.ui.formatDate(entry.added)])
       ))
     ]);
   }

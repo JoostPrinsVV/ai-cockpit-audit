@@ -345,11 +345,8 @@
         : (a.created_at < b.created_at ? 1 : -1));
       listNode.replaceChildren(...filtered.map((item) => ideaItem(item, mineRefs.has(item.ref))));
       if (!filtered.length) {
-        listNode.append(el('div', { className: 'empty' }, [
-          el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('message-plus')]),
-          el('p', { className: 'empty__title', text: items.length ? 'Nog niets in deze categorie' : 'Nog niets gepubliceerd' }),
-          el('p', { className: 'empty__text', text: 'Zodra het AI-team inzendingen beantwoordt of oppakt, verschijnen ze hier. Stuur gerust de eerste in!' })
-        ]));
+        listNode.append(ns.ui.emptyState(items.length ? 'Nog niets in deze categorie' : 'Nog niets gepubliceerd',
+          'Zodra het AI-team inzendingen beantwoordt of oppakt, verschijnen ze hier. Stuur gerust de eerste in!', null, 'message-plus'));
       }
     }
 
@@ -491,12 +488,12 @@
 
     const how = el('section', { className: 'side-card', attrs: { 'aria-labelledby': 'how-title' } }, [
       el('h2', { className: 'side-card__title', attrs: { id: 'how-title' } }, [icon('info'), el('span', { text: 'Zo werkt het' })]),
-      el('ol', { className: 'steps steps--small', attrs: { role: 'list' } }, [
+      ns.blocks.stepsList([
         'Je stuurt een idee, vraag, verzoek of prompt in.',
         'Het AI-team bekijkt iedere inzending en reageert.',
         'Goede ideeën worden een usecase, prompt of tip op dit platform.',
         'Antwoorden die voor iedereen nuttig zijn, zetten we (zonder naam) in de hub.'
-      ].map((text, index) => el('li', { className: 'steps__item' }, [el('span', { className: 'steps__number', text: String(index + 1) }), el('span', { text })])))
+      ], 'small')
     ]);
 
     const node = el('div', { className: 'page container' }, [

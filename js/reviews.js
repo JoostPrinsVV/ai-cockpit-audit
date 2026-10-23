@@ -65,6 +65,14 @@
   /** De gemiddelden als ze al binnen zijn (anders undefined: dan eerst stats() afwachten). */
   const cached = () => loaded;
 
+  /** Komen de gemiddelden nog binnen, dan daarna onReady() (bijv. de kaarten met de sterren opnieuw bouwen). */
+  function whenLoaded(onReady) {
+    if (!enabled() || loaded !== undefined) return;
+    loadStats().then((map) => {
+      if (map) onReady();
+    });
+  }
+
   const averageText = (value) => value.toFixed(1).replace('.', ',');
   // Een gemiddelde met één decimaal (4,0), een losse beoordeling als heel getal (4)
   const ratingText = (value) => (Number.isInteger(value) ? String(value) : averageText(value));
@@ -223,5 +231,5 @@
     return loadStats(true);
   }
 
-  ns.reviews = { block, refresh, starRow, enabled, stats: loadStats, cached, ratingChip, rank, averageText };
+  ns.reviews = { block, refresh, starRow, enabled, stats: loadStats, cached, whenLoaded, ratingChip, rank, averageText };
 })(window.AIAudit);

@@ -9,6 +9,7 @@
   'use strict';
 
   const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, emptyState } = ns.ui;
+  const { detailHeader, relatedList, itemLinks, warningList, askCard, notice, linkButton, statusPanel, openButton, filterRow, resultCount, countText, cardCache } = ns.blocks;
 
   // Filters blijven staan zolang de pagina open is
   const filters = { kind: 'all', status: 'all' };
@@ -40,7 +41,7 @@
 
   /** Kaart voor een agent (ook gebruikt bij zoeken). */
   function card(agent, headingTag) {
-    return el('a', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : ''), attrs: { href: '#/agent/' + agent.id } }, [
+    return el('a', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : ''), attrs: { href: '#/agent/' + agent.id }, dataset: { kind: 'agent', id: agent.id } }, [
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(agent.icon)]),
         el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), ns.cockpit.sharedBadge(agent), newBadge(agent.added), agentLicense(agent, true)])
@@ -57,16 +58,13 @@
     ]);
   }
 
-  function questionCta() {
-    return el('div', { className: 'notice notice--cta' }, [
-      icon('question'),
-      el('div', {}, [
-        el('p', { className: 'notice__title', text: 'Mis je een agent of tool, of twijfel je of je iets mag gebruiken?' }),
-        el('p', { text: 'Vraag het na voordat je een andere AI-tool voor je werk gebruikt. Stel je vraag in de ideeënhub; het antwoord helpt vaak ook anderen.' })
-      ]),
-      el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#/ideeen/vraag' } }, [icon('message-plus'), el('span', { text: 'Stel een vraag' })])
-    ]);
-  }
+  const questionCta = () => notice({
+    tone: 'cta',
+    icon: 'question',
+    title: 'Mis je een agent of tool, of twijfel je of je iets mag gebruiken?',
+    text: 'Vraag het na voordat je een andere AI-tool voor je werk gebruikt. Stel je vraag in de ideeënhub; het antwoord helpt vaak ook anderen.',
+    action: linkButton('#/ideeen/vraag', 'message-plus', 'Stel een vraag', 'btn--secondary btn--sm')
+  });
 
   /** Schakelknoppen voor alle waarden, met aantallen; een waarde zonder agents staat uit. */
   function facet(label, values, all, key, onChange) {
@@ -94,12 +92,8 @@
     if (!all.length) {
       const node = el('div', { className: 'page container' }, [
         head,
-        el('div', { className: 'empty' }, [
-          el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('robot')]),
-          el('p', { className: 'empty__title', text: 'De catalogus wordt gevuld' }),
-          el('p', { className: 'empty__text', text: `Hier komen de AI-agents en tools die je in ${ns.cockpit.active().label} kunt gebruiken, met waarvoor ze bedoeld zijn en hoe je toegang krijgt.` }),
-          el('a', { className: 'btn btn--primary', attrs: { href: '#/ideeen/vraag' } }, [icon('message-plus'), el('span', { text: 'Stel een vraag' })])
-        ])
+        emptyState('De catalogus wordt gevuld', `Hier komen de AI-agents en tools die je in ${ns.cockpit.active().label} kunt gebruiken, met waarvoor ze bedoeld zijn en hoe je toegang krijgt.`,
+          linkButton('#/ideeen/vraag', 'message-plus', 'Stel een vraag', 'btn--primary'), 'robot')
       ]);
       return { node, title: 'Agents & tools' };
     }
@@ -109,23 +103,18 @@
     if (!all.some((agent) => agent.status === filters.status)) filters.status = 'all';
 
     const grid = el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } });
-    const count = el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
+    const count = resultCount();
     const empty = emptyState('Geen agents of tools met deze filters', 'Kies een andere soort of status.');
 
-    // Iedere kaart één keer bouwen; filteren zet alleen de bestaande kaarten op hun plek
-    const cards = new Map();
-    const cardFor = (agent) => {
-      if (!cards.has(agent.id)) cards.set(agent.id, el('li', {}, [card(agent)]));
-      return cards.get(agent.id);
-    };
+    const cardFor = cardCache((agent) => card(agent));
 
     function update() {
       const items = all.filter((agent) =>
         (filters.kind === 'all' || agent.kind === filters.kind) &&
         (filters.status === 'all' || agent.status === filters.status)
       );
-      grid.replaceChildren(...items.map(cardFor));
-      count.textContent = items.length === 1 ? '1 agent of tool' : items.length + ' agents en tools';
+      grid.replaceChildren(...items.map((agent) => cardFor(agent)));
+      count.textContent = countText(items.length, 'agent of tool', 'agents en tools');
       empty.hidden = items.length > 0;
       grid.hidden = items.length === 0;
     }
@@ -133,8 +122,8 @@
     const node = el('div', { className: 'page container' }, [
       head,
       el('div', { className: 'filters' }, [
-        el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Soort' }), facet('soort', ns.content.AGENT_KINDS, all, 'kind', update)]),
-        el('div', { className: 'filters__row' }, [el('span', { className: 'filters__label', text: 'Status' }), facet('status', ns.content.AGENT_STATUSES, all, 'status', update), count])
+        filterRow('Soort', facet('soort', ns.content.AGENT_KINDS, all, 'kind', update)),
+        filterRow('Status', facet('status', ns.content.AGENT_STATUSES, all, 'status', update), count)
       ]),
       grid,
       empty,
@@ -147,37 +136,19 @@
   /* ---- Eén agent of tool ----------------------------------------------------------- */
   function openBlock(agent) {
     if (agent.stopped) {
-      return el('div', { className: 'recording recording--pending ' + accentClass(agent.accent) }, [
-        el('span', { className: 'recording__icon', attrs: { 'aria-hidden': 'true' } }, [icon('close')]),
-        el('div', { className: 'recording__body' }, [
-          el('p', { className: 'recording__title', text: 'Gestopt' }),
-          el('p', { className: 'recording__text', text: 'Deze agent of tool is niet meer in gebruik. Zoek je een alternatief? Kijk bij de andere agents en tools of stel een vraag in de ideeënhub.' })
-        ])
-      ]);
+      return statusPanel({ accent: agent.accent, icon: 'close', pending: true, title: 'Gestopt', text: 'Deze agent of tool is niet meer in gebruik. Zoek je een alternatief? Kijk bij de andere agents en tools of stel een vraag in de ideeënhub.' });
     }
     const title = (STATUS_INFO[agent.status] || {}).open || 'Aan de slag met ' + agent.title;
     if (!agent.link) {
-      return el('div', { className: 'recording recording--pending ' + accentClass(agent.accent) }, [
-        el('span', { className: 'recording__icon', attrs: { 'aria-hidden': 'true' } }, [icon(agent.icon)]),
-        el('div', { className: 'recording__body' }, [
-          el('p', { className: 'recording__title', text: title }),
-          el('p', { className: 'recording__text', text: agent.access ? 'Hieronder staat hoe je toegang krijgt.' : 'Er is (nog) geen link om dit te openen.' })
-        ])
-      ]);
+      return statusPanel({ accent: agent.accent, icon: agent.icon, pending: true, title, text: agent.access ? 'Hieronder staat hoe je toegang krijgt.' : 'Er is (nog) geen link om dit te openen.' });
     }
-    const open = el('a', { className: 'btn btn--primary btn--lg', attrs: { href: agent.link, target: '_blank', rel: 'noopener noreferrer' } }, [
-      el('span', { text: 'Openen' }),
-      icon('external')
-    ]);
-    open.addEventListener('click', () => ns.central.track('open_agent', agent.id));
-    return el('div', { className: 'recording ' + accentClass(agent.accent) }, [
-      el('span', { className: 'recording__icon', attrs: { 'aria-hidden': 'true' } }, [icon(agent.icon)]),
-      el('div', { className: 'recording__body' }, [
-        el('p', { className: 'recording__title', text: title }),
-        el('p', { className: 'recording__text', text: agent.kind === 'Extern product' ? 'Opent in een nieuw tabblad.' : 'Opent in een nieuw tabblad. Log in met je Visser & Visser-account.' })
-      ]),
-      open
-    ]);
+    return statusPanel({
+      accent: agent.accent,
+      icon: agent.icon,
+      title,
+      text: agent.kind === 'Extern product' ? 'Opent in een nieuw tabblad.' : 'Opent in een nieuw tabblad. Log in met je Visser & Visser-account.',
+      action: openButton(agent.link, 'Openen', { onOpen: () => ns.central.track('open_agent', agent.id) })
+    });
   }
 
   const allPhases = (agent) => agent.phases.length > 1 && agent.phases.length === ns.content.phases.length;
@@ -207,52 +178,32 @@
     const agent = ns.content.agentById.get(id);
     if (!agent) return null;
 
-    const usecases = agent.usecases.map((uid) => ns.content.usecaseById.get(uid)).filter(Boolean);
-    const trainings = agent.trainings.map((tid) => ns.content.trainingById.get(tid)).filter(Boolean);
-    const tips = agent.tips.map((tid) => ns.content.tipById.get(tid)).filter((tip) => tip && !tip.locked);
-    const relatedLinks = [
-      ...usecases.map((u) => ({ href: '#/usecase/' + u.id, icon: 'play-circle', text: u.title })),
-      ...trainings.map((t) => ({ href: '#/training/' + t.id, icon: 'cap', text: t.title })),
-      ...tips.map((t) => ({ href: '#/tip/' + t.id, icon: 'bulb', text: t.title }))
-    ];
-
     const aside = el('aside', { className: 'detail__aside', attrs: { 'aria-label': 'Bij deze agent' } }, [
       facts(agent),
-      relatedLinks.length ? el('section', { className: 'related', attrs: { 'aria-labelledby': 'ag-related' } }, [
-        el('h2', { className: 'related__title', text: 'Zie het in de praktijk', attrs: { id: 'ag-related' } }),
-        el('ul', { className: 'related__list', attrs: { role: 'list' } }, relatedLinks.map((link) =>
-          el('li', {}, [el('a', { className: 'related__link', attrs: { href: link.href } }, [icon(link.icon), el('span', { text: link.text }), icon('arrow-right', { className: 'related__go' })])])
-        ))
-      ]) : null,
-      agent.registerUrl ? el('section', { className: 'related', attrs: { 'aria-labelledby': 'ag-register' } }, [
-        el('h2', { className: 'related__title', text: 'Formele registratie', attrs: { id: 'ag-register' } }),
-        el('ul', { className: 'related__list', attrs: { role: 'list' } }, [
-          el('li', {}, [el('a', { className: 'related__link', attrs: { href: agent.registerUrl, target: '_blank', rel: 'noopener noreferrer' } }, [
-            icon('shield'), el('span', { text: 'Bekijk in het AI-register' }), icon('external', { className: 'related__go' })
-          ])])
-        ]),
-        el('p', { className: 'field__hint', text: 'Afgeschermde omgeving: alleen te openen met je kantooraccount en de juiste rechten.' })
-      ]) : null,
-      el('div', { className: 'side-card' }, [
-        el('h2', { className: 'side-card__title' }, [icon('question'), el('span', { text: 'Vraag over deze agent?' })]),
-        el('p', { className: 'side-card__text', text: 'Stel hem in de ideeënhub. Het antwoord helpt vaak ook anderen.' }),
-        el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#/ideeen/vraag' } }, [icon('message-plus'), el('span', { text: 'Stel een vraag' })])
-      ])
+      relatedList('ag-related', 'Zie het in de praktijk', [
+        ...itemLinks('usecase', agent.usecases),
+        ...itemLinks('training', agent.trainings),
+        ...itemLinks('tip', agent.tips)
+      ]),
+      agent.registerUrl ? relatedList('ag-register', 'Formele registratie', [{ href: agent.registerUrl, icon: 'shield', text: 'Bekijk in het AI-register', external: true }],
+        el('p', { className: 'field__hint', text: 'Afgeschermde omgeving: alleen te openen met je kantooraccount en de juiste rechten.' })) : null,
+      askCard('deze agent')
     ]);
 
     const node = el('article', { className: 'page container detail ' + accentClass(agent.accent) }, [
-      el('header', { className: 'detail__header' }, [
-        el('a', { className: 'btn btn--back btn--sm', attrs: { href: '#/agents' } }, [icon('arrow-left'), el('span', { text: 'Alle agents & tools' })]),
-        el('p', { className: 'detail__eyebrow' }, [icon('robot'), el('span', { text: agent.kind })]),
-        el('h1', { className: 'detail__title', text: agent.title, attrs: { tabindex: '-1' } }),
-        agent.summary ? el('p', { className: 'detail__subtitle', text: agent.summary }) : null,
-        el('div', { className: 'chips' }, [
+      detailHeader({
+        back: ['#/agents', 'Alle agents & tools'],
+        icon: 'robot',
+        eyebrow: agent.kind,
+        title: agent.title,
+        subtitle: agent.summary,
+        chips: [
           statusBadge(agent),
           agentLicense(agent),
           ...(allPhases(agent) ? [chip('Alle fasen', { icon: 'grid' })] : agent.phases.map((phase) => chip(phase.short, { icon: phase.icon }))),
           newBadge(agent.added)
-        ].filter(Boolean))
-      ]),
+        ]
+      }),
       el('div', { className: 'detail__layout' }, [
         el('div', { className: 'detail__main' }, [
           openBlock(agent),
@@ -261,10 +212,7 @@
             el('h2', { className: 'why__title', attrs: { id: 'ag-access' } }, [icon('key'), el('span', { text: 'Zo krijg je toegang' })]),
             ...paragraphs(agent.access)
           ]) : null,
-          agent.notFor.length ? el('section', { className: 'callout callout--warning', attrs: { 'aria-labelledby': 'ag-notfor' } }, [
-            el('h2', { className: 'callout__title', attrs: { id: 'ag-notfor' } }, [icon('alert'), el('span', { text: 'Niet gebruiken voor' })]),
-            el('ul', { className: 'callout__list' }, agent.notFor.map((item) => el('li', { text: item })))
-          ]) : null
+          warningList('ag-notfor', 'Niet gebruiken voor', agent.notFor)
         ]),
         aside
       ])

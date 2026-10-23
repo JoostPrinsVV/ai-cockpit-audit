@@ -4,7 +4,7 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, pageHeader } = ns.ui;
+  const { el, icon, pageHeader, emptyState } = ns.ui;
 
   function render(params) {
     const initial = params[0] || ''; // al gedecodeerd (js/app.js)
@@ -41,12 +41,8 @@
       const total = found.usecases.length + found.prompts.length + found.tips.length + found.trainings.length + found.agents.length;
       count.textContent = total === 1 ? '1 resultaat' : total + ' resultaten';
       if (!total) {
-        results.replaceChildren(el('div', { className: 'empty' }, [
-          el('span', { className: 'empty__icon', attrs: { 'aria-hidden': 'true' } }, [icon('search')]),
-          el('p', { className: 'empty__title', text: `Niets gevonden voor "${query}"` }),
-          el('p', { className: 'empty__text', text: 'Probeer een ander woord. Of laat het ons weten: misschien is dit precies een goed idee voor een nieuwe usecase of prompt.' }),
-          el('a', { className: 'btn btn--primary', attrs: { href: '#/ideeen/verzoek' } }, [icon('message-plus'), el('span', { text: 'Doe een verzoek' })])
-        ]));
+        results.replaceChildren(emptyState(`Niets gevonden voor "${query}"`, 'Probeer een ander woord. Of laat het ons weten: misschien is dit precies een goed idee voor een nieuwe usecase of prompt.',
+          ns.blocks.linkButton('#/ideeen/verzoek', 'message-plus', 'Doe een verzoek', 'btn--primary')));
         return;
       }
       results.replaceChildren(...[

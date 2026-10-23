@@ -21,16 +21,9 @@
     redacteur: { label: 'Redacteur', text: 'Bewerken en publiceren, niet verwijderen', rank: 2 },
     bijdrager: { label: 'Bijdrager', text: 'Alleen voorstellen; een ander publiceert', rank: 3 }
   };
-  // Onderdelen waartoe je een rol kunt beperken (soorten inhoud)
-  const SECTIONS = [
-    { id: 'usecase', label: 'Usecases' },
-    { id: 'prompt', label: 'Prompts' },
-    { id: 'tip', label: 'Tips' },
-    { id: 'training', label: 'Trainingen' },
-    { id: 'agent', label: 'Agents & tools' },
-    { id: 'phase', label: 'Fasen' },
-    { id: 'setting', label: 'Teksten' }
-  ];
+  // Onderdelen waartoe je een rol kunt beperken (soorten inhoud, zie js/kinds.js)
+  const SECTIONS = ns.kinds.pages.map((kind) => kind.type).concat(['phase', 'setting'])
+    .map((type) => ({ id: type, label: ns.kinds.get(type).title }));
 
   const current = () => ns.central.rights() || { owner: false, roles: [] };
 

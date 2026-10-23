@@ -62,9 +62,6 @@
     };
   }
 
-  // Bij welk menu-item hoort een route?
-  const NAV_FOR = { usecases: 'usecases', usecase: 'usecases', prompts: 'prompts', prompt: 'prompts', tips: 'tips', tip: 'tips', trainingen: 'trainingen', training: 'trainingen', agents: 'agents', agent: 'agents', ideeen: 'ideeen' };
-
   /** Een deel van het adres als tekst; een kapotte %-code (bijv. uit een verminkte link) blijft zoals hij is. */
   function decodePart(part) {
     try {
@@ -99,26 +96,24 @@
     };
   }
 
-  /* ---- Bewerkbalk voor beheerders (op detailpagina's) ---------------------------------- */
-  const EDITABLE = {
-    usecase: { type: 'usecase', map: 'usecaseById', label: 'deze usecase' },
-    prompt: { type: 'prompt', map: 'promptById', label: 'deze prompt' },
-    tip: { type: 'tip', map: 'tipById', label: 'deze tip' },
-    training: { type: 'training', map: 'trainingById', label: 'deze training' },
-    agent: { type: 'agent', map: 'agentById', label: 'deze agent' }
-  };
+  /** Op een detailpagina (#/tip/…): de soort en het item, of null. */
+  function pageSubject(parsed) {
+    const kind = ns.kinds.byRoute(parsed.name);
+    const item = kind ? ns.kinds.item(kind.type, parsed.params[0]) : null;
+    return item ? { kind, item } : null;
+  }
 
+  /* ---- Bewerkbalk voor beheerders (op detailpagina's) ---------------------------------- */
   /** Het item op deze pagina, voor 'Bewerk deze tip' in de bewerkbalk (js/editor.js). */
   function pageItem(parsed) {
     if (!ns.central.signedIn() || ns.content.source === 'bestanden') return null;
-    const info = own(EDITABLE, parsed.name);
-    if (!info) return null;
-    let item = ns.content[info.map].get(parsed.params[0]);
-    if (!item) return null;
-    let type = info.type;
-    let label = info.label;
+    const subject = pageSubject(parsed);
+    if (!subject) return null;
+    let { item } = subject;
+    let type = subject.kind.type;
+    let label = subject.kind.subject.toLowerCase();
     // Een prompt uit een usecase pas je aan in die usecase
-    if (parsed.name === 'prompt' && item.usecase) {
+    if (type === 'prompt' && item.usecase) {
       item = item.usecase;
       type = 'usecase';
       label = 'de usecase van deze prompt';
@@ -128,11 +123,9 @@
   }
 
   /** Detailpagina van een gedeeld item: een regel uitleg onder de titel. */
-  const NOTE_WHAT = { usecase: 'Deze usecase', prompt: 'Deze prompt', tip: 'Deze tip', training: 'Deze training', agent: 'Deze agent' };
   function sharedNote(parsed, node) {
-    const info = own(EDITABLE, parsed.name);
-    const item = info ? ns.content[info.map].get(parsed.params[0]) : null;
-    const note = item ? ns.cockpit.sharedNote(item, NOTE_WHAT[parsed.name]) : null;
+    const subject = pageSubject(parsed);
+    const note = subject ? ns.cockpit.sharedNote(subject.item, subject.kind.subject) : null;
     if (!note) return;
     // Onder de kop; staat de kop in een rij met de bladwijzer, dan onder die rij
     const heading = node.querySelector('h1');
@@ -140,19 +133,16 @@
     if (anchor) anchor.insertAdjacentElement('afterend', note);
   }
 
-  // Anonieme teller 'bekeken' (js/central.js); een prompt telt bij kopiëren
-  const VIEW_KIND = { usecase: 'view_usecase', tip: 'view_tip', training: 'view_training', agent: 'view_agent' };
-
   /**
    * Een geopende usecase, prompt, tip, training of agent: onthouden voor 'Recent bekeken' op de
-   * startpagina (alleen in deze browser) en één keer tellen. Niet bij opnieuw opbouwen van dezelfde pagina.
+   * startpagina (alleen in deze browser) en één keer tellen (anoniem; een prompt telt bij kopiëren).
+   * Niet bij opnieuw opbouwen van dezelfde pagina.
    */
   function rememberViewed(parsed) {
-    const info = own(EDITABLE, parsed.name);
-    const item = info ? ns.content[info.map].get(parsed.params[0]) : null;
-    if (!item || item.locked) return;
-    ns.ui.viewed.add(info.type, item.id);
-    if (own(VIEW_KIND, info.type)) ns.central.track(VIEW_KIND[info.type], item.id);
+    const subject = pageSubject(parsed);
+    if (!subject || subject.item.locked) return;
+    ns.ui.viewed.add(subject.kind.type, subject.item.id);
+    if (subject.kind.track) ns.central.track(subject.kind.track, subject.item.id);
   }
 
   /* ---- Focus bij opnieuw opbouwen ------------------------------------------------------
@@ -286,7 +276,7 @@
       document.title = result.title ? `${result.title} · ${siteTitle}` : siteTitle;
 
       // Menu: huidige pagina markeren ('page' op het overzicht zelf, 'true' op een pagina daarbinnen)
-      const navKey = own(NAV_FOR, parsed.name) || '';
+      const navKey = ns.kinds.navFor(parsed.name);
       const onOverview = navKey === parsed.name;
       document.querySelectorAll('[data-nav]').forEach((link) => {
         if (link.dataset.nav === navKey) link.setAttribute('aria-current', onOverview ? 'page' : 'true');

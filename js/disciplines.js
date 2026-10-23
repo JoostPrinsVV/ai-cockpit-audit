@@ -148,22 +148,14 @@
   }
 
   /* ---- Wisselaar in de kopbalk -------------------------------------------------------- */
-  const DETAIL = {
-    usecase: { map: 'usecaseById', list: '#/usecases' },
-    prompt: { map: 'promptById', list: '#/prompts' },
-    tip: { map: 'tipById', list: '#/tips' },
-    training: { map: 'trainingById', list: '#/trainingen' },
-    agent: { map: 'agentById', list: '#/agents' }
-  };
-
   /** Waar je in een andere cockpit uitkomt: dezelfde pagina; een detailpagina alleen als het item gedeeld is. */
   function targetHash() {
     const hash = window.location.hash && window.location.hash.startsWith('#/') ? window.location.hash : '#/';
     const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-    const info = DETAIL[(parts[0] || '').toLowerCase()];
-    if (!info) return hash;
-    const item = ns.content && ns.content[info.map] ? ns.content[info.map].get(parts[1]) : null;
-    return item && item.shared ? hash : info.list;
+    const kind = ns.kinds.byRoute((parts[0] || '').toLowerCase());
+    if (!kind) return hash;
+    const item = ns.kinds.item(kind.type, parts[1]);
+    return item && item.shared ? hash : '#/' + kind.list;
   }
 
   let switcher = null;
