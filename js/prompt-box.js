@@ -28,7 +28,9 @@
     const fields = parsePlaceholders(text);
     const values = {};
 
-    const pre = el('pre', { className: 'prompt-box__text', attrs: { id: id + '-text', tabindex: '0', 'aria-label': opts.label ? 'Prompt: ' + opts.label : 'Prompt' } });
+    // Te scrollen met het toetsenbord (tabindex), en daarom een benoemd gebied: een schermlezer
+    // zegt dan waar je bent ('Prompt: Stap 1 …'), ook als de tekst lang is
+    const pre = el('pre', { className: 'prompt-box__text', attrs: { id: id + '-text', tabindex: '0', role: 'region', 'aria-label': opts.label ? 'Prompt: ' + opts.label : 'Prompt' } });
     function renderText() {
       pre.replaceChildren(...promptNodes(text, values));
     }

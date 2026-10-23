@@ -812,18 +812,23 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
   transition: transform var(--duration) var(--ease-out);
 }
 
-/* De hele kaart is klikbaar via de titel; de bewaarknop ligt erboven */
+/* De hele kaart is klikbaar via de titel (ook bij agents en trainingen); de bewaarknop ligt erboven.
+   Een schermlezer hoort zo alleen de titel als link; de focusring staat om de hele kaart. */
 .uc-card__link,
-.tip-card__link { color: inherit; text-decoration: none; }
+.tip-card__link,
+.tr-card__link { color: inherit; text-decoration: none; }
 
 .uc-card__link::after,
-.tip-card__link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.tip-card__link::after,
+.tr-card__link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
 
 .uc-card__link:focus-visible,
-.tip-card__link:focus-visible { outline: none; }
+.tip-card__link:focus-visible,
+.tr-card__link:focus-visible { outline: none; }
 
 .uc-card:has(.uc-card__link:focus-visible),
-.tip-card:has(.tip-card__link:focus-visible) { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
+.tip-card:has(.tip-card__link:focus-visible),
+.tr-card:has(.tr-card__link:focus-visible) { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
 
 .uc-card .fav,
 .tip-card .fav { position: relative; z-index: 2; width: 2.25rem; height: 2.25rem; }
@@ -2015,8 +2020,8 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 
 .vote__count { min-width: 1.8em; padding: 0.1em 0.5em; border-radius: var(--radius-pill); background: var(--color-surface-muted); text-align: center; font-variant-numeric: tabular-nums; }
 .vote:hover { border-color: var(--color-text-muted); }
-.vote[aria-pressed='true'] { border-color: var(--color-success); background: var(--badge-free-bg); color: var(--badge-free-ink); }
-.vote[aria-pressed='true'] .vote__count { background: var(--color-surface); }
+.vote.is-voted { border-color: var(--color-success); background: var(--badge-free-bg); color: var(--badge-free-ink); cursor: default; }
+.vote.is-voted .vote__count { background: var(--color-surface); }
 
 /* ==========================================================================
    Meldingen in de pagina, laden en leeg
@@ -2339,7 +2344,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   .toggle:is([aria-pressed='true'], [aria-current='page']),
   .nav__link[aria-current],
   .fav[aria-pressed='true'],
-  .vote[aria-pressed='true'] { forced-color-adjust: none; border-color: Highlight; background: Highlight; color: HighlightText; }
+  .vote.is-voted { forced-color-adjust: none; border-color: Highlight; background: Highlight; color: HighlightText; }
   .naslag__link[aria-current='true'],
   .kind-picker__input:checked + .kind-picker__label { border: 3px solid Highlight; }
   /* Labels, meldingen en vensters zonder eigen rand */

@@ -43,7 +43,7 @@
     toggle.addEventListener('click', () => {
       const open = preview.hidden;
       if (open && !preview.firstChild) {
-        preview.append(el('pre', { className: 'prompt-box__text prompt-box__text--plain', attrs: { tabindex: '0' } }, ns.ui.promptNodes(prompt.prompt)));
+        preview.append(el('pre', { className: 'prompt-box__text prompt-box__text--plain', attrs: { tabindex: '0', role: 'region', 'aria-label': 'Prompt: ' + prompt.title } }, ns.ui.promptNodes(prompt.prompt)));
       }
       preview.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));

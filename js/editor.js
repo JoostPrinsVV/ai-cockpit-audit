@@ -746,8 +746,51 @@
     entry.timer = window.setTimeout(tick, 400);
   }
 
-  /* ---- Bewerkbalk ------------------------------------------------------------------ */
+  /* ---- Bewerkbalk ---------------------------------------------------------------------
+     Eén keer opgebouwd en daarna alleen bijgewerkt: een knop die je net gebruikte houdt de
+     focus, en een schermlezer meldt de stand (role=status) alleen als die verandert. Een knop
+     die nu niets kan doen is aria-disabled (niet disabled): dan blijft hij focus houden. */
   let barItem = null; // het item van de huidige pagina: { type, id, namespace, label, shared }
+  let barParts = null;
+
+  const setText = (node, text) => {
+    if (node.textContent !== text) node.textContent = text;
+  };
+  const setOff = (button, off) => button.setAttribute('aria-disabled', String(Boolean(off)));
+
+  function barButton(className, iconName, text, attrs, onClick) {
+    const label = text == null ? null : el('span', { text });
+    const button = el('button', { className: 'admin-bar__btn' + (className ? ' ' + className : ''), attrs: Object.assign({ type: 'button' }, attrs) }, [icon(iconName), label]);
+    button.addEventListener('click', () => {
+      if (button.getAttribute('aria-disabled') !== 'true') onClick();
+    });
+    return { button, label };
+  }
+
+  function buildBar(bar) {
+    const p = {};
+    p.role = el('span', { className: 'admin-bar__role' });
+    p.brand = el('a', { className: 'admin-bar__brand', attrs: { href: '#/beheer', title: 'Naar Beheer' } }, [icon('lock'), p.role]);
+    // Bewerken op de pagina zelf (js/editmode.js)
+    p.mode = barButton('admin-bar__btn--mode', 'pencil-line', 'Bewerken', { 'aria-pressed': 'false', title: 'Pas de pagina zelf aan: teksten, volgorde, toevoegen en verwijderen' }, () => ns.editmode.toggle());
+    p.status = el('span', { className: 'admin-bar__status', attrs: { role: 'status' } });
+    p.undo = barButton('', 'arrow-left', null, { title: 'Ongedaan maken (Ctrl+Z)', 'aria-label': 'Ongedaan maken' }, undo);
+    p.redo = barButton('', 'arrow-right', null, { title: 'Opnieuw (Ctrl+Y)', 'aria-label': 'Opnieuw' }, redo);
+    p.group = el('span', { className: 'admin-bar__group' }, [p.undo.button, p.redo.button]);
+    p.save = barButton('admin-bar__btn--save', 'check', 'Opslaan', { title: 'Opslaan (Ctrl+S)' }, save);
+    p.publish = barButton('admin-bar__btn--publish', 'send', 'Publiceren', {}, openPublish);
+    p.count = el('span', { className: 'admin-bar__count' });
+    p.publish.button.append(p.count);
+    p.log = barButton('', 'clock', 'Logboek', {}, openLog);
+    p.view = barButton('', 'eye', 'Als collega', { 'aria-pressed': 'false', title: 'Bekijk de site zoals collega\'s hem zien' }, () => setVisitorView(!visitorView));
+    // 'Bewerk deze tip': in de bewerkmodus het zijpaneel, anders het formulier in Beheer
+    p.itemButton = barButton('admin-bar__btn--item', 'pencil-line', '', {}, () => ns.editmode.openPanel(barItem.type, barItem.namespace, barItem.id));
+    p.itemLabel = el('span');
+    p.itemLink = el('a', { className: 'admin-bar__btn admin-bar__btn--item' }, [icon('pencil-line'), p.itemLabel]);
+    p.tools = [p.mode.button, p.group, p.save.button, p.publish.button, p.log.button, p.view.button];
+    bar.replaceChildren(el('div', { className: 'container admin-bar__inner' }, [p.brand, p.mode.button, p.status, p.group, p.save.button, p.publish.button, p.log.button, p.view.button, p.itemButton.button, p.itemLink]));
+    return p;
+  }
 
   function renderBar() {
     const bar = document.getElementById('admin-bar');
@@ -755,55 +798,52 @@
     if (!signedIn()) {
       bar.hidden = true;
       bar.replaceChildren();
+      barParts = null;
       document.body.classList.remove('has-admin-bar');
       return;
     }
+    if (!barParts || !bar.contains(barParts.brand)) barParts = buildBar(bar);
+    const p = barParts;
     bar.hidden = false;
     document.body.classList.add('has-admin-bar');
     const own = ns.cockpit.namespace(ns.cockpit.activeId());
     const general = ns.rights.describe(ns.cockpit.GENERAL_NAMESPACE);
-    const role = ns.rights.describe(own) || (general ? general + ' (gedeelde basis)' : ns.rights.isOwner() ? 'Hoofdbeheerder' : 'Beheer');
-    const items = [];
+    setText(p.role, ns.rights.describe(own) || (general ? general + ' (gedeelde basis)' : ns.rights.isOwner() ? 'Hoofdbeheerder' : 'Beheer'));
 
-    items.push(el('a', { className: 'admin-bar__brand', attrs: { href: '#/beheer', title: 'Naar Beheer' } }, [icon('lock'), el('span', { className: 'admin-bar__role', text: role })]));
-
-    if (!available()) {
-      items.push(el('span', { className: 'admin-bar__status', text: ns.central.draftingAvailable() === false ? 'Opslaan en publiceren werkt na stap 7 (setup/supabase-audit-bewerken.sql). Tot dan gaan wijzigingen in Beheer direct live.' : 'Beheer' }));
+    const on = available();
+    p.tools.forEach((node) => { node.hidden = !on; });
+    p.mode.button.hidden = !on || !ns.editmode;
+    p.status.classList.toggle('admin-bar__status--dirty', on && pending.size > 0);
+    if (!on) {
+      setText(p.status, ns.central.draftingAvailable() === false ? 'Opslaan en publiceren werkt na stap 7 (setup/supabase-audit-bewerken.sql). Tot dan gaan wijzigingen in Beheer direct live.' : 'Beheer');
     } else {
       const waitingItems = waiting();
       const waitingCount = waitingItems.length;
       const proposals = waitingItems.filter((item) => item.proposal).length;
-      const status = busy ? 'Bezig…' : pending.size ? `${pending.size === 1 ? '1 wijziging' : pending.size + ' wijzigingen'} niet opgeslagen` : waitingCount ? `${waitingCount} klaar om te publiceren${proposals ? ` (${proposals === 1 ? '1 voorstel' : proposals + ' voorstellen'})` : ''}` : 'Alles is gepubliceerd';
-      // Bewerken op de pagina zelf (js/editmode.js)
+      setText(p.status, busy ? 'Bezig…' : pending.size ? `${pending.size === 1 ? '1 wijziging' : pending.size + ' wijzigingen'} niet opgeslagen` : waitingCount ? `${waitingCount} klaar om te publiceren${proposals ? ` (${proposals === 1 ? '1 voorstel' : proposals + ' voorstellen'})` : ''}` : 'Alles is gepubliceerd');
       if (ns.editmode) {
-        const editToggle = el('button', { className: 'admin-bar__btn admin-bar__btn--mode', attrs: { type: 'button', 'aria-pressed': String(ns.editmode.isOn()), title: 'Pas de pagina zelf aan: teksten, volgorde, toevoegen en verwijderen' } }, [icon('pencil-line'), el('span', { text: ns.editmode.isOn() ? 'Bewerken aan' : 'Bewerken' })]);
-        editToggle.addEventListener('click', () => ns.editmode.toggle());
-        items.push(editToggle);
+        p.mode.button.setAttribute('aria-pressed', String(ns.editmode.isOn()));
+        setText(p.mode.label, ns.editmode.isOn() ? 'Bewerken aan' : 'Bewerken');
       }
-      items.push(el('span', { className: 'admin-bar__status' + (pending.size ? ' admin-bar__status--dirty' : ''), attrs: { role: 'status' }, text: status }));
-      const undoButton = el('button', { className: 'admin-bar__btn', attrs: { type: 'button', disabled: !undoStack.length || busy, title: 'Ongedaan maken (Ctrl+Z)', 'aria-label': 'Ongedaan maken' } }, [icon('arrow-left')]);
-      const redoButton = el('button', { className: 'admin-bar__btn', attrs: { type: 'button', disabled: !redoStack.length || busy, title: 'Opnieuw (Ctrl+Y)', 'aria-label': 'Opnieuw' } }, [icon('arrow-right')]);
-      const saveButton = el('button', { className: 'admin-bar__btn admin-bar__btn--save' + (pending.size ? ' is-dirty' : ''), attrs: { type: 'button', disabled: !pending.size || busy, title: 'Opslaan (Ctrl+S)' } }, [icon('check'), el('span', { text: 'Opslaan' })]);
+      setOff(p.undo.button, !undoStack.length || busy);
+      setOff(p.redo.button, !redoStack.length || busy);
+      setOff(p.save.button, !pending.size || busy);
+      p.save.button.classList.toggle('is-dirty', pending.size > 0);
       const canPublishHere = ns.rights.can('publiceren', own) || ns.rights.can('publiceren', ns.cockpit.GENERAL_NAMESPACE);
-      const publishButton = el('button', { className: 'admin-bar__btn admin-bar__btn--publish', attrs: { type: 'button', disabled: busy || (!waitingCount && !pending.size) } }, [icon('send'), el('span', { text: canPublishHere ? 'Publiceren' : 'Klaar voor publicatie' }), waitingCount ? el('span', { className: 'admin-bar__count', text: String(waitingCount) }) : null]);
-      const logButton = el('button', { className: 'admin-bar__btn', attrs: { type: 'button' } }, [icon('clock'), el('span', { text: 'Logboek' })]);
-      const viewButton = el('button', { className: 'admin-bar__btn', attrs: { type: 'button', 'aria-pressed': String(visitorView), title: 'Bekijk de site zoals collega\'s hem zien' } }, [icon('eye'), el('span', { text: 'Als collega' })]);
-      undoButton.addEventListener('click', undo);
-      redoButton.addEventListener('click', redo);
-      saveButton.addEventListener('click', save);
-      publishButton.addEventListener('click', openPublish);
-      logButton.addEventListener('click', openLog);
-      viewButton.addEventListener('click', () => setVisitorView(!visitorView));
-      items.push(el('span', { className: 'admin-bar__group' }, [undoButton, redoButton]), saveButton, publishButton, logButton, viewButton);
+      setOff(p.publish.button, busy || (!waitingCount && !pending.size));
+      setText(p.publish.label, canPublishHere ? 'Publiceren' : 'Klaar voor publicatie');
+      setText(p.count, String(waitingCount));
+      p.count.hidden = !waitingCount;
+      p.view.button.setAttribute('aria-pressed', String(visitorView));
     }
-    if (barItem && ns.editmode && ns.editmode.isOn() && available()) {
-      const open = el('button', { className: 'admin-bar__btn admin-bar__btn--item', attrs: { type: 'button' } }, [icon('pencil-line'), el('span', { text: 'Bewerk ' + barItem.label })]);
-      open.addEventListener('click', () => ns.editmode.openPanel(barItem.type, barItem.namespace, barItem.id));
-      items.push(open);
-    } else if (barItem) {
-      items.push(el('a', { className: 'admin-bar__btn admin-bar__btn--item', attrs: { href: `#/beheer/${barItem.shared ? 'basis' : 'inhoud'}/${barItem.type}/${barItem.id}` } }, [icon('pencil-line'), el('span', { text: 'Bewerk ' + barItem.label })]));
+    const inPanel = Boolean(barItem && ns.editmode && ns.editmode.isOn() && on);
+    p.itemButton.button.hidden = !inPanel;
+    p.itemLink.hidden = !barItem || inPanel;
+    if (barItem) {
+      setText(p.itemButton.label, 'Bewerk ' + barItem.label);
+      setText(p.itemLabel, 'Bewerk ' + barItem.label);
+      p.itemLink.setAttribute('href', `#/beheer/${barItem.shared ? 'basis' : 'inhoud'}/${barItem.type}/${barItem.id}`);
     }
-    bar.replaceChildren(el('div', { className: 'container admin-bar__inner' }, items));
   }
 
   /** De pagina is gewisseld: welk item staat erop (voor 'Bewerk deze tip'). */

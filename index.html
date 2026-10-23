@@ -22,41 +22,41 @@
 
   <!-- Huisstijl en lettertypes (overgenomen van de AI Snackbar), daarna de opmaak van dit platform.
        De opmaak van Beheer (css/admin.css) laadt js/app.js pas als iemand beheert. -->
-  <link rel="stylesheet" href="css/variables.css?v=202610231527">
-  <link rel="stylesheet" href="css/base.css?v=202610231527">
-  <link rel="stylesheet" href="css/audit.css?v=202610231527">
-  <link rel="stylesheet" href="css/motion.css?v=202610231527">
+  <link rel="stylesheet" href="css/variables.css?v=202610231620">
+  <link rel="stylesheet" href="css/base.css?v=202610231620">
+  <link rel="stylesheet" href="css/audit.css?v=202610231620">
+  <link rel="stylesheet" href="css/motion.css?v=202610231620">
 
   <!-- Vóór de eerste weergave: het gekozen thema (geen witte flits) en een vangnet bij fouten -->
-  <script src="js/vroeg.js?v=202610231527"></script>
+  <script src="js/vroeg.js?v=202610231620"></script>
 
   <!-- Instellingen en de lijst met disciplines (deze bestanden mag je aanpassen, zie README.md).
        De inhoud in data/ (usecases, prompts, …) laadt js/content.js alleen als de database die niet levert. -->
-  <script defer src="js/config.js?v=202610231527"></script>
-  <script defer src="data/disciplines.js?v=202610231527"></script>
+  <script defer src="js/config.js?v=202610231620"></script>
+  <script defer src="data/disciplines.js?v=202610231620"></script>
 
   <!-- Applicatie (volgorde is belangrijk). De beheercode (js/rights.js, js/editor.js, js/admin-*.js,
        js/view-admin.js, js/editmode.js) laadt js/app.js pas bij inloggen of op #/beheer. -->
-  <script defer src="js/ui.js?v=202610231527"></script>
-  <script defer src="js/kinds.js?v=202610231527"></script>
-  <script defer src="js/blocks.js?v=202610231527"></script>
-  <script defer src="js/disciplines.js?v=202610231527"></script>
-  <script defer src="js/instruments.js?v=202610231527"></script>
-  <script defer src="js/content.js?v=202610231527"></script>
-  <script defer src="js/central.js?v=202610231527"></script>
-  <script defer src="js/prompt-box.js?v=202610231527"></script>
-  <script defer src="js/reviews.js?v=202610231527"></script>
-  <script defer src="js/player.js?v=202610231527"></script>
-  <script defer src="js/view-home.js?v=202610231527"></script>
-  <script defer src="js/view-usecases.js?v=202610231527"></script>
-  <script defer src="js/view-prompts.js?v=202610231527"></script>
-  <script defer src="js/view-tips.js?v=202610231527"></script>
-  <script defer src="js/view-trainings.js?v=202610231527"></script>
-  <script defer src="js/view-agents.js?v=202610231527"></script>
-  <script defer src="js/view-ideas.js?v=202610231527"></script>
-  <script defer src="js/view-search.js?v=202610231527"></script>
-  <script defer src="js/motion.js?v=202610231527"></script>
-  <script defer src="js/app.js?v=202610231527"></script>
+  <script defer src="js/ui.js?v=202610231620"></script>
+  <script defer src="js/kinds.js?v=202610231620"></script>
+  <script defer src="js/blocks.js?v=202610231620"></script>
+  <script defer src="js/disciplines.js?v=202610231620"></script>
+  <script defer src="js/instruments.js?v=202610231620"></script>
+  <script defer src="js/content.js?v=202610231620"></script>
+  <script defer src="js/central.js?v=202610231620"></script>
+  <script defer src="js/prompt-box.js?v=202610231620"></script>
+  <script defer src="js/reviews.js?v=202610231620"></script>
+  <script defer src="js/player.js?v=202610231620"></script>
+  <script defer src="js/view-home.js?v=202610231620"></script>
+  <script defer src="js/view-usecases.js?v=202610231620"></script>
+  <script defer src="js/view-prompts.js?v=202610231620"></script>
+  <script defer src="js/view-tips.js?v=202610231620"></script>
+  <script defer src="js/view-trainings.js?v=202610231620"></script>
+  <script defer src="js/view-agents.js?v=202610231620"></script>
+  <script defer src="js/view-ideas.js?v=202610231620"></script>
+  <script defer src="js/view-search.js?v=202610231620"></script>
+  <script defer src="js/motion.js?v=202610231620"></script>
+  <script defer src="js/app.js?v=202610231620"></script>
 </head>
 <body data-view="home">
   <a class="skip-link" href="#main" id="skip-link">Direct naar de inhoud</a>
@@ -65,12 +65,13 @@
   <header class="topbar on-dark" id="topbar">
     <div class="topbar__inner container">
       <div class="brand-group">
-        <a class="brand" href="#/" id="brand" aria-label="Naar de startpagina">
+        <!-- De naam is ook de naam van de link (wat je ziet, kun je met spraak aanroepen) -->
+        <a class="brand" href="#/" id="brand">
           <span class="brand__mark" aria-hidden="true">
             <img class="brand__logo" src="assets/branding/logo-dark.svg" alt="" width="40" height="40">
           </span>
           <span class="brand__text">
-            <span class="brand__title" id="brand-title">AI Cockpit</span>
+            <span class="brand__title" id="brand-title">AI Cockpit</span><span class="sr-only">, naar de startpagina</span>
           </span>
         </a>
 
@@ -105,7 +106,7 @@
         <a class="btn btn--ghost-dark btn--icon" href="#/zoeken" id="search-button" aria-label="Zoeken">
           <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-search"></use></svg>
         </a>
-        <button class="btn btn--ghost-dark btn--icon" type="button" id="theme-button" aria-label="Donker thema" aria-pressed="false">
+        <button class="btn btn--ghost-dark btn--icon" type="button" id="theme-button" aria-label="Donker thema" title="Donker thema" aria-pressed="false">
           <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-moon"></use></svg>
         </button>
       </div>
@@ -146,7 +147,7 @@
   <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Vangnet als het opstarten mislukt -->
-  <div class="fatal" id="fatal" hidden>
+  <div class="fatal" id="fatal" role="alert" hidden>
     <div class="fatal__panel">
       <h2 class="fatal__title">Er ging iets mis</h2>
       <p class="fatal__text">Herlaad de pagina. Blijft dit gebeuren? Laat het weten via de ideeënhub of je AI-aanspreekpunt.</p>

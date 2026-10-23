@@ -136,14 +136,18 @@
         el('div', { className: 'review__picker' }, [1, 2, 3, 4, 5].map((n) => {
           const id = group + '-' + n;
           const input = el('input', { className: 'sr-only', attrs: { type: 'radio', name: group, id, value: String(n) } });
+          // Gekozen sterren zijn gevuld, de andere alleen omlijnd: niet alleen een verschil in kleur
           const label = el('label', { className: 'review__star', attrs: { for: id, title: n === 1 ? '1 ster' : n + ' sterren' } }, [
-            icon('star-filled'),
+            icon('star'),
             el('span', { className: 'sr-only', text: n === 1 ? '1 ster' : n + ' sterren' })
           ]);
           labels.push(label);
           input.addEventListener('change', () => {
             rating = n;
-            labels.forEach((l, index) => l.classList.toggle('is-on', index < n));
+            labels.forEach((l, index) => {
+              l.classList.toggle('is-on', index < n);
+              ns.ui.setIcon(l.querySelector('svg'), index < n ? 'star-filled' : 'star');
+            });
             send.disabled = false;
           });
           return el('span', {}, [input, label]);

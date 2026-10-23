@@ -28,11 +28,14 @@
     return isUpcoming(training) ? 'Gepland' : 'Opname volgt';
   }
 
-  /** Kaart: 'miniatuur' met afspeelknop en duur, daaronder datum, titel en labels. */
+  /**
+   * Kaart: 'miniatuur' met afspeelknop en duur, daaronder datum, titel en labels. Klikbaar via de
+   * titel (die over de hele kaart reikt); soort en duur of stand van zaken leest een schermlezer gewoon voor.
+   */
   function card(training, headingTag) {
     const upcoming = isUpcoming(training);
-    const thumb = el('div', { className: 'tr-card__thumb', attrs: { 'aria-hidden': 'true' } }, [
-      el('span', { className: 'tr-card__play' }, [icon(training.hasRecording ? 'play' : training.hasNaslag ? 'book' : upcoming ? 'calendar' : 'clock')]),
+    const thumb = el('div', { className: 'tr-card__thumb' }, [
+      el('span', { className: 'tr-card__play', attrs: { 'aria-hidden': 'true' } }, [icon(training.hasRecording ? 'play' : training.hasNaslag ? 'book' : upcoming ? 'calendar' : 'clock')]),
       el('span', { className: 'tr-card__category', text: training.category }),
       el('span', { className: 'tr-card__duration', text: cardLabel(training) })
     ]);
@@ -43,11 +46,11 @@
       img.addEventListener('error', () => img.remove(), { once: true });
       thumb.prepend(img);
     }
-    return el('a', { className: 'tr-card ' + accentClass(training.accent), attrs: { href: '#/training/' + training.id }, dataset: { kind: 'training', id: training.id } }, [
+    return el('article', { className: 'tr-card ' + accentClass(training.accent), dataset: { kind: 'training', id: training.id } }, [
       thumb,
       el('div', { className: 'tr-card__body' }, [
         el('p', { className: 'tr-card__meta', text: [formatDate(training.date), training.trainer].filter(Boolean).join(' · ') }),
-        el(headingTag || 'h3', { className: 'tr-card__title', text: training.title }),
+        el(headingTag || 'h3', { className: 'tr-card__title' }, [el('a', { className: 'tr-card__link', attrs: { href: ns.kinds.href('training', training.id) }, text: training.title })]),
         training.subtitle ? el('p', { className: 'tr-card__subtitle', text: training.subtitle }) : null,
         el('div', { className: 'chips' }, [
           ns.ui.draftBadge(training),

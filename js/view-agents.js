@@ -39,16 +39,19 @@
     return null;
   }
 
-  /** Kaart voor een agent (ook gebruikt bij zoeken). */
+  /**
+   * Kaart voor een agent (ook gebruikt bij zoeken). Klikbaar via de titel, die over de hele kaart
+   * reikt: een schermlezer hoort dan de naam als link, niet de hele kaart.
+   */
   function card(agent, headingTag) {
-    return el('a', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : ''), attrs: { href: '#/agent/' + agent.id }, dataset: { kind: 'agent', id: agent.id } }, [
+    return el('article', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : ''), dataset: { kind: 'agent', id: agent.id } }, [
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(agent.icon)]),
         el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), ns.cockpit.sharedBadge(agent), newBadge(agent.added), agentLicense(agent, true)])
       ]),
       el('div', { className: 'uc-card__body' }, [
         el('p', { className: 'uc-card__phase', text: agent.kind }),
-        el(headingTag || 'h2', { className: 'uc-card__title', text: agent.title }),
+        el(headingTag || 'h2', { className: 'uc-card__title' }, [el('a', { className: 'uc-card__link', attrs: { href: ns.kinds.href('agent', agent.id) }, text: agent.title })]),
         agent.summary ? el('p', { className: 'uc-card__subtitle', text: agent.summary }) : null
       ]),
       el('div', { className: 'uc-card__footer' }, [

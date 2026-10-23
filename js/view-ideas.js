@@ -277,20 +277,29 @@
     if (ns.app.config().enableVotes !== false) {
       let count = Number(item.votes) || 0;
       const countNode = el('span', { className: 'vote__count', text: String(count) });
-      voteButton = el('button', { className: 'vote', attrs: { type: 'button', 'aria-pressed': String(voted), 'aria-label': `Ik ook: ${item.title} (${count} stemmen)` } }, [icon('thumb'), el('span', { text: 'Ik ook' }), countNode]);
+      voteButton = el('button', { className: 'vote', attrs: { type: 'button' } }, [icon('thumb'), el('span', { text: 'Ik ook' }), countNode]);
+      // Stemmen gaat één kant op (terugdraaien kan niet): geen aan/uit-knop, maar na je stem
+      // 'aria-disabled' met een naam die zegt dat je al stemde (de knop houdt de focus)
+      const showVote = (done) => {
+        voteButton.classList.toggle('is-voted', done);
+        voteButton.setAttribute('aria-disabled', String(done));
+        voteButton.setAttribute('aria-label', `${done ? 'Je stemde al voor' : 'Ik ook'}: ${item.title} (${count === 1 ? '1 stem' : count + ' stemmen'})`);
+      };
+      showVote(voted);
+      let sending = false; // niet 'disabled' tijdens het versturen: dan raak je de focus kwijt
       voteButton.addEventListener('click', async () => {
-        if (voteButton.getAttribute('aria-pressed') === 'true') {
+        if (sending) return;
+        if (voteButton.getAttribute('aria-disabled') === 'true') {
           toast('Je hebt hier al voor gestemd');
           return;
         }
-        voteButton.disabled = true;
+        sending = true;
         const result = await ns.central.vote(item.id, ns.ui.deviceId());
-        voteButton.disabled = false;
+        sending = false;
         if (result === 'ok' || result === 'duplicate') {
           if (result === 'ok') count += 1;
           countNode.textContent = String(count);
-          voteButton.setAttribute('aria-pressed', 'true');
-          voteButton.setAttribute('aria-label', `Ik ook: ${item.title} (${count} stemmen)`);
+          showVote(true);
           storage.set('votes', myVotes().concat(item.id));
           if (result === 'ok') toast('Bedankt! Je stem is meegeteld.', { tone: 'success' });
         } else {

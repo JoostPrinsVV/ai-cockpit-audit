@@ -34,6 +34,7 @@ js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admi
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
 data/*.js             Startinhoud van Audit en terugval als de database niet bereikbaar is (alleen dan geladen)
 tools/versie.ps1      Nieuwe versie van de site: ?v=… in index.html ophogen (zie 'Snel laden')
+tests/                Tests van de kern, in de browser (zie 'Tests')
 data/voorbeelden/     Voorbeeldinhoud om een nieuwe discipline mee te beginnen (alleen via Beheer)
 demos/                Nagespeelde Copilot-demo's (player.html + scripts.js)
 assets/fonts/         IBM Plex (SIL Open Font License, zie OFL.txt)
@@ -271,7 +272,8 @@ staan dezelfde velden onder de kop **Naslagwerk**.
    de volgorde van het naslagwerk. Liefst 16:9, ongeveer 1600 px breed en hooguit ongeveer 150 kB per slide.
 2. **Afbeeldingen in de repository.** Zet ze in `assets/trainingen/<id>/`, waarbij `<id>` het adres van de training
    is (bijv. `assets/trainingen/learn-play-sessie-2/slide-01.jpg`). Commit en push via GitHub Desktop; GitHub Pages
-   zet ze binnen een paar minuten online. **Beheer kan geen afbeeldingen uploaden**: dat gaat altijd via de repository.
+   zet ze binnen een paar minuten online. Na stap 7 kan het ook met **Uploaden** bij ieder slideveld in Beheer
+   (openbaar, zie 'Bewerken op de site'); via de repository blijven de slides van een training bij elkaar in één map.
 3. **De inhoud.**
    - *Zolang de database nog geen trainingen heeft:* zet de training in `data/trainings.js` en klik in Beheer → Inhoud
      op de melding **… uit de bestanden toevoegen**.
@@ -280,8 +282,9 @@ staan dezelfde velden onder de kop **Naslagwerk**.
      die je alleen in `data/trainings.js` zet, verschijnt dan niet meer vanzelf.
    - *Of met een importbestand:* een JSON-bestand in de vorm hieronder zet je terug met **Importeer back-up**. Alleen
      items met hetzelfde adres worden overschreven; met `"status": "draft"` komt hij er als concept in.
-4. **Controleren en publiceren.** Zet hem eerst op *Concept*, bekijk hem via **Bekijk op de site** en zet hem dan
-   op *Gepubliceerd*. Een link naar een slide (`slide: 14`) telt vanaf 1 in de lijst met slides: laat je een slide
+4. **Controleren en publiceren.** Sla hem op (een werkversie: alleen beheerders zien hem), bekijk hem via **Bekijk op
+   de site** en zet hem live met **Publiceren** in de bewerkbalk. (Zonder stap 7: eerst *Concept*, daarna
+   *Gepubliceerd*.) Een link naar een slide (`slide: 14`) telt vanaf 1 in de lijst met slides: laat je een slide
    weg, pas dan ook de nummers aan.
 
 ```json
@@ -442,6 +445,34 @@ Bewust zo gelaten: de inhoud van een discipline die op slot staat, is technisch 
   verhuizing bewust gelijk gebleven. Het adres valt onder hetzelfde domein (`joostprinsvv.github.io`), dus favorieten,
   thema, stemmen en een lopende inlog gaan gewoon mee. Verander deze namen niet, anders raakt iedereen dat kwijt.
 
+## Toegankelijkheid
+
+Het doel is WCAG 2.2 niveau AA. Wat daarvoor in de code zit (en wat je bij nieuwe onderdelen meeneemt):
+
+- **Toetsenbord:** alles is met Tab te bereiken, met een zichtbare focusring (crimson, op donkere vlakken turquoise).
+  'Direct naar de inhoud' staat als eerste. Na een andere pagina staat de focus op de kop; wordt de pagina opnieuw
+  opgebouwd (nieuwe inhoud, een wijziging in de bewerkmodus), dan blijft hij op hetzelfde element. Knoppen die je net
+  gebruikte (Opslaan in de bewerkbalk, 'Ik ook', de pijltjes in Beheer) houden de focus, ook als ze daarna even niets
+  kunnen doen (`aria-disabled` in plaats van `disabled`).
+- **Kaarten:** de titel is de link en reikt over de hele kaart; de bewaarknop ligt erboven. Een schermlezer hoort zo
+  alleen de titel als link. De kompasroos op de startpagina is alleen voor de muis: dezelfde zes onderdelen staan als
+  tegels eronder.
+- **Schermlezers:** de stand van de bewerkbalk, het aantal resultaten bij filteren en zoeken, en meldingen worden
+  voorgelezen (`role="status"`, de meldingenlaag); de lijsten zelf niet bij iedere toetsaanslag. Schakelknoppen
+  (filters, 'Bewaard', het thema) hebben een vaste naam met `aria-pressed`.
+- **Kleur en contrast:** tekst haalt minimaal 4,5:1, randen van invoervelden 3:1, in beide thema's (de waarden staan
+  bij de tokens in `css/variables.css`). Gekozen sterren zijn gevuld, de andere omlijnd: niet alleen kleur.
+- **Hoog contrast** (Windows-contrastthema's), **minder beweging** (alle animaties uit) en **afdrukken** (alleen de
+  inhoud, prompts helemaal, in het lichte thema) staan onderaan `css/audit.css` en `css/motion.css`.
+
+## Tests
+
+`tests/index.html` test de kern zonder build of npm: plaatshouders, zoeken, de controles op adressen en paden, inhoud
+laden, rechten, het soortenregister, de verzoeken naar Supabase (met een nagebootste verbinding), de werkversies en het
+gereedschap van Beheer. Open hem via een lokale webserver (`/tests/`) of op de live site
+(`…/ai-cockpit-audit/tests/`). De uitkomst staat bovenaan en in de titel van het tabblad (✓ of ✗); er wordt niets
+opgeslagen of verstuurd. Een nieuwe test zet je in `tests/tests.js` (`await test('…', () => equal(…))`).
+
 ## Snel laden
 
 - Een bezoeker laadt alleen wat de site nodig heeft. De beheercode (`js/rights.js`, `js/editor.js`, `js/admin-*.js`,
@@ -456,5 +487,5 @@ Bewust zo gelaten: de inhoud van een discipline die op slot staat, is technisch 
 ## Lokaal testen
 
 Open de root van deze repository via een lokale webserver (de demo's en de klembordknop werken niet betrouwbaar vanaf
-`file://`) en ga naar `/`. Gebruik Edge of Chrome. Een eigen `.claude/` (bijv. `launch.json`) wordt niet gecommit
-(zie `.gitignore`).
+`file://`) en ga naar `/`. Gebruik Edge of Chrome. Draai na een wijziging ook de tests (`/tests/`). Een eigen
+`.claude/` (bijv. `launch.json`) wordt niet gecommit (zie `.gitignore`).

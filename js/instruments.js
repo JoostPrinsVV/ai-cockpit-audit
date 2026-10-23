@@ -22,14 +22,14 @@
   };
   // Elk onderdeel zijn eigen koers, rondom de kompasroos (N = de startpagina). Wisselen van
   // pagina is een beetje bijsturen; op de startpagina staan ze als koerspunten op de roos.
-  // short: de korte naam op de roos (zoals in het telefoonmenu), label: voor schermlezers
+  // short: de korte naam op de roos (zoals in het telefoonmenu)
   const WAYPOINTS = [
-    { id: 'usecases', label: 'Usecases', short: 'Usecases', heading: 30 },
-    { id: 'prompts', label: 'Prompts', short: 'Prompts', heading: 90 },
-    { id: 'tips', label: 'Tips & tricks', short: 'Tips', heading: 150 },
-    { id: 'trainingen', label: 'Trainingen', short: 'Training', heading: 210 },
-    { id: 'agents', label: 'Agents & tools', short: 'Agents', heading: 270 },
-    { id: 'ideeen', label: 'Ideeënhub', short: 'Ideeën', heading: 330 }
+    { id: 'usecases', short: 'Usecases', heading: 30 },
+    { id: 'prompts', short: 'Prompts', heading: 90 },
+    { id: 'tips', short: 'Tips', heading: 150 },
+    { id: 'trainingen', short: 'Training', heading: 210 },
+    { id: 'agents', short: 'Agents', heading: 270 },
+    { id: 'ideeen', short: 'Ideeën', heading: 330 }
   ];
   const HEADINGS = Object.fromEntries(WAYPOINTS.map((w) => [w.id, w.heading]));
 
@@ -130,11 +130,13 @@
   };
 
   /**
-   * Kompasroos voor de hero, met de zes onderdelen als koerspunten. Aanwijzen (of tabben):
-   * de naald draait naar die koers, het punt licht op en de koersband stuurt mee. Klikken: erheen.
+   * Kompasroos voor de hero, met de zes onderdelen als koerspunten. Aanwijzen: de naald draait
+   * naar die koers, het punt licht op en de koersband stuurt mee. Klikken: erheen.
+   * Voor de muis: dezelfde zes onderdelen staan als tegels onder de hero, en daar komen
+   * toetsenbord en schermlezer langs (geen zes extra tabstops, niets dubbel voorgelezen).
    */
   function rose() {
-    const root = svg('svg', { class: 'hero__rose', viewBox: '-280 -280 560 560', role: 'group', 'aria-label': 'Kompas: kies een onderdeel', focusable: 'false' });
+    const root = svg('svg', { class: 'hero__rose', viewBox: '-280 -280 560 560', 'aria-hidden': 'true', focusable: 'false' });
     root.append(once('rose', drawRoseDecor));
 
     // De naald: koerslijn en logo, draaien samen naar het aangewezen onderdeel
@@ -148,9 +150,9 @@
       const marker = point(w.heading, 250);
       const text = point(w.heading, 222);
       const side = text.x > 20 ? 'end' : text.x < -20 ? 'start' : 'middle';
-      const link = svg('a', { class: 'rose__waypoint', href: '#/' + w.id, 'aria-label': w.label });
+      const link = svg('a', { class: 'rose__waypoint', href: '#/' + w.id, tabindex: '-1' });
       link.append(svg('circle', { class: 'rose__marker', cx: marker.x, cy: marker.y, r: 7 }));
-      const label = svg('text', { class: 'rose__waypoint-label', x: text.x, y: text.y + 5, 'text-anchor': side, 'aria-hidden': 'true' });
+      const label = svg('text', { class: 'rose__waypoint-label', x: text.x, y: text.y + 5, 'text-anchor': side });
       label.textContent = w.short;
       link.append(label);
       const on = () => {

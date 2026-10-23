@@ -98,16 +98,17 @@
 }
 
 .admin-bar__btn .icon { width: 1.05em; height: 1.05em; }
-.admin-bar__btn:hover:not(:disabled) { border-color: var(--on-dark-line-strong); background: var(--on-dark-fill-strong); }
-.admin-bar__btn:disabled { cursor: default; opacity: 0.4; }
+/* Nu niet te gebruiken: aria-disabled (de knop houdt de focus, zie js/editor.js) */
+.admin-bar__btn:hover:not([aria-disabled='true']) { border-color: var(--on-dark-line-strong); background: var(--on-dark-fill-strong); }
+.admin-bar__btn[aria-disabled='true'] { cursor: default; opacity: 0.4; }
 .admin-bar__group .admin-bar__btn { width: 2.1rem; padding: 0; justify-content: center; }
 .admin-bar__btn[aria-pressed='true'] { border-color: var(--color-readout); background: color-mix(in srgb, var(--vv-teal) 20%, transparent); }
 
 /* Opslaan licht op zodra er iets niet is opgeslagen */
 .admin-bar__btn--save.is-dirty { border-color: var(--vv-amber-300); background: var(--vv-amber-300); color: var(--vv-navy); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-amber-300) 25%, transparent); }
-.admin-bar__btn--save.is-dirty:hover:not(:disabled) { background: color-mix(in srgb, var(--vv-amber-300) 70%, var(--vv-white)); }
-.admin-bar__btn--publish:not(:disabled) { border-color: var(--vv-teal); background: var(--vv-teal); color: var(--vv-navy); }
-.admin-bar__btn--publish:hover:not(:disabled) { background: var(--color-glow); }
+.admin-bar__btn--save.is-dirty:hover:not([aria-disabled='true']) { background: color-mix(in srgb, var(--vv-amber-300) 70%, var(--vv-white)); }
+.admin-bar__btn--publish:not([aria-disabled='true']) { border-color: var(--vv-teal); background: var(--vv-teal); color: var(--vv-navy); }
+.admin-bar__btn--publish:hover:not([aria-disabled='true']) { background: var(--color-glow); }
 .admin-bar__count { min-width: 1.4em; padding: 0 0.35em; border-radius: var(--radius-pill); background: var(--vv-navy); color: var(--color-readout); font-family: var(--font-mono); font-size: 0.75rem; text-align: center; }
 .admin-bar__btn--item { margin-left: auto; }
 
@@ -171,6 +172,7 @@
 /* De kaartlink niet over de hele kaart: dan kun je in de tekst klikken */
 .is-editing .uc-card__link::after,
 .is-editing .tip-card__link::after,
+.is-editing .tr-card__link::after,
 .is-editing .p-card__title a::after { display: none; }
 .is-editing :is(.tile, .uc-card, .tip-card, .p-card, .tr-card)::after { display: none; }
 

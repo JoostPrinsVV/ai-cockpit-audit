@@ -46,7 +46,7 @@
 
     function row(discipline, index) {
       const isNew = Boolean(discipline._new);
-      const status = el('select', { className: 'field__input field__input--sm', attrs: { 'aria-label': 'Status van ' + (discipline.name || 'de nieuwe discipline') } }, [
+      const status = el('select', { className: 'field__input field__input--sm', attrs: { 'aria-label': 'Status van ' + (discipline.name || 'de nieuwe discipline') }, dataset: { control: 'status' } }, [
         el('option', { attrs: { value: 'open' }, text: 'Open voor iedereen' }),
         el('option', { attrs: { value: 'locked' }, text: 'Op slot' })
       ]);
@@ -55,8 +55,8 @@
         discipline.status = status.value;
         draw();
       });
-      const up = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omhoog: ' + discipline.name, disabled: index === 0 } }, [icon('arrow-up')]);
-      const down = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omlaag: ' + discipline.name, disabled: index === list.length - 1 } }, [icon('arrow-down')]);
+      const up = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omhoog: ' + discipline.name, disabled: index === 0 }, dataset: { control: 'up' } }, [icon('arrow-up')]);
+      const down = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omlaag: ' + discipline.name, disabled: index === list.length - 1 }, dataset: { control: 'down' } }, [icon('arrow-down')]);
       up.addEventListener('click', () => move(index, -1));
       down.addEventListener('click', () => move(index, 1));
 
@@ -100,7 +100,7 @@
       });
       fields.push(field('Icoon', iconSelect, null, true), field('Kleur', accentSelect, null, true));
 
-      const remove = isNew ? el('button', { className: 'btn btn--danger btn--sm', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Weghalen' })]) : null;
+      const remove = isNew ? el('button', { className: 'btn btn--danger btn--sm', attrs: { type: 'button' }, dataset: { control: 'remove' } }, [icon('trash'), el('span', { text: 'Weghalen' })]) : null;
       if (remove) remove.addEventListener('click', () => {
         list.splice(index, 1);
         draw();
@@ -117,7 +117,7 @@
 
       const nameNode = el('span', { className: 'disc__name', text: discipline.name || 'Nieuwe discipline' });
       const locked = discipline.status !== 'open';
-      return el('li', { className: 'disc' + (locked ? ' disc--locked' : '') }, [
+      return el('li', { className: 'disc' + (locked ? ' disc--locked' : ''), dataset: { key: discipline._key } }, [
         el('div', { className: 'disc__head' }, [
           markNode,
           el('div', { className: 'disc__main' }, [
@@ -147,13 +147,31 @@
       const [item] = list.splice(index, 1);
       list.splice(target, 0, item);
       draw();
+      ns.ui.announce(`${item.name || 'De nieuwe discipline'} staat nu op plek ${target + 1} van ${list.length}`);
     }
 
+    /**
+     * Alles opnieuw opbouwen. De focus blijft op dezelfde knop of keuzelijst van dezelfde
+     * discipline (kan die knop niet meer, bijv. bovenaan 'Omhoog': de andere pijl); is de
+     * discipline weggehaald, dan naar 'Nieuwe discipline'.
+     */
     function draw() {
       list.forEach((discipline, index) => {
         if (!discipline._key) discipline._key = 'k' + index + '-' + (discipline.id || nextId());
       });
+      const active = document.activeElement;
+      const rowNode = active && listNode.contains(active) ? active.closest('li[data-key]') : null;
+      const mark = rowNode && active.dataset.control ? { key: rowNode.dataset.key, control: active.dataset.control } : null;
       listNode.replaceChildren(...list.map(row));
+      if (!mark) return;
+      const again = listNode.querySelector(`li[data-key="${CSS.escape(mark.key)}"]`);
+      if (!again) {
+        add.focus();
+        return;
+      }
+      const usable = (name) => again.querySelector(`[data-control="${name}"]:not(:disabled)`);
+      const next = usable(mark.control) || usable(mark.control === 'down' ? 'up' : 'down') || usable('status');
+      if (next) next.focus();
     }
 
     const add = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('message-plus'), el('span', { text: 'Nieuwe discipline' })]);

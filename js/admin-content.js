@@ -520,9 +520,14 @@
           up.addEventListener('click', () => move(item, -1));
           down.addEventListener('click', () => move(item, 1));
           remove.addEventListener('click', () => {
-            items.splice(items.indexOf(item), 1);
+            const index = items.indexOf(item);
+            items.splice(index, 1);
             node.remove();
             renumber();
+            // De focus naar het item dat nu op deze plek staat (of het vorige), anders naar 'toevoegen'
+            const next = items[index] || items[index - 1];
+            (next ? next.remove : add).focus();
+            ns.ui.announce(`${title.textContent} verwijderd`);
           });
           items.push(item);
           listNode.append(node);
@@ -533,10 +538,17 @@
           const index = items.indexOf(item);
           const target = index + delta;
           if (target < 0 || target >= items.length) return;
-          items.splice(index, 1);
-          items.splice(target, 0, item);
-          listNode.replaceChildren(...items.map((i) => i.node));
+          // De buurman verplaatsen, niet dit item: dan houdt de knop die je gebruikte de focus
+          const other = items[target];
+          if (delta < 0) item.node.after(other.node);
+          else item.node.before(other.node);
+          items[target] = item;
+          items[index] = other;
           renumber();
+          // Bovenaan (of onderaan) kan deze kant niet verder: dan de andere pijl
+          const used = delta < 0 ? item.up : item.down;
+          if (used.disabled) (delta < 0 ? item.down : item.up).focus();
+          ns.ui.announce(`Nu ${item.title.textContent}`);
         }
         (Array.isArray(value) ? value : []).forEach((v) => addItem(v));
         if (!items.length && field.min) addItem(null);

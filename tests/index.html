@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Geen netwerk: de verzoeken naar Supabase worden in de tests nagebootst -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="robots" content="noindex">
+  <title>Tests · AI Cockpit Audit</title>
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="tests.css">
+</head>
+<body>
+  <main class="tests container">
+    <h1>Tests</h1>
+    <p class="tests__lead">De kern van het platform, zonder build of npm: open deze pagina in de browser (ook op de live site, onder /tests/). Er wordt niets opgeslagen en niets verstuurd.</p>
+    <p class="tests__summary" id="summary" role="status">Bezig…</p>
+    <ol class="tests__list" id="results"></ol>
+  </main>
+
+  <!-- De modules die getest worden, in dezelfde volgorde als in index.html -->
+  <script src="../js/config.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/kinds.js"></script>
+  <script src="../js/content.js"></script>
+  <script src="../js/central.js"></script>
+  <script src="../js/admin-kit.js"></script>
+  <script src="../js/rights.js"></script>
+  <script src="../js/editor.js"></script>
+  <script src="tests.js"></script>
+</body>
+</html>

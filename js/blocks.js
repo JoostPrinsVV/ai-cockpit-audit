@@ -211,6 +211,7 @@
       filters.saved = on;
       update();
     }, count);
+    // De focus na 'niet meer bewaren' (de kaart verdwijnt) regelt ns.ui.onSaved
     const watch = (list) => ns.ui.onSaved(type, list, () => (filters.saved ? update() : ids()));
     return { button, ids, watch };
   }

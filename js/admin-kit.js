@@ -24,7 +24,7 @@
 
   /** Bestandsnaam voor een upload: zoals slug, maar met de punt van de extensie erin. */
   function fileName(value) {
-    return ns.ui.normalize(value).replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '').slice(-80) || 'bestand';
+    return ns.ui.normalize(value).replace(/[^a-z0-9.]+/g, '-').replace(/-+\./g, '.').replace(/^-+|-+$/g, '').slice(-80) || 'bestand';
   }
 
   let icons = null;

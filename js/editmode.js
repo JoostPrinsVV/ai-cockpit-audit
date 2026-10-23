@@ -21,10 +21,10 @@
   // de korte tekst. Alleen deze kaarten; de regels op de startpagina zijn geen kaart.
   const CARD_PARTS = {
     usecase: { title: '.uc-card__link', text: '.uc-card__subtitle' },
-    agent: { title: '.uc-card__title', text: '.uc-card__subtitle' },
+    agent: { title: '.uc-card__link', text: '.uc-card__subtitle' },
     tip: { title: '.tip-card__link', text: '.tip-card__summary' },
     prompt: { title: '.p-card__title a', text: '.p-card__desc' },
-    training: { title: '.tr-card__title', text: '.tr-card__subtitle' }
+    training: { title: '.tr-card__link', text: '.tr-card__subtitle' }
   };
   const CARDS = ':is(.uc-card, .tip-card, .p-card, .tr-card)[data-kind][data-id]';
 
@@ -99,14 +99,28 @@
     node.addEventListener('focus', () => {
       original = node.textContent;
     });
+    // Klaar: de wijziging doorgeven. Met Enter blijft de focus op dit veld, zodat je met het
+    // toetsenbord op dezelfde plek verder werkt (js/app.js zet hem na het opnieuw opbouwen terug).
+    function finish() {
+      // innerText houdt regeleinden (ook als de browser <br> gebruikt); harde spaties worden gewone
+      const text = node.innerText.replace(/ /g, ' ').trim();
+      if (text === original.trim()) return;
+      if (!text) {
+        node.textContent = original;
+        return;
+      }
+      original = text;
+      commit(text);
+    }
     node.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
+        // Terug naar de tekst van daarnet (de focus blijft hier)
+        event.stopPropagation();
         node.textContent = original;
-        node.blur();
       } else if (event.key === 'Enter' && !multiline) {
         // Een titel is één regel: ook Shift+Enter is klaar
         event.preventDefault();
-        node.blur();
+        finish();
       }
     });
     node.addEventListener('paste', (event) => {
@@ -115,16 +129,7 @@
       const text = event.clipboardData.getData('text/plain');
       document.execCommand('insertText', false, multiline ? text : text.replace(/\s*\n\s*/g, ' '));
     });
-    node.addEventListener('blur', () => {
-      // innerText houdt regeleinden (ook als de browser <br> gebruikt); harde spaties worden gewone
-      const text = node.innerText.replace(/\u00a0/g, ' ').trim();
-      if (text === original.trim()) return;
-      if (!text) {
-        node.textContent = original;
-        return;
-      }
-      commit(text);
-    });
+    node.addEventListener('blur', finish);
   }
 
   function editField(t, key) {
@@ -181,7 +186,8 @@
         ns.editor.change(t.namespace, t.type, t.id, { status: 'trash' });
       }, ' edit-tools__btn--danger'));
     }
-    slot.append(el('div', { className: 'edit-tools', attrs: { role: 'toolbar', 'aria-label': 'Bewerken: ' + label } }, tools));
+    // Een groep (geen 'toolbar': die belooft pijltjestoetsen tussen de knoppen)
+    slot.append(el('div', { className: 'edit-tools', attrs: { role: 'group', 'aria-label': 'Bewerken: ' + label } }, tools));
 
     // Titel en korte tekst direct aanpassen (niet bij een prompt uit een usecase)
     if (!t.derived) {

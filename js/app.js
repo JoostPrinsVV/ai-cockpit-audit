@@ -523,10 +523,9 @@
     document.documentElement.dataset.theme = theme;
     const button = document.getElementById('theme-button');
     if (!button) return;
+    // Een schakelknop houdt één naam ('Donker thema'); aan of uit zegt aria-pressed (en het icoon)
     const dark = theme === 'donker';
     button.setAttribute('aria-pressed', String(dark));
-    button.setAttribute('aria-label', dark ? 'Licht thema' : 'Donker thema');
-    button.title = dark ? 'Licht thema' : 'Donker thema';
     ns.ui.setIcon(button.querySelector('svg'), dark ? 'sun' : 'moon');
   }
 
