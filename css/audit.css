@@ -86,6 +86,10 @@ body {
 .btn--ghost-dark { background: rgba(255, 255, 255, 0.08); color: var(--color-on-dark); border-color: rgba(255, 255, 255, 0.26); }
 .btn--back { padding-inline: 0.85rem 1.1rem; background: var(--color-surface); color: var(--color-text); border-color: var(--color-border); box-shadow: var(--shadow-sm); }
 .btn--copy { background: var(--color-secondary); color: var(--color-on-dark); }
+/* Kopieer en open Copilot */
+.btn--copilot { background: var(--color-surface); color: var(--accent-teal-ink); border-color: var(--vv-teal); }
+.btn--copilot:hover { background: var(--badge-free-bg); }
+:root[data-theme='donker'] .btn--copilot { background: transparent; color: #5ff0d6; }
 .btn--copy.is-copied { background: var(--color-success); animation: pop var(--duration-slow) var(--ease-spring); }
 .btn--danger { background: var(--color-surface); color: var(--color-danger); border-color: currentColor; }
 

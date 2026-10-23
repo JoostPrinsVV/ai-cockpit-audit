@@ -9,7 +9,7 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, copyButton, parsePlaceholders, fillPlaceholders, promptNodes } = ns.ui;
+  const { el, icon, copyButton, copilotButton, parsePlaceholders, fillPlaceholders, promptNodes } = ns.ui;
   let counter = 0;
 
   /**
@@ -36,6 +36,8 @@
     renderText();
 
     const copy = copyButton(() => fillPlaceholders(text, values), { label: opts.copyLabel || 'Kopieer prompt', onCopy: opts.onCopy });
+    // Kopiëren en meteen Copilot openen (met wat je hebt ingevuld)
+    const open = copilotButton(() => fillPlaceholders(text, values), { className: 'btn--sm', onCopy: opts.onCopy });
 
     // ---- Invullen ----
     let fillToggle = null;
@@ -115,7 +117,7 @@
     const node = el('div', { className: 'prompt-box' }, [
       el('div', { className: 'prompt-box__head' }, [
         opts.label ? el(headingTag, { className: 'prompt-box__label', text: opts.label }) : el('p', { className: 'prompt-box__label', text: 'Prompt' }),
-        el('div', { className: 'prompt-box__actions' }, [fillToggle, copy])
+        el('div', { className: 'prompt-box__actions' }, [fillToggle, open, copy])
       ]),
       fillPanel,
       body

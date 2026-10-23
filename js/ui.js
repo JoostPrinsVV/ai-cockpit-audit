@@ -320,6 +320,35 @@
     return btn;
   }
 
+  /**
+   * 'Kopieer en open Copilot': kopieert de (ingevulde) prompt en opent Copilot Chat in een nieuw
+   * tabblad, met je zakelijke account. Daar plak je hem met Ctrl+V: Microsoft heeft geen officiële
+   * manier om een prompt al in het typveld te zetten. Werkt in jullie omgeving een parameter wel
+   * (config.copilotPromptParam, zie README.md), dan staat hij er ook al in.
+   * options: { label, className, onCopy }
+   */
+  function copilotButton(getText, options) {
+    const opts = options || {};
+    const base = config.copilotUrl || 'https://m365.cloud.microsoft/chat';
+    const link = el('a', {
+      className: 'btn btn--copilot ' + (opts.className || ''),
+      attrs: { href: base, target: '_blank', rel: 'noopener', title: 'Kopieert de prompt en opent Copilot Chat. Plak hem daar met Ctrl+V.' }
+    }, [icon('external'), el('span', { text: opts.label || 'Kopieer en open Copilot' })]);
+    link.addEventListener('click', (event) => {
+      event.stopPropagation(); // niet ook de kaart openen
+      const text = getText();
+      // Eerst kopiëren (nu dit tabblad nog de focus heeft), dan opent de link Copilot
+      copyText(text).then((ok) => {
+        toast(ok ? 'Prompt gekopieerd: plak hem in Copilot met Ctrl+V.' : 'Kopiëren lukte niet. Kopieer de prompt zelf en plak hem in Copilot.', { tone: ok ? 'success' : 'warning', duration: 6000 });
+      });
+      if (config.copilotPromptParam) {
+        link.href = `${base}${base.includes('?') ? '&' : '?'}${encodeURIComponent(config.copilotPromptParam)}=${encodeURIComponent(text)}`;
+      }
+      if (opts.onCopy) opts.onCopy();
+    });
+    return link;
+  }
+
   /* ---- Tekst en zoeken ------------------------------------------------------------ */
   /** Kleine letters, zonder accenten: 'Continuïteit' → 'continuiteit'. */
   function normalize(text) {
@@ -525,6 +554,7 @@
     announce,
     copyText,
     copyButton,
+    copilotButton,
     normalize,
     matches,
     formatDate,

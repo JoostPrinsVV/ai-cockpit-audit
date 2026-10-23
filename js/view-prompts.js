@@ -4,7 +4,7 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, switchButton, emptyState, copyButton, saveButton, matches } = ns.ui;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, switchButton, emptyState, copyButton, copilotButton, saveButton, matches } = ns.ui;
 
   // Zoekterm, filters en volgorde blijven staan zolang de pagina open is
   const filters = { query: '', phase: 'all', license: 'all', demo: false, saved: false, sort: 'phase' };
@@ -61,6 +61,7 @@
       el('div', { className: 'chips' }, chipsFor(prompt, !grouped)),
       el('div', { className: 'p-card__actions' }, [
         copyButton(() => prompt.prompt, { label: 'Kopieer', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
+        copilotButton(() => prompt.prompt, { label: 'Copilot', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
         toggle,
         el('a', { className: 'btn btn--quiet btn--sm', attrs: { href: '#/prompt/' + prompt.id, 'aria-label': 'Invullen en details: ' + prompt.title } }, [icon('pencil-line'), el('span', { text: 'Invullen' })])
       ]),

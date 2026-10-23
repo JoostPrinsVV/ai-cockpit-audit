@@ -44,6 +44,14 @@ window.AIAudit.config = {
   enableVotes: true,                    // 'Ik ook'-stem bij gepubliceerde ideeën en vragen
   enableReviews: true,                  // 'Wat vond je ervan?' (sterren en toelichting) bij usecases en prompts
 
+  /* ---- Openen in Copilot ------------------------------------------------- */
+  // 'Kopieer en open Copilot' bij iedere prompt: kopieert de (ingevulde) prompt en opent Copilot Chat
+  // met je zakelijke account. Microsoft heeft geen officiële manier om een prompt al in het typveld
+  // te zetten: je plakt hem met Ctrl+V.
+  copilotUrl: 'https://m365.cloud.microsoft/chat',
+  copilotPromptParam: '',               // Optioneel, alleen na testen: de parameter waarmee Copilot de prompt al invult
+                                        // (bijv. 'prompt'). Zie README.md. Leeg = alleen kopiëren en openen
+
   /* ---- Gebruik meten ------------------------------------------------------ */
   enableUsageStats: true,               // Anoniem tellen welke usecases, demo's en prompts gebruikt worden (zichtbaar in Beheer)
 

@@ -319,6 +319,19 @@ Onderaan iedere usecase en prompt staat **Wat vond je ervan?**: 1 tot 5 sterren,
 - **Favoriet bij collega's** op de startpagina: de vier best beoordeelde prompts en usecases met minstens drie
   beoordelingen (`MIN_REVIEWS` in `js/view-home.js`). Zolang er niets aan die drempel voldoet, staat het blok er niet.
 
+## Kopieer en open Copilot
+
+Bij iedere prompt staat **Kopieer en open Copilot** (op de kaart: **Copilot**). Die kopieert de prompt, met wat je
+bij 'Invullen' hebt ingevuld, en opent Copilot Chat met je zakelijke account (`copilotUrl` in `js/config.js`) in een
+nieuw tabblad. Daar plak je hem met Ctrl+V.
+
+Microsoft heeft geen officiële manier om een prompt al in het typveld van Microsoft 365 Copilot te zetten. Wil je
+testen of het in jullie omgeving toch kan: open in Edge (ingelogd) bijvoorbeeld
+`https://m365.cloud.microsoft/chat/?prompt=Dit%20is%20een%20test`. Staat de tekst in het typveld en is hij níet
+meteen verstuurd, zet dan `copilotPromptParam: 'prompt'` in `js/config.js`. Het kopiëren blijft dan gewoon werken,
+voor het geval Microsoft dit later verandert. Gebruik nooit de gratis consumentenversie (copilot.microsoft.com):
+die heeft niet de bescherming van je zakelijke account.
+
 ## Bewaren en recent bekeken
 
 - Met de **bladwijzer** bewaar je een prompt, usecase of tip (op de kaart en op de pagina zelf). Bij prompts, usecases
