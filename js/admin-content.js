@@ -27,31 +27,27 @@
   'use strict';
 
   const { el, icon, toast, formatDate } = ns.ui;
+  const { notice } = ns.blocks;
+  const kit = ns.adminKit;
   const confirm = (message, options) => ns.ui.confirmDialog(message, options);
-  const ID_PATTERN = /^[a-z0-9-]{1,80}$/;
-  const LOCAL_PATH = /^(?![a-z][a-z0-9+.-]*:)(?!\/\/)[^\s<>"'`\\]+$/i;
-  const HTTPS_URL = /^https:\/\/[^\s<>"'`]+$/i;
-  // Oude paden uit de tijd in de map audit/ van de snackbar (zie js/content.js); bij opslaan wordt het nieuwe pad bewaard
-  const LEGACY_ASSETS = /^\.\.\/assets\//;
+  // Dezelfde controles als bij het laden (js/content.js). Een oud pad ('../assets/…') wordt bij opslaan het nieuwe.
+  const { ID_PATTERN, LOCAL_PATH, HTTPS_URL, LEGACY_ASSETS } = ns.content.patterns;
 
   /* ---- Keuzelijsten ----------------------------------------------------------- */
   const LEVELS = [{ value: '', label: '—' }, { value: 'Starter', label: 'Starter' }, { value: 'Gevorderd', label: 'Gevorderd' }];
   const TASKS = ['', 'Analyseren', 'Samenvatten', 'Schrijven', 'Controleren', 'Voorbereiden', 'Plannen'].map((value) => ({ value, label: value || '—' }));
-  const ACCENTS = [
-    { value: 'teal', label: 'Turquoise' }, { value: 'crimson', label: 'Rood' }, { value: 'steel', label: 'Staalblauw' },
-    { value: 'rose', label: 'Roze' }, { value: 'deepteal', label: 'Donkerturquoise' }, { value: 'navy', label: 'Donkerblauw' }
-  ];
   const KNOWN_MEDIA = [
     'demos/player.html#risicoanalyse', 'demos/player.html#walkthrough', 'demos/player.html#cijferanalyse',
     'demos/player.html#journaalposten', 'demos/player.html#notulen', 'demos/player.html#managementletter',
     'assets/demos/snack-01.html', 'assets/videos/snack-01.mp4', 'assets/videos/snack-02.mp4', 'assets/videos/snack-03.mp4'
   ];
 
-  // Omgeving waarin je werkt (zie render): { kind: 'discipline'|'basis', namespace, base, name, id, files }
+  // De omgeving waarin je in Beheer werkt (zie render): { kind: 'discipline'|'basis', namespace, base, name, id, files }.
+  // Het zijpaneel in de bewerkmodus geeft zijn eigen omgeving mee (zie quickForm).
   let scope = { kind: 'discipline', namespace: '', base: '#/beheer/inhoud', name: '', id: '', files: true };
 
   // In de gedeelde basis alleen de gedeelde fasen: die bestaan in iedere cockpit
-  const phaseOptions = () => ns.content.phases.filter((phase) => scope.kind !== 'basis' || phase.shared).map((phase) => ({ value: phase.id, label: phase.label }));
+  const phaseOptions = (ctx) => ns.content.phases.filter((phase) => ctx.where.kind !== 'basis' || phase.shared).map((phase) => ({ value: phase.id, label: phase.label }));
   const unique = (values) => Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'nl'));
   const asOptions = (values) => values.map((value) => ({ value, label: value }));
   // Lijsten waaruit je bij 'refs' kiest
@@ -228,7 +224,7 @@
         { key: 'label', label: 'Naam', type: 'text', required: true },
         { key: 'id', label: 'Code (id)', type: 'id', titleKey: 'label' },
         { key: 'short', label: 'Korte naam (filters, mobiel)', type: 'text', half: true },
-        { key: 'accent', label: 'Kleur', type: 'select', options: ACCENTS, half: true },
+        { key: 'accent', label: 'Kleur', type: 'select', options: kit.accentOptions, half: true },
         { key: 'icon', label: 'Icoon', type: 'icon', half: true }
       ]
     },
@@ -247,20 +243,25 @@
   Object.keys(SCHEMAS).forEach((type) => {
     const kind = ns.kinds.get(type);
     Object.assign(SCHEMAS[type], { label: kind.title, one: kind.one, many: kind.many, add: kind.add, route: ns.kinds.byRoute(type) ? type : undefined, ordered: Boolean(kind.ordered) });
-  });  const ORDER = ['usecase', 'prompt', 'tip', 'training', 'agent', 'phase', 'setting'];
+  });
+  const ORDER = ['usecase', 'prompt', 'tip', 'training', 'agent', 'phase', 'setting'];
   const view = { type: '', status: 'live', query: '' }; // filters in de lijst
 
   /* ---- Rijen uit de database ------------------------------------------------------- */
   // Alle opgehaalde rijen: de eigen inhoud van deze cockpit én de gedeelde basis
   const everywhere = () => (Array.isArray(ns.content.adminRows) ? ns.content.adminRows : []);
-  // Alleen de rijen van de omgeving waarin je werkt
-  function allRows() {
-    return everywhere().filter((row) => row.namespace === scope.namespace);
-  }
+  // De rijen van één omgeving (standaard die waarin je in Beheer werkt)
+  const allRows = (namespace) => everywhere().filter((row) => row.namespace === (namespace || scope.namespace));
   // Op volgorde zoals je hem bewerkt: de opgeslagen werkversie gaat voor de gepubliceerde positie
-  const rowsOf = (type) => allRows().filter((row) => row.type === type).sort((a, b) => (stateOf(a).position || 0) - (stateOf(b).position || 0) || (a.id < b.id ? -1 : 1));
+  const rowsOf = (type, namespace) => allRows(namespace).filter((row) => row.type === type).sort((a, b) => (stateOf(a).position || 0) - (stateOf(b).position || 0) || (a.id < b.id ? -1 : 1));
   const findRow = (type, id) => allRows().find((row) => row.type === type && row.id === id) || null;
   const isSeeded = () => allRows().some((row) => row.type === 'meta' && row.id === 'bron');
+  // Een nieuw item komt achteraan
+  const nextPosition = (type, namespace) => Math.max(0, ...rowsOf(type, namespace).map((row) => stateOf(row).position || 0)) + 10;
+  const nameOf = (row) => {
+    const data = stateOf(row).data || {};
+    return data.title || data.label || row.id;
+  };
 
   async function afterChange(message) {
     await ns.app.reloadContent();
@@ -273,21 +274,12 @@
   const may = (action, type) => !drafting() || ns.rights.can(action, scope.namespace, type);
   /** De stand die je bewerkt: de opgeslagen werkversie als die er is, anders de gepubliceerde. */
   const stateOf = (row) => (drafting() ? ns.editor.savedState(row) : { data: row.data || {}, position: row.position || 0, status: row.status });
-  const draftLabel = (row) => (!row.draft ? '' : row.draft.status === 'trash' ? 'Wordt verwijderd' : row.publish_at ? 'Gepland' : row.draft_kind === 'voorstel' ? 'Voorstel' : row.status === 'draft' ? 'Nieuw' : 'Gewijzigd');
+  /** Wat er bij publiceren met een item gebeurt ('Gewijzigd', 'Wordt verwijderd', …), of ''. */
+  const changeText = (row) => (ns.ui.CHANGES[ns.editor.changeOf(row)] || { text: '' }).text;
 
   /** Werkversie opslaan voor één item in deze omgeving. */
   function stage(type, id, data, position, status) {
     return ns.editor.saveOne({ namespace: scope.namespace, type, id, draft: { data, position: position || 0, status: status || 'published' } });
-  }
-
-  function slugify(value) {
-    return String(value || '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // accenten (é → e)
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 60);
   }
 
   /* ---- Formuliervelden ----------------------------------------------------------- */
@@ -313,12 +305,11 @@
   };
   const UPLOAD_MAX = 50 * 1024 * 1024;
   const canUpload = () => drafting() && ns.central.isEnabled();
-  const safeName = (name) => String(name || 'bestand').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '').slice(-80) || 'bestand';
   // Past het bestand bij wat dit veld aanneemt (bijv. 'video/mp4,video/webm')?
   const accepts = (accept, file) => String(accept).split(',').map((type) => type.trim()).includes(file.type);
 
   /** Knop 'Uploaden' naast een padveld: het adres van het geüploade bestand komt in input. */
-  function uploadButton(input, accept) {
+  function uploadButton(input, accept, namespace) {
     const file = el('input', { className: 'sr-only', attrs: { type: 'file', accept, tabindex: '-1' } });
     const button = el('button', { className: 'btn btn--secondary btn--sm field__upload', attrs: { type: 'button' } }, [icon('upload'), el('span', { text: 'Uploaden' })]);
     button.addEventListener('click', () => file.click());
@@ -335,20 +326,16 @@
         return;
       }
       if (!(await confirm(`"${chosen.name}" wordt openbaar: iedereen met de link kan het zien. Alleen materiaal zonder klant- of interne informatie.`, { title: 'Openbaar uploaden?', confirmLabel: 'Uploaden' }))) return;
-      const label = button.querySelector('span');
-      button.disabled = true;
-      label.textContent = 'Bezig…';
+      const restore = kit.busy(button);
       try {
         const month = new Date().toISOString().slice(0, 7);
-        const url = await ns.central.upload(chosen, `${scope.namespace}/${month}/${Date.now().toString(36)}-${safeName(chosen.name)}`);
-        input.value = url;
+        input.value = await ns.central.upload(chosen, `${namespace}/${month}/${Date.now().toString(36)}-${kit.fileName(chosen.name)}`);
         input.dispatchEvent(new Event('input', { bubbles: true }));
         toast('Geüpload', { tone: 'success' });
       } catch (error) {
-        toast('Uploaden mislukt: ' + error.message, { tone: 'warning', duration: 8000 });
+        kit.failed('Uploaden', error, 8000);
       } finally {
-        button.disabled = false;
-        label.textContent = 'Uploaden';
+        restore();
       }
     });
     return el('span', { className: 'field__upload-wrap' }, [button, file]);
@@ -387,7 +374,7 @@
         input.value = value == null ? '' : field.type === 'path' ? String(value).replace(LEGACY_ASSETS, 'assets/') : String(value);
         // Bij een video, afbeelding of bijlage: ook uploaden
         const accept = field.upload || (field.type === 'path' ? UPLOAD_ACCEPT[field.key] : null);
-        const upload = accept && canUpload() ? uploadButton(input, accept) : null;
+        const upload = accept && canUpload() ? uploadButton(input, accept, ctx.where.namespace) : null;
         const choices = suggestions && suggestions.length ? datalist(id + '-list', suggestions) : null;
         const node = wrap(upload ? el('div', { className: 'field__with-upload' }, [input, upload]) : input, choices);
         return {
@@ -421,7 +408,7 @@
         };
       }
       case 'select': {
-        const options = typeof field.options === 'function' ? field.options() : field.options;
+        const options = typeof field.options === 'function' ? field.options(ctx) : field.options;
         const current = value == null ? '' : String(value);
         // Een opgeslagen waarde die niet (meer) in de lijst staat, blijft zichtbaar in plaats van
         // stil te veranderen in de eerste keuze; bij een verplicht veld moet je dan bewust kiezen
@@ -459,7 +446,7 @@
         };
       }
       case 'icon': {
-        const names = Array.from(document.querySelectorAll('svg.sprite symbol')).map((symbol) => symbol.id.replace(/^i-/, '')).sort();
+        const names = kit.iconNames();
         // Een icoon dat niet (meer) in de set staat, blijft bewaard tot je een ander kiest
         if (value && !names.includes(value)) names.push(value);
         const preview = el('span', { className: 'icon-preview', attrs: { 'aria-hidden': 'true' } }, [icon(value || 'bulb')]);
@@ -593,83 +580,134 @@
     }
   }
 
-  /* ---- Formulier voor één item ------------------------------------------------------ */
-  function editor(type, id) {
-    const schema = SCHEMAS[type];
-    const isNew = id === 'nieuw';
-    const existing = schema.single ? findRow(type, schema.single) : isNew ? null : findRow(type, id);
-    if (!isNew && !schema.single && !existing) {
-      return el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [
-        el('p', { className: 'notice__title', text: 'Niet gevonden' }),
-        el('p', { text: `Er is geen ${schema.one} met het adres "${id}".` })
-      ])]);
-    }
-    // Met werkversies: zoals het nu bij jou staat, inclusief niet-opgeslagen wijzigingen op de pagina
-    // (opslaan neemt die mee in plaats van ze stil weg te gooien)
-    const base = !existing ? null : drafting() ? ns.editor.effective(scope.namespace, type, existing.id) || stateOf(existing) : stateOf(existing);
-    const unsaved = Boolean(existing && drafting() && JSON.stringify(base) !== JSON.stringify(stateOf(existing)));
-    const data = existing ? Object.assign({}, base.data, schema.single ? {} : { id: existing.id }) : {};
-    const canEdit = may('bewerken', type);
-    const canDelete = may('verwijderen', type);
-    const canPublish = drafting() && ns.rights.can('publiceren', scope.namespace, type);
-    let saving = false;
+  /* ---- Formulier voor één item (Beheer en het zijpaneel in de bewerkmodus) ------------------- */
+  const RENAME_DENIED = 'Het adres wijzigen kan alleen iemand die ook mag verwijderen. Laat het adres staan.';
 
-    const ctx = {
-      idTaken: (value) => {
-        if (existing && value === existing.id) return false;
-        // Ook niet hetzelfde adres als een item in de andere omgeving (basis of discipline)
-        if (everywhere().some((row) => row.type === type && row.id === value)) return true;
-        if (type === 'prompt') {
-          if (ns.content.usecaseById.has(value)) return true;
-          const match = /^(.+)-(\d+)$/.exec(value);
-          if (match && ns.content.usecaseById.has(match[1])) return true;
-        }
-        return false;
-      }
-    };
+  /**
+   * Is dit adres al bezet? Ook door een item in de andere omgeving (basis of discipline), door een
+   * klaargezet nieuw item, en bij prompts door een usecase (de prompts daarvan heten <usecase>-<n>).
+   */
+  function idTaken(type, namespace, ownId, value) {
+    if (value === ownId) return false;
+    if (everywhere().some((row) => row.type === type && row.id === value)) return true;
+    if (drafting() && ns.editor.effective(namespace, type, value)) return true;
+    return type === 'prompt' && ns.content.usecaseById.has(value.replace(/-\d+$/, ''));
+  }
 
-    const controls = schema.fields.map((field) => ({ field, ctl: control(field, data[field.key], ctx) }));
+  /**
+   * De velden van een soort als formulier. o: type, data (beginwaarden), where (de omgeving:
+   * welke fasen, waar uploads heen gaan), ownId (het huidige adres), isNew.
+   * Bij een nieuw item volgt het adres de titel, tot je het adres zelf aanpast.
+   */
+  function schemaForm(o) {
+    const schema = SCHEMAS[o.type];
+    const ctx = { where: o.where, idTaken: (value) => idTaken(o.type, o.where.namespace, o.ownId, value) };
+    const controls = schema.fields.map((field) => ({ field, ctl: control(field, o.data[field.key], ctx) }));
     const byKey = (key) => (controls.find((c) => c.field.key === key) || {}).ctl;
-
-    // Nieuw: het adres volgt de titel, tot je het adres zelf aanpast
     const idCtl = byKey('id');
-    if (idCtl && isNew) {
-      const titleField = schema.fields.find((f) => f.key === 'id').titleKey || 'title';
-      const titleCtl = byKey(titleField);
+    if (idCtl && o.isNew) {
+      const titleCtl = byKey(schema.fields.find((f) => f.key === 'id').titleKey || 'title');
       let touched = false;
       idCtl.input.addEventListener('input', () => {
         touched = true;
       });
       if (titleCtl && titleCtl.input) {
         titleCtl.input.addEventListener('input', () => {
-          if (!touched) idCtl.input.value = slugify(titleCtl.input.value);
+          if (!touched) idCtl.input.value = kit.slug(titleCtl.input.value, 60);
         });
       }
     }
+    const error = kit.formError();
+    function collect() {
+      const record = {};
+      controls.forEach(({ field, ctl }) => {
+        const value = ctl.get();
+        if (field.key !== 'id' && !isEmpty(value)) record[field.key] = value;
+      });
+      return record;
+    }
+    return {
+      grid: el('div', { className: 'form-grid' }, controls.map((c) => c.ctl.node)),
+      formError: error.node,
+      showError: error.show,
+      collect,
+      newId: () => schema.single || idCtl.get(),
+      snapshot: () => JSON.stringify([collect(), idCtl ? idCtl.get() : '']),
+      /** Alle velden controleren; bij een fout gaat de focus naar het eerste foute veld. */
+      valid(form) {
+        error.hide();
+        if (!controls.map(({ ctl }) => ctl.validate()).find(Boolean)) return true;
+        const invalid = form.querySelector('[aria-invalid="true"]');
+        if (invalid) invalid.focus();
+        error.show('Controleer de gemarkeerde velden.');
+        return false;
+      }
+    };
+  }
 
-    const status = existing ? existing.status : 'published';
+  /** Is er iets veranderd sinds de beginstand (vastgelegd na de opbouw) of sinds saved()? */
+  function changeTracker(snapshot) {
+    let initial = '';
+    window.setTimeout(() => {
+      initial = snapshot();
+    }, 0);
+    return {
+      saved: () => {
+        initial = snapshot();
+      },
+      dirty: () => Boolean(initial) && snapshot() !== initial
+    };
+  }
+
+  /**
+   * Verwijderen na een bevestiging: met werkversies zodra je publiceert, anders naar de prullenbak.
+   * Geeft de melding voor daarna, of false (geannuleerd, fase nog in gebruik of niet opgeslagen).
+   */
+  async function removeItem(type, row) {
+    const used = type === 'phase' ? usageOfPhase(row.id) : 0;
+    if (used) {
+      toast(`Deze fase wordt nog gebruikt door ${used} usecase(s), prompt(s) of agent(s). Kies daar eerst een andere fase.`, { tone: 'warning', duration: 6000 });
+      return false;
+    }
+    const name = nameOf(row);
+    if (drafting()) {
+      if (!(await confirm(`"${name}" wordt verwijderd zodra je publiceert. Tot die tijd zien collega's hem nog.`, { title: 'Verwijderen?', confirmLabel: 'Verwijderen', danger: true }))) return false;
+      const current = stateOf(row);
+      return (await stage(type, row.id, current.data, current.position, 'trash')) ? 'Klaar om te verwijderen: publiceer via de bewerkbalk' : false;
+    }
+    if (!(await confirm(`"${name}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return false;
+    await ns.central.patchContent(type, row.id, { status: 'trash' }, scope.namespace);
+    return 'In de prullenbak gezet';
+  }
+
+  /** In Beheer: het hele item, met opslaan (en publiceren), verwijderen en de status. */
+  function editor(type, id) {
+    const schema = SCHEMAS[type];
+    const isNew = id === 'nieuw';
+    const existing = schema.single ? findRow(type, schema.single) : isNew ? null : findRow(type, id);
+    if (!isNew && !schema.single && !existing) return notice({ tone: 'warning', title: 'Niet gevonden', text: `Er is geen ${schema.one} met het adres "${id}".` });
+    // Met werkversies: zoals het nu bij jou staat, inclusief niet-opgeslagen wijzigingen op de pagina
+    // (opslaan neemt die mee in plaats van ze stil weg te gooien)
+    const saved = existing ? stateOf(existing) : null;
+    const base = existing && drafting() ? ns.editor.effective(scope.namespace, type, existing.id) || saved : saved;
+    const unsaved = Boolean(existing && drafting() && JSON.stringify(base) !== JSON.stringify(saved));
+    const data = existing ? Object.assign({}, base.data, schema.single ? {} : { id: existing.id }) : {};
+    const canEdit = may('bewerken', type);
+    const canDelete = may('verwijderen', type);
+    const canPublish = drafting() && ns.rights.can('publiceren', scope.namespace, type);
+    const fields = schemaForm({ type, data, where: scope, ownId: existing ? existing.id : '', isNew });
+    let saving = false;
+
+    // Zonder werkversies kies je hier de status; met werkversies regelt Publiceren wat live staat
     const statusId = nextId();
     const statusSelect = el('select', { className: 'field__input', attrs: { id: statusId } }, [
       el('option', { attrs: { value: 'published' }, text: 'Gepubliceerd: zichtbaar voor iedereen' }),
       el('option', { attrs: { value: 'draft' }, text: 'Concept: alleen zichtbaar voor beheerders' })
     ]);
-    statusSelect.value = status === 'draft' ? 'draft' : 'published';
+    statusSelect.value = existing && existing.status === 'draft' ? 'draft' : 'published';
+    const changes = changeTracker(() => fields.snapshot() + statusSelect.value);
 
-    function collect() {
-      const result = {};
-      controls.forEach(({ field, ctl }) => {
-        const v = ctl.get();
-        if (field.key === 'id') return;
-        if (isEmpty(v)) return;
-        result[field.key] = v;
-      });
-      return result;
-    }
-    const snapshot = () => JSON.stringify([collect(), idCtl ? idCtl.get() : '', statusSelect.value]);
-    let initial = '';
-
-    const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
-    const save = el('button', { className: drafting() && canPublish ? 'btn btn--secondary' : 'btn btn--primary', attrs: { type: 'submit', disabled: !canEdit } }, [icon('check'), el('span', { text: drafting() ? (canPublish ? 'Opslaan' : 'Opslaan als voorstel') : 'Opslaan' })]);
+    const save = el('button', { className: canPublish ? 'btn btn--secondary' : 'btn btn--primary', attrs: { type: 'submit', disabled: !canEdit } }, [icon('check'), el('span', { text: drafting() && !canPublish ? 'Opslaan als voorstel' : 'Opslaan' })]);
     const saveAndPublish = canPublish ? el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('send'), el('span', { text: 'Opslaan en publiceren' })]) : null;
     const cancel = el('a', { className: 'btn btn--secondary', attrs: { href: schema.single ? scope.base : `${scope.base}/${type}` } }, [el('span', { text: schema.single ? 'Terug' : 'Terug naar de lijst' })]);
     const viewLink = existing && schema.route && existing.status !== 'trash'
@@ -680,50 +718,40 @@
       : null;
 
     const form = el('form', { className: 'cms-form', attrs: { novalidate: true } }, [
-      el('div', { className: 'form-grid' }, controls.map((c) => c.ctl.node)),
-      // Met werkversies regelt Publiceren wat live staat; zonder kies je hier de status
+      fields.grid,
       schema.single || drafting() ? null : el('div', { className: 'field field--half' }, [el('label', { className: 'field__label', text: 'Status', attrs: { for: statusId } }), statusSelect]),
-      formError,
+      fields.formError,
       el('div', { className: 'cms-form__actions' }, [saveAndPublish, save, cancel, viewLink, el('span', { className: 'cms-form__spacer' }), trash])
     ]);
     if (!canEdit) form.querySelectorAll('input, textarea, select, button[type="button"]').forEach((input) => { input.disabled = true; });
 
-    async function onSubmit(event) {
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
       // Welke knop: 'Opslaan en publiceren' geldt alleen voor deze ene keer (ook als er iets misgaat of je annuleert)
       const publishNow = Boolean(saveAndPublish) && event.submitter === saveAndPublish;
-      formError.hidden = true;
-      const firstError = controls.map(({ ctl }) => ctl.validate()).find(Boolean);
-      if (firstError) {
-        const invalid = form.querySelector('[aria-invalid="true"]');
-        if (invalid) invalid.focus();
-        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Controleer de gemarkeerde velden.' })]));
-        formError.hidden = false;
+      if (!fields.valid(form)) return;
+      const newId = fields.newId();
+      const record = fields.collect();
+      const renamed = existing && !schema.single && newId !== existing.id;
+      if (drafting() && renamed && !canDelete) {
+        fields.showError(RENAME_DENIED);
         return;
       }
-      const newId = schema.single ? schema.single : idCtl.get();
-      const record = collect();
       if (type === 'tip' && record.release && new Date(record.release + 'T12:00:00').getDay() !== 5 &&
         !(await confirm('De datum voor "Tip van de week" is geen vrijdag. Toch opslaan?', { title: 'Geen vrijdag', confirmLabel: 'Toch opslaan' }))) return;
-      const renamed = existing && !schema.single && newId !== existing.id;
       if (renamed && !(await confirm(`Het adres verandert van "${existing.id}" naar "${newId}". Links naar het oude adres werken dan niet meer.`, { title: 'Adres wijzigen?', confirmLabel: 'Adres wijzigen' }))) return;
-      const position = existing ? base.position : Math.max(0, ...rowsOf(type).map((row) => stateOf(row).position || 0)) + 10;
-      if (drafting() && renamed && !canDelete) {
-        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Het adres wijzigen kan alleen iemand die ook mag verwijderen. Laat het adres staan.' })]));
-        formError.hidden = false;
-        return;
-      }
+      const position = existing ? base.position : nextPosition(type);
       saving = true;
       save.disabled = true;
       try {
         if (drafting()) {
           // Werkversie: pas live na publiceren
-          const saved = await stage(type, newId, record, position, 'published');
-          if (!saved) return;
+          const stored = await stage(type, newId, record, position, 'published');
+          if (!stored) return;
           const removed = renamed ? await stage(type, existing.id, existing.data, existing.position, 'trash') : null;
           if (publishNow) {
             // Precies de versies die je net opsloeg (de database slaat ze over als iemand ertussen kwam)
-            const items = [{ namespace: scope.namespace, type, id: newId, version: saved.version }]
+            const items = [{ namespace: scope.namespace, type, id: newId, version: stored.version }]
               .concat(removed ? [{ namespace: scope.namespace, type, id: existing.id, version: removed.version }] : []);
             await ns.editor.publish(items);
           }
@@ -731,172 +759,100 @@
           await ns.central.saveContent([{ type, id: newId, data: record, position, status: schema.single ? 'published' : statusSelect.value }], scope.namespace);
           if (renamed) await ns.central.deleteContent(type, existing.id, scope.namespace);
         }
-        initial = snapshot();
+        changes.saved();
         const target = schema.single ? `${scope.base}/setting` : `${scope.base}/${type}/${newId}`;
         if (window.location.hash !== target) window.history.replaceState(window.history.state, '', target);
         // Na publiceren is de inhoud al opnieuw opgehaald (js/editor.js)
         if (!(drafting() && publishNow)) await afterChange(drafting() ? (canPublish ? 'Opgeslagen. Nog niet live: publiceer via de bewerkbalk.' : 'Voorstel opgeslagen. Een beheerder publiceert het.') : isNew ? 'Toegevoegd' : 'Opgeslagen');
       } catch (error) {
-        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Opslaan mislukt: ' + error.message })]));
-        formError.hidden = false;
+        fields.showError('Opslaan mislukt: ' + error.message);
       } finally {
         saving = false;
         save.disabled = !canEdit;
       }
-    }
-    form.addEventListener('submit', onSubmit);
+    });
 
     if (trash) {
       trash.addEventListener('click', async () => {
-        if (type === 'phase' && usageOfPhase(existing.id)) {
-          toast(`Deze fase wordt nog gebruikt door ${usageOfPhase(existing.id)} usecase(s), prompt(s) of agent(s). Kies daar eerst een andere fase.`, { tone: 'warning', duration: 6000 });
-          return;
-        }
-        if (drafting()) {
-          if (!(await confirm(`"${data.title || data.label || existing.id}" wordt verwijderd zodra je publiceert. Tot die tijd zien collega's hem nog.`, { title: 'Verwijderen?', confirmLabel: 'Verwijderen', danger: true }))) return;
-        } else if (!(await confirm(`"${data.title || data.label || existing.id}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return;
         try {
-          if (drafting()) {
-            const current = stateOf(existing);
-            await stage(type, existing.id, current.data, current.position, 'trash');
-          } else await ns.central.patchContent(type, existing.id, { status: 'trash' }, scope.namespace);
-          initial = snapshot();
+          const message = await removeItem(type, existing);
+          if (!message) return;
+          changes.saved();
           window.location.hash = `${scope.base}/${type}`;
-          await afterChange(drafting() ? 'Klaar om te verwijderen: publiceer via de bewerkbalk' : 'In de prullenbak gezet');
+          await afterChange(message);
         } catch (error) {
-          toast('Mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+          kit.failed('Verwijderen', error);
         }
       });
     }
 
-    const stamp = (value) => new Date(value).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' });
-    const draftNotice = existing && existing.draft && drafting()
-      ? el('div', { className: 'notice' }, [icon('pencil-line'), el('div', {}, [
-        el('p', { className: 'notice__title', text: `${draftLabel(existing)}: opgeslagen, nog niet live` }),
-        el('p', { text: `Door ${existing.draft_by || 'onbekend'} op ${stamp(existing.draft_at)}${existing.publish_at ? `, gepland voor ${stamp(existing.publish_at)}` : ''}. Hieronder staat die versie; collega's zien nog de gepubliceerde. Publiceren of weggooien doe je via Publiceren in de bewerkbalk.` })
-      ])])
-      : null;
-    const unsavedNotice = unsaved
-      ? el('div', { className: 'notice' }, [icon('info'), el('div', {}, [
-        el('p', { className: 'notice__title', text: 'Met je niet-opgeslagen wijzigingen' }),
-        el('p', { text: 'Hieronder staat ook wat je op de pagina hebt aangepast maar nog niet hebt opgeslagen. Opslaan bewaart alles samen.' })
-      ])])
-      : null;
     const node = el('div', { className: 'cms-editor' }, [
       el('div', { className: 'cms-editor__head' }, [
         el('h2', { className: 'cms-editor__title', text: schema.single ? 'Teksten van de site' : isNew ? schema.add : `${schema.one.charAt(0).toUpperCase() + schema.one.slice(1)} bewerken` }),
-        existing && existing.updated_at ? el('p', { className: 'field__hint', text: 'Laatst gepubliceerd: ' + stamp(existing.updated_at) + (existing.updated_by ? ' door ' + existing.updated_by : '') }) : null,
+        existing && existing.updated_at ? el('p', { className: 'field__hint', text: 'Laatst gepubliceerd: ' + kit.moment(existing.updated_at) + (existing.updated_by ? ' door ' + existing.updated_by : '') }) : null,
         type === 'prompt' || schema.single ? el('p', { className: 'field__hint', text: schema.note }) : null
       ]),
-      !canEdit ? el('div', { className: 'notice notice--warning' }, [icon('lock'), el('div', {}, [el('p', { text: 'Je mag dit onderdeel bekijken, maar niet bewerken. Vraag een hoofdbeheerder om meer rechten.' })])]) : null,
-      draftNotice,
-      unsavedNotice,
+      canEdit ? null : notice({ tone: 'warning', icon: 'lock', text: 'Je mag dit onderdeel bekijken, maar niet bewerken. Vraag een hoofdbeheerder om meer rechten.' }),
+      existing && existing.draft && drafting() ? notice({
+        icon: 'pencil-line',
+        title: `${changeText(existing)}: opgeslagen, nog niet live`,
+        text: `Door ${existing.draft_by || 'onbekend'} op ${kit.moment(existing.draft_at)}${existing.publish_at ? `, gepland voor ${kit.moment(existing.publish_at)}` : ''}. Hieronder staat die versie; collega's zien nog de gepubliceerde. Publiceren of weggooien doe je via Publiceren in de bewerkbalk.`
+      }) : null,
+      unsaved ? notice({ title: 'Met je niet-opgeslagen wijzigingen', text: 'Hieronder staat ook wat je op de pagina hebt aangepast maar nog niet hebt opgeslagen. Opslaan bewaart alles samen.' }) : null,
       warningNotice(schema),
       form
     ]);
     // Melding als een andere beheerder dit item ook open heeft
     if (existing && drafting()) ns.editor.watch(scope.namespace, type, existing.id, node);
-    // Na opbouw: beginstand vastleggen (voor 'niet-opgeslagen wijzigingen')
-    window.setTimeout(() => {
-      initial = snapshot();
-    }, 0);
-    return { node, canLeave: () => saving || !initial || snapshot() === initial };
+    return { node, canLeave: () => saving || !changes.dirty() };
   }
 
-  /* ---- Zijpaneel in de bewerkmodus (js/editmode.js) ------------------------------------------ */
   /**
-   * Hetzelfde formulier als in Beheer, maar Toepassen zet de wijziging klaar (niet opgeslagen):
-   * je ziet hem meteen op de pagina en slaat op met Opslaan in de bewerkbalk.
-   * id leeg = nieuw item. onClose(): het paneel sluiten.
+   * In het zijpaneel van de bewerkmodus (js/editmode.js): dezelfde velden, maar Toepassen zet de
+   * wijziging klaar (niet opgeslagen). Je ziet hem meteen op de pagina en slaat op met Opslaan in
+   * de bewerkbalk. id leeg = nieuw item. onClose(): het paneel sluiten.
    */
   function quickForm(type, namespace, id, onClose, onCancel) {
     const schema = SCHEMAS[type];
-    const general = namespace === ns.cockpit.GENERAL_NAMESPACE;
-    const discipline = ns.cockpit.active();
-    scope = general
-      ? { kind: 'basis', namespace, base: '#/beheer/basis', name: 'de gedeelde basis', id: 'algemeen', files: false }
-      : { kind: 'discipline', namespace, base: '#/beheer/inhoud', name: discipline.name, id: discipline.id, files: false };
+    const where = { kind: namespace === ns.cockpit.GENERAL_NAMESPACE ? 'basis' : 'discipline', namespace };
     const isNew = !id;
     const current = isNew ? null : ns.editor.effective(namespace, type, id);
     const data = current ? Object.assign({}, current.data, schema.single ? {} : { id }) : {};
-    const ctx = {
-      idTaken: (value) => {
-        if (!isNew && value === id) return false;
-        if (ns.editor.effective(namespace, type, value)) return true;
-        if (everywhere().some((row) => row.type === type && row.id === value)) return true;
-        if (type === 'prompt' && ns.content.usecaseById.has(value.replace(/-\d+$/, ''))) return true;
-        return false;
-      }
-    };
-    const controls = schema.fields.map((field) => ({ field, ctl: control(field, data[field.key], ctx) }));
-    const byKey = (key) => (controls.find((c) => c.field.key === key) || {}).ctl;
-    const idCtl = byKey('id');
-    if (idCtl && isNew) {
-      const titleCtl = byKey(schema.fields.find((f) => f.key === 'id').titleKey || 'title');
-      let touched = false;
-      idCtl.input.addEventListener('input', () => {
-        touched = true;
-      });
-      if (titleCtl && titleCtl.input) titleCtl.input.addEventListener('input', () => {
-        if (!touched) idCtl.input.value = slugify(titleCtl.input.value);
-      });
-    }
-    const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
+    const fields = schemaForm({ type, data, where, ownId: id, isNew });
+    const changes = changeTracker(fields.snapshot);
     const apply = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('check'), el('span', { text: 'Toepassen' })]);
     const cancel = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [el('span', { text: 'Annuleren' })]);
     cancel.addEventListener('click', onCancel || onClose);
-    const collect = () => {
-      const record = {};
-      controls.forEach(({ field, ctl }) => {
-        const v = ctl.get();
-        if (field.key !== 'id' && !isEmpty(v)) record[field.key] = v;
-      });
-      return record;
-    };
-    const snapshot = () => JSON.stringify([collect(), idCtl ? idCtl.get() : '']);
-    let initial = '';
-    window.setTimeout(() => {
-      initial = snapshot();
-    }, 0);
     const form = el('form', { className: 'cms-form cms-form--panel', attrs: { novalidate: true } }, [
       el('p', { className: 'field__hint', text: 'Toepassen zet je wijziging klaar op de pagina. Sla daarna op met Opslaan in de bewerkbalk; collega\'s zien het pas na Publiceren.' }),
-      el('div', { className: 'form-grid' }, controls.map((c) => c.ctl.node)),
-      formError,
+      fields.grid,
+      fields.formError,
       el('div', { className: 'cms-form__actions' }, [apply, cancel])
     ]);
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      formError.hidden = true;
-      const firstError = controls.map(({ ctl }) => ctl.validate()).find(Boolean);
-      if (firstError) {
-        const invalid = form.querySelector('[aria-invalid="true"]');
-        if (invalid) invalid.focus();
-        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Controleer de gemarkeerde velden.' })]));
-        formError.hidden = false;
-        return;
-      }
-      const record = collect();
-      const newId = schema.single ? schema.single : idCtl.get();
+      if (!fields.valid(form)) return;
+      const newId = fields.newId();
       const renamed = !isNew && !schema.single && newId !== id;
       if (renamed && !ns.rights.can('verwijderen', namespace, type)) {
-        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Het adres wijzigen kan alleen iemand die ook mag verwijderen. Laat het adres staan.' })]));
-        formError.hidden = false;
+        fields.showError(RENAME_DENIED);
         return;
       }
-      const position = current ? current.position : Math.max(0, ...rowsOf(type).map((row) => stateOf(row).position || 0)) + 10;
+      const position = current ? current.position : nextPosition(type, namespace);
+      const record = fields.collect();
       // Eén stap voor ongedaan maken, ook bij een nieuw adres (nieuw item plus het oude weg)
       ns.editor.batch(() => {
         if (renamed) ns.editor.change(namespace, type, id, { status: 'trash' });
         ns.editor.change(namespace, type, newId, { data: record, position, status: 'published' });
       });
-      initial = snapshot();
+      changes.saved();
       onClose();
       toast(isNew ? 'Toegevoegd op de pagina. Vergeet niet op te slaan.' : 'Toegepast. Vergeet niet op te slaan.', { duration: 5000 });
     });
     const node = el('div', { className: 'cms-editor cms-editor--panel' }, [warningNotice(schema), form]);
     if (!isNew) ns.editor.watch(namespace, type, id, node);
     // isDirty(): is er iets ingevuld dat nog niet is toegepast (dan eerst vragen bij sluiten)
-    return { node, isDirty: () => Boolean(initial) && snapshot() !== initial };
+    return { node, isDirty: changes.dirty };
   }
 
   /* ---- Lijst per soort ---------------------------------------------------------------- */
@@ -925,12 +881,17 @@
     ]);
     statusFilter.value = view.status;
 
-    async function act(fn, message) {
+    /**
+     * Een actie op de lijst. task geeft false (geannuleerd: niets te doen), een melding of iets
+     * anders (dan geldt message). Daarna wordt de inhoud opnieuw opgehaald.
+     */
+    async function act(what, task, message) {
       try {
-        await fn();
-        await afterChange(message);
+        const result = await task();
+        if (result === false) return;
+        await afterChange(typeof result === 'string' ? result : message);
       } catch (error) {
-        toast('Mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+        kit.failed(what, error);
       }
     }
 
@@ -942,18 +903,23 @@
       if (type === 'training') rows = rows.slice().sort((a, b) => ((a.data && a.data.date) < (b.data && b.data.date) ? 1 : -1));
       if (query) rows = rows.filter((row) => ns.ui.normalize([row.id, row.data && (row.data.title || row.data.label)].join(' ')).includes(query));
       const canMove = schema.ordered && view.status === 'live' && !query;
+      const canEdit = may('bewerken', type);
+      const iconButton = (iconName, label, title) => el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': label, title } }, [icon(iconName)]);
+      const setPosition = (item, position) => (drafting()
+        ? stage(type, item.id, stateOf(item).data, position, stateOf(item).status)
+        : ns.central.patchContent(type, item.id, { position }, scope.namespace));
 
       listNode.replaceChildren(...(rows.length ? rows.map((row) => {
         const data = stateOf(row).data || {};
+        const name = nameOf(row);
         const index = live.indexOf(row);
         const actions = [];
-        if (canMove && may('bewerken', type)) {
-          const up = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omhoog: ' + (data.title || data.label || row.id), disabled: index <= 0 } }, [icon('arrow-up')]);
-          const down = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omlaag: ' + (data.title || data.label || row.id), disabled: index >= live.length - 1 } }, [icon('arrow-down')]);
-          const setPosition = (item, position) => (drafting()
-            ? stage(type, item.id, stateOf(item).data, position, stateOf(item).status)
-            : ns.central.patchContent(type, item.id, { position }, scope.namespace));
-          const swap = (other) => act(async () => {
+        if (canMove && canEdit) {
+          const up = iconButton('arrow-up', 'Omhoog: ' + name);
+          const down = iconButton('arrow-down', 'Omlaag: ' + name);
+          up.disabled = index <= 0;
+          down.disabled = index >= live.length - 1;
+          const swap = (other) => act('Verplaatsen', async () => {
             const a = stateOf(row).position || 0;
             const b = stateOf(other).position || 0;
             if (a !== b) {
@@ -975,9 +941,10 @@
           actions.push(up, down);
         }
         if (row.status === 'trash') {
-          if (may('bewerken', type)) {
+          if (canEdit) {
             const restore = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Terugzetten' })]);
             restore.addEventListener('click', () => act(
+              'Terugzetten',
               () => (drafting() ? stage(type, row.id, row.data, row.position, 'published') : ns.central.patchContent(type, row.id, { status: 'draft' }, scope.namespace)),
               drafting() ? 'Teruggezet: publiceer om hem weer live te zetten' : 'Teruggezet als concept'
             ));
@@ -986,37 +953,24 @@
           // Definitief verwijderen: alleen een hoofdbeheerder
           if (!drafting() || ns.rights.isOwner()) {
             const destroy = el('button', { className: 'btn btn--danger btn--sm', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Definitief verwijderen' })]);
-            destroy.addEventListener('click', async () => {
-              if (!(await confirm(`"${data.title || data.label || row.id}" wordt definitief verwijderd. Herstellen kan dan alleen nog via de geschiedenis in Supabase.`, { title: 'Definitief verwijderen?', confirmLabel: 'Definitief verwijderen', danger: true }))) return;
-              act(() => ns.central.deleteContent(type, row.id, scope.namespace), 'Definitief verwijderd');
-            });
+            destroy.addEventListener('click', () => act('Verwijderen', async () =>
+              (await confirm(`"${name}" wordt definitief verwijderd. Herstellen kan dan alleen nog via de geschiedenis in Supabase.`, { title: 'Definitief verwijderen?', confirmLabel: 'Definitief verwijderen', danger: true })) &&
+              ns.central.deleteContent(type, row.id, scope.namespace), 'Definitief verwijderd'));
             actions.push(destroy);
           }
         } else {
-          actions.push(el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: `${scope.base}/${type}/${row.id}` } }, [icon('pencil-line'), el('span', { text: may('bewerken', type) ? 'Bewerken' : 'Bekijken' })]));
-          if (schema.route) actions.push(el('a', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { href: `#/${schema.route}/${row.id}`, 'aria-label': 'Bekijk op de site: ' + (data.title || row.id), title: 'Bekijk op de site' } }, [icon('eye')]));
-          if (may('verwijderen', type) && !(row.draft && row.draft.status === 'trash')) {
-            const toTrash = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Verwijderen: ' + (data.title || data.label || row.id), title: drafting() ? 'Verwijderen (na publiceren)' : 'Naar de prullenbak' } }, [icon('trash')]);
-            toTrash.addEventListener('click', async () => {
-              if (type === 'phase' && usageOfPhase(row.id)) {
-                toast(`Deze fase wordt nog gebruikt door ${usageOfPhase(row.id)} usecase(s), prompt(s) of agent(s). Kies daar eerst een andere fase.`, { tone: 'warning', duration: 6000 });
-                return;
-              }
-              if (drafting()) {
-                if (!(await confirm(`"${data.title || data.label || row.id}" wordt verwijderd zodra je publiceert.`, { title: 'Verwijderen?', confirmLabel: 'Verwijderen', danger: true }))) return;
-                act(() => stage(type, row.id, stateOf(row).data, stateOf(row).position, 'trash'), 'Klaar om te verwijderen: publiceer via de bewerkbalk');
-                return;
-              }
-              if (!(await confirm(`"${data.title || data.label || row.id}" gaat naar de prullenbak. Collega's zien hem dan niet meer; je kunt hem terugzetten.`, { title: 'Naar de prullenbak?', confirmLabel: 'Naar de prullenbak', danger: true }))) return;
-              act(() => ns.central.patchContent(type, row.id, { status: 'trash' }, scope.namespace), 'In de prullenbak gezet');
-            });
+          actions.push(el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: `${scope.base}/${type}/${row.id}` } }, [icon('pencil-line'), el('span', { text: canEdit ? 'Bewerken' : 'Bekijken' })]));
+          if (schema.route) actions.push(el('a', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { href: ns.kinds.href(type, row.id), 'aria-label': 'Bekijk op de site: ' + name, title: 'Bekijk op de site' } }, [icon('eye')]));
+          if (may('verwijderen', type) && ns.editor.changeOf(row) !== 'verwijderen') {
+            const toTrash = iconButton('trash', 'Verwijderen: ' + name, drafting() ? 'Verwijderen (na publiceren)' : 'Naar de prullenbak');
+            toTrash.addEventListener('click', () => act('Verwijderen', () => removeItem(type, row)));
             actions.push(toTrash);
           }
         }
-        const pendingLabel = drafting() ? draftLabel(row) : '';
+        const pendingLabel = drafting() ? changeText(row) : '';
         return el('div', { className: 'cms-row' + (row.status === 'draft' ? ' cms-row--draft' : '') }, [
           el('div', { className: 'cms-row__main' }, [
-            el('a', { className: 'cms-row__title', attrs: { href: row.status === 'trash' ? null : `${scope.base}/${type}/${row.id}` }, text: data.title || data.label || row.id }),
+            el('a', { className: 'cms-row__title', attrs: { href: row.status === 'trash' ? null : `${scope.base}/${type}/${row.id}` }, text: name }),
             el('p', { className: 'cms-row__meta' }, [
               el('code', { text: row.id }),
               schema.meta && schema.meta(data) ? ' · ' + schema.meta(data) : '',
@@ -1059,41 +1013,44 @@
 
   /** Waarschuwing bij een soort (bijv. agents: de site is openbaar). */
   function warningNotice(schema) {
-    return schema.warning ? el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [el('p', { text: schema.warning })])]) : null;
+    return schema.warning ? notice({ tone: 'warning', text: schema.warning }) : null;
   }
 
   /* ---- Overzetten, exporteren en importeren -------------------------------------------- */
+  /**
+   * Eenmalig rijen in de database zetten (een bestaand adres blijft zoals het is). De knop is
+   * bezet zolang het duurt; daarna wordt de pagina opnieuw opgebouwd.
+   * o: busy (tekst op de knop), done (melding), what (bij een fout: '<what> mislukt: …').
+   */
+  async function addRows(buttons, rows, o) {
+    const restore = kit.busy(buttons, o.busy);
+    try {
+      await ns.central.saveContent(rows, scope.namespace, { onlyNew: true });
+      await afterChange(o.done);
+    } catch (error) {
+      restore();
+      kit.failed(o.what, error, 8000);
+    }
+  }
+
   function seedPanel(status) {
     if (status === 'missing') {
-      return el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [
-        el('p', { className: 'notice__title', text: 'De tabel voor de inhoud ontbreekt nog' }),
-        el('p', { text: 'Voer setup/supabase-audit.sql (opnieuw) uit in Supabase. Daarna kun je de inhoud hier overzetten en beheren.' })
-      ])]);
+      return notice({ tone: 'warning', title: 'De tabel voor de inhoud ontbreekt nog', text: 'Voer setup/supabase-audit.sql (opnieuw) uit in Supabase. Daarna kun je de inhoud hier overzetten en beheren.' });
     }
     const rows = ns.content.toRows();
     const counts = ['usecase', 'prompt', 'tip', 'training', 'agent', 'phase'].map((type) => `${rows.filter((r) => r.type === type).length} ${SCHEMAS[type].many}`).join(', ');
     const button = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('download'), el('span', { text: 'Overzetten naar de database' })]);
     button.addEventListener('click', async () => {
       if (!(await confirm('Alle inhoud uit de bestanden wordt in de database gezet. Vanaf dan pas je alles hier aan en tonen alle collega\'s de inhoud uit de database.', { title: 'Inhoud overzetten?', confirmLabel: 'Overzetten' }))) return;
-      button.disabled = true;
-      button.querySelector('span').textContent = 'Bezig met overzetten…';
-      try {
-        await ns.central.saveContent(rows, scope.namespace, { onlyNew: true });
-        await afterChange('Overgezet: de database is nu leidend');
-      } catch (error) {
-        button.disabled = false;
-        button.querySelector('span').textContent = 'Overzetten naar de database';
-        toast('Overzetten mislukt: ' + error.message, { tone: 'warning', duration: 8000 });
-      }
+      addRows(button, rows, { busy: 'Bezig met overzetten…', done: 'Overgezet: de database is nu leidend', what: 'Overzetten' });
     });
-    return el('div', { className: 'notice notice--cta seed' }, [
-      icon('info'),
-      el('div', {}, [
-        el('p', { className: 'notice__title', text: 'De inhoud staat nog in de bestanden' }),
-        el('p', { text: `Zet hem eenmalig over naar de database (${counts}). Daarna pas je alles hier aan, voeg je toe en verwijder je, zonder bestanden te bewerken.` })
-      ]),
-      button
-    ]);
+    return notice({
+      tone: 'cta',
+      className: 'seed',
+      title: 'De inhoud staat nog in de bestanden',
+      text: `Zet hem eenmalig over naar de database (${counts}). Daarna pas je alles hier aan, voeg je toe en verwijder je, zonder bestanden te bewerken.`,
+      action: button
+    });
   }
 
   /**
@@ -1109,29 +1066,18 @@
       if (!rows.length) return null;
       const schema = SCHEMAS[type];
       const what = `${rows.length} ${rows.length === 1 ? schema.one : schema.many}`;
-      const label = `${what} uit de bestanden toevoegen`;
-      const button = el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'button' } }, [icon('download'), el('span', { text: label })]);
+      const button = el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'button' } }, [icon('download'), el('span', { text: `${what} uit de bestanden toevoegen` })]);
       button.addEventListener('click', async () => {
         if (!(await confirm(`De ${what} uit de bestanden (data/) komen in de database en zijn direct zichtbaar voor alle collega's. Daarna pas je ze hier aan, zet je ze op concept of in de prullenbak.`, { title: `${schema.label} toevoegen?`, confirmLabel: 'Toevoegen' }))) return;
-        button.disabled = true;
-        button.querySelector('span').textContent = 'Bezig met toevoegen…';
-        try {
-          await ns.central.saveContent(rows, scope.namespace, { onlyNew: true });
-          await afterChange(`${what} toegevoegd`);
-        } catch (error) {
-          button.disabled = false;
-          button.querySelector('span').textContent = label;
-          toast('Toevoegen mislukt: ' + error.message, { tone: 'warning', duration: 8000 });
-        }
+        addRows(button, rows, { busy: 'Bezig met toevoegen…', done: `${what} toegevoegd`, what: 'Toevoegen' });
       });
-      return el('div', { className: 'notice notice--cta seed' }, [
-        icon('info'),
-        el('div', {}, [
-          el('p', { className: 'notice__title', text: `Nieuw in de bestanden: ${schema.label.toLowerCase()}` }),
-          el('p', { text: `In de bestanden staan ${what} die nog niet in de database staan. Voeg ze eenmalig toe; daarna beheer je ze hier.` })
-        ]),
-        button
-      ]);
+      return notice({
+        tone: 'cta',
+        className: 'seed',
+        title: `Nieuw in de bestanden: ${schema.label.toLowerCase()}`,
+        text: `In de bestanden staan ${what} die nog niet in de database staan. Voeg ze eenmalig toe; daarna beheer je ze hier.`,
+        action: button
+      });
     }).filter(Boolean);
   }
 
@@ -1143,15 +1089,9 @@
   /** Laadt de voorbeeldinhoud van een discipline (data/voorbeelden/<id>.js, zie data/disciplines.js), of null. */
   function loadExample(id) {
     const path = (ns.disciplineExamples || {})[id];
-    if (!path) return Promise.resolve(null);
-    if (ns.examples && ns.examples[id]) return Promise.resolve(ns.examples[id]);
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = path;
-      script.onload = () => resolve((ns.examples || {})[id] || null);
-      script.onerror = () => resolve(null);
-      document.head.append(script);
-    });
+    const example = () => (ns.examples || {})[id] || null;
+    if (!path || example()) return Promise.resolve(example());
+    return ns.ui.loadScripts([path]).then(example, () => null);
   }
 
   function exampleRows(example) {
@@ -1186,29 +1126,19 @@
       const list = (withExample ? rows : []).concat([startRow()]);
       const what = withExample ? `de voorbeeldinhoud (${list.length - 1} items)` : 'een lege omgeving';
       if (!(await confirm(`${discipline.name} begint met ${what}. Daarna voeg je hier inhoud toe en pas je die aan.${discipline.status === 'open' ? '' : ' Collega\'s zien er niets van zolang de discipline op slot staat.'}`, { title: 'Discipline inrichten?', confirmLabel: 'Inrichten' }))) return;
-      empty.disabled = true;
-      fromExample.disabled = true;
-      try {
-        await ns.central.saveContent(list, scope.namespace, { onlyNew: true });
-        await afterChange(`${discipline.name} heeft nu een eigen omgeving`);
-      } catch (error) {
-        empty.disabled = false;
-        fromExample.disabled = false;
-        toast('Inrichten mislukt: ' + error.message, { tone: 'warning', duration: 8000 });
-      }
+      addRows(withExample ? [fromExample, empty] : [empty, fromExample], list, { busy: 'Bezig met inrichten…', done: `${discipline.name} heeft nu een eigen omgeving`, what: 'Inrichten' });
     }
     empty.addEventListener('click', () => start(false));
     fromExample.addEventListener('click', () => start(true));
 
-    return el('div', { className: 'notice notice--cta seed' }, [
-      icon('info'),
-      el('div', {}, [
-        el('p', { className: 'notice__title', text: `${discipline.name} heeft nog geen eigen inhoud` }),
-        el('p', { text: 'De gedeelde basis (tips, agents, trainingen) staat er vanzelf in zodra die is ingericht. Begin leeg en voeg zelf fasen, usecases en prompts toe (eerst de fasen), of neem de voorbeeldinhoud over.' }),
-        exampleText
-      ]),
-      el('div', { className: 'seed__actions' }, [fromExample, empty])
-    ]);
+    return notice({
+      tone: 'cta',
+      className: 'seed',
+      title: `${discipline.name} heeft nog geen eigen inhoud`,
+      text: 'De gedeelde basis (tips, agents, trainingen) staat er vanzelf in zodra die is ingericht. Begin leeg en voeg zelf fasen, usecases en prompts toe (eerst de fasen), of neem de voorbeeldinhoud over.',
+      more: [exampleText],
+      action: el('div', { className: 'seed__actions' }, [fromExample, empty])
+    });
   }
 
   /* ---- Gedeelde basis eenmalig inrichten (vanuit Audit) -------------------------------------- */
@@ -1219,13 +1149,13 @@
     const source = ns.cockpit.namespace(filesId);
     const filesName = (ns.cockpit.find(filesId) || { name: 'Audit' }).name;
     if (ns.cockpit.activeId() !== filesId) {
-      return el('div', { className: 'notice' }, [icon('info'), el('div', {}, [
-        el('p', { className: 'notice__title', text: 'De gedeelde basis is nog niet ingericht' }),
-        el('p', {}, [
+      return notice({
+        title: 'De gedeelde basis is nog niet ingericht',
+        text: [
           `Dat doe je eenmalig vanuit de cockpit van ${filesName}: daar kies je welke items voor iedereen zijn. `,
           el('a', { attrs: { href: ns.cockpit.href(filesId, '#/beheer/basis') }, text: `Naar Beheer in ${filesName}` })
-        ])
-      ])]);
+        ]
+      });
     }
     const fromDatabase = everywhere().filter((row) => row.namespace === source && SCHEMAS[row.type] && !SCHEMAS[row.type].single && row.status !== 'trash');
     // Een soort die nog helemaal niet in de database staat (bijv. agents): uit de bestanden
@@ -1251,15 +1181,17 @@
     }).filter(Boolean);
 
     const button = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('globe'), el('span', { text: 'Gedeelde basis inrichten' })]);
-    const panel = el('div', { className: 'notice notice--cta seed basis-setup' }, [
-      icon('globe'),
-      el('div', {}, [
-        el('p', { className: 'notice__title', text: 'Richt de gedeelde basis in' }),
-        el('p', { text: `Kies welke items voor iedereen zijn. Die verhuizen van ${filesName} naar de gedeelde basis en staan straks in de cockpit van iedere discipline. In ${filesName} blijft alles gewoon zichtbaar. Het voorstel komt uit data/disciplines.js: vink aan of uit wat je wilt.` }),
+    const panel = notice({
+      tone: 'cta',
+      className: 'seed basis-setup',
+      icon: 'globe',
+      title: 'Richt de gedeelde basis in',
+      text: `Kies welke items voor iedereen zijn. Die verhuizen van ${filesName} naar de gedeelde basis en staan straks in de cockpit van iedere discipline. In ${filesName} blijft alles gewoon zichtbaar. Het voorstel komt uit data/disciplines.js: vink aan of uit wat je wilt.`,
+      more: [
         groups.length ? el('div', { className: 'basis-setup__groups' }, groups) : el('p', { text: `${filesName} heeft nog geen inhoud in de database.` }),
         el('div', { className: 'seed__actions' }, [button])
-      ])
-    ]);
+      ]
+    });
 
     button.addEventListener('click', async () => {
       const picked = Array.from(panel.querySelectorAll('input[type="checkbox"]:checked'))
@@ -1275,11 +1207,10 @@
       const count = (type) => picked.filter((row) => row.type === type).length;
       const summary = BASIS_ORDER.filter(count).map((type) => `${count(type)} ${count(type) === 1 ? SCHEMAS[type].one : SCHEMAS[type].many}`).join(', ');
       if (!(await confirm(`${summary} verhuizen van ${filesName} naar de gedeelde basis. In ${filesName} blijft alles zichtbaar; zodra je een andere discipline openzet, staat het daar ook in. Daarna pas je deze items aan bij Gedeelde basis.`, { title: 'Gedeelde basis inrichten?', confirmLabel: 'Inrichten' }))) return;
-      button.disabled = true;
+      const restore = kit.busy(button, 'Bezig met kopiëren…');
       const label = button.querySelector('span');
       let copied = false;
       try {
-        label.textContent = 'Bezig met kopiëren…';
         await ns.central.saveContent(picked.map((row) => ({ type: row.type, id: row.id, data: row.data, position: row.position || 0, status: row.status })).concat([startRow()]), ns.cockpit.GENERAL_NAMESPACE, { onlyNew: true });
         copied = true;
         // Wat uit Audit kwam, daar weghalen (wat uit de bestanden kwam, stond nog nergens)
@@ -1291,8 +1222,7 @@
         window.history.replaceState(window.history.state, '', '#/beheer/basis');
         await afterChange('De gedeelde basis staat klaar');
       } catch (error) {
-        button.disabled = false;
-        label.textContent = 'Gedeelde basis inrichten';
+        restore();
         await afterChange();
         // Kopiëren gaat in één keer: mislukt dat, dan is er niets verhuisd. Daarna gaat het weghalen per item.
         toast(copied
@@ -1303,20 +1233,11 @@
     return panel;
   }
 
-  function download(name, text) {
-    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-    const link = el('a', { attrs: { href: url, download: name } });
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-
   function backupTools() {
     const exportButton = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('download'), el('span', { text: 'Exporteer alles (JSON)' })]);
     exportButton.addEventListener('click', () => {
       const rows = allRows().map(({ type, id, data, position, status, updated_at: updatedAt }) => ({ type, id, data, position, status, updated_at: updatedAt }));
-      download(`ai-cockpit-${scope.id}-inhoud-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ exported_at: new Date().toISOString(), namespace: scope.namespace, rows }, null, 2));
+      kit.download(`ai-cockpit-${scope.id}-inhoud-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ exported_at: new Date().toISOString(), namespace: scope.namespace, rows }, null, 2));
     });
     const fileInput = el('input', { className: 'sr-only', attrs: { type: 'file', accept: 'application/json,.json', tabindex: '-1' } });
     const importButton = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Importeer back-up' })]);
@@ -1334,7 +1255,7 @@
         await ns.central.saveContent(rows.map((row) => ({ type: row.type, id: row.id, data: row.data, position: row.position || 0, status: ['published', 'draft', 'trash'].includes(row.status) ? row.status : 'draft' })), scope.namespace);
         await afterChange('Back-up teruggezet');
       } catch (error) {
-        toast('Importeren mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+        kit.failed('Importeren', error);
       }
     });
     return el('div', { className: 'cms-backup' }, [exportButton, importButton, fileInput]);
@@ -1352,11 +1273,12 @@
     // leeg is, want dan zou 'Overzetten' of 'Inrichten' verschijnen
     if (state && state.status === 'failed' && !Array.isArray(ns.content.adminRows)) {
       return {
-        node: el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [
-          el('p', { className: 'notice__title', text: 'De inhoud kon niet worden opgehaald' }),
-          el('p', { text: 'Controleer je verbinding en probeer het opnieuw. Tot die tijd kun je hier niets aanpassen.' }),
-          el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: () => ns.app.reloadContent() } }, [icon('refresh'), el('span', { text: 'Opnieuw proberen' })])
-        ])]),
+        node: notice({
+          tone: 'warning',
+          title: 'De inhoud kon niet worden opgehaald',
+          text: 'Controleer je verbinding en probeer het opnieuw. Tot die tijd kun je hier niets aanpassen.',
+          more: [el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: () => ns.app.reloadContent() } }, [icon('refresh'), el('span', { text: 'Opnieuw proberen' })])]
+        }),
         canLeave: null
       };
     }
@@ -1364,7 +1286,7 @@
     const owner = !drafting() || ns.rights.isOwner();
     const allowed = ORDER.filter((key) => owner || ns.rights.can('bewerken', scope.namespace, key));
     if (!allowed.length) {
-      return { node: el('div', { className: 'notice notice--warning' }, [icon('lock'), el('div', {}, [el('p', { text: 'Je hebt hier geen bewerkrechten. Vraag een hoofdbeheerder om een rol voor deze discipline.' })])]), canLeave: null };
+      return { node: notice({ tone: 'warning', icon: 'lock', text: 'Je hebt hier geen bewerkrechten. Vraag een hoofdbeheerder om een rol voor deze discipline.' }), canLeave: null };
     }
     const type = SCHEMAS[params[0]] && allowed.includes(params[0]) ? params[0] : allowed[0];
     const seeded = isSeeded();
@@ -1410,5 +1332,5 @@
     };
   }
 
-  ns.adminContent = { render, quickForm, SCHEMAS };
+  ns.adminContent = { render, quickForm };
 })(window.AIAudit);

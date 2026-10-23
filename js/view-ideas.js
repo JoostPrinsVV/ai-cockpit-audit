@@ -75,15 +75,6 @@
     storage.set('submissions', list.slice(0, 50));
   }
 
-  function voterId() {
-    let id = storage.get('voterId', '');
-    if (!id) {
-      id = ns.ui.randomId();
-      storage.set('voterId', id);
-    }
-    return id;
-  }
-
   function myVotes() {
     const value = storage.get('votes', []);
     return Array.isArray(value) ? value : [];
@@ -283,7 +274,7 @@
     const phase = item.phase ? ns.content.phaseById.get(item.phase) : null;
 
     let voteButton = null;
-    if (ns.config.enableVotes !== false) {
+    if (ns.app.config().enableVotes !== false) {
       let count = Number(item.votes) || 0;
       const countNode = el('span', { className: 'vote__count', text: String(count) });
       voteButton = el('button', { className: 'vote', attrs: { type: 'button', 'aria-pressed': String(voted), 'aria-label': `Ik ook: ${item.title} (${count} stemmen)` } }, [icon('thumb'), el('span', { text: 'Ik ook' }), countNode]);
@@ -293,7 +284,7 @@
           return;
         }
         voteButton.disabled = true;
-        const result = await ns.central.vote(item.id, voterId());
+        const result = await ns.central.vote(item.id, ns.ui.deviceId());
         voteButton.disabled = false;
         if (result === 'ok' || result === 'duplicate') {
           if (result === 'ok') count += 1;
@@ -508,7 +499,7 @@
     return { node, title: 'Ideeënhub' };
   }
 
-  ns.ideas = { KINDS, KIND_BY_ID, STATUSES, statusBadge, kindChip };
+  ns.ideas = { KINDS, STATUSES, statusBadge, kindChip };
   ns.views = ns.views || {};
   ns.views.ideas = { render };
 })(window.AIAudit);

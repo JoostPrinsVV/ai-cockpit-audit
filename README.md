@@ -19,8 +19,12 @@ css/audit.css         De opmaak van dit platform
 css/admin.css         De opmaak van Beheer, de bewerkbalk en de bewerkmodus (alleen geladen voor wie beheert)
 js/vroeg.js           Vóór de eerste weergave: het gekozen thema (geen witte flits) en een vangnet bij fouten
 js/config.js          Instellingen: titel, gouden regels, Supabase
+js/kinds.js           De soorten inhoud (usecase, prompt, tip, …): naam, adres, lijstpagina; één plek voor alles
+js/blocks.js          Bouwstenen voor de pagina's: detailkop, lijsten, meldingen en de filters van de lijstpagina's
+js/central.js         Centrale opslag (Supabase): alle verzoeken, via een paar gedeelde hulpfuncties
 js/disciplines.js     Disciplines: welke cockpit je ziet, wat op slot staat, de wisselaar in de kopbalk
 js/instruments.js     Cockpitstijl: de koersband (onder kopbalk en hero) en de kompasroos in de hero
+js/admin-kit.js       Gereedschap voor Beheer: downloaden, meldingen, bezette knoppen, adressen en kleuren
 js/rights.js          Rollen: wat de ingelogde beheerder mag (zelfde regels als de database)
 js/editor.js          Werkversies, bewerkbalk, opslaan, publiceren (ook gepland), logboek, ongedaan maken
 js/editmode.js        Bewerken op de pagina zelf: teksten, verslepen, toevoegen, verwijderen, zijpaneel

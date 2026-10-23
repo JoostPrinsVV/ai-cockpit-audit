@@ -28,15 +28,6 @@
     return ns.central.isEnabled() && config.enableReviews !== false;
   }
 
-  function voterId() {
-    let id = storage.get('voterId', '');
-    if (!id) {
-      id = ns.ui.randomId();
-      storage.set('voterId', id);
-    }
-    return id;
-  }
-
   function mine() {
     const value = storage.get('reviews', {});
     return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -61,9 +52,6 @@
     }
     return stats;
   }
-
-  /** De gemiddelden als ze al binnen zijn (anders undefined: dan eerst stats() afwachten). */
-  const cached = () => loaded;
 
   /** Komen de gemiddelden nog binnen, dan daarna onReady() (bijv. de kaarten met de sterren opnieuw bouwen). */
   function whenLoaded(onReady) {
@@ -184,7 +172,7 @@
         event.preventDefault();
         if (!rating) return;
         send.disabled = true;
-        const result = await ns.central.submitReview({ type, id: item.id, rating, comment: comment.value.trim(), voter: voterId() });
+        const result = await ns.central.submitReview({ type, id: item.id, rating, comment: comment.value.trim(), voter: ns.ui.deviceId() });
         if (result === 'ok' || result === 'duplicate') {
           const given = mine();
           given[itemKey] = result === 'ok' ? rating : given[itemKey] || rating;
@@ -227,9 +215,5 @@
   }
 
   /** Na inloggen of opslaan in Beheer: gemiddelden opnieuw ophalen. */
-  function refresh() {
-    return loadStats(true);
-  }
-
-  ns.reviews = { block, refresh, starRow, enabled, stats: loadStats, cached, whenLoaded, ratingChip, rank, averageText };
+  ns.reviews = { block, starRow, enabled, stats: loadStats, whenLoaded, ratingChip, rank, averageText };
 })(window.AIAudit);

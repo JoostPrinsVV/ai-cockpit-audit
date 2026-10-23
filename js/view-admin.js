@@ -22,6 +22,9 @@
   'use strict';
 
   const { el, icon, toast, formatDate, pageHeader } = ns.ui;
+  const { notice } = ns.blocks;
+  const kit = ns.adminKit;
+  const loadFailed = (error) => notice({ tone: 'warning', title: 'Laden mislukt', text: error.message });
   const view = { status: 'open', kind: 'all', days: 90, reviews: 'todo' };
   const PLAIN_EMAIL = /^[^\s@?&#%]+@[^\s@?&#%]+$/;
   const TABS = [
@@ -107,13 +110,7 @@
   function exportCsv(items) {
     const columns = ['id', 'created_at', 'kind', 'status', 'is_public', 'allow_public', 'votes', 'phase', 'title', 'body', 'name', 'email', 'answer', 'answered_at'];
     const lines = [columns.join(';')].concat(items.map((item) => columns.map((column) => csvCell(item[column])).join(';')));
-    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = el('a', { attrs: { href: url, download: 'ideeenhub-' + new Date().toISOString().slice(0, 10) + '.csv' } });
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+    ns.adminKit.download('ideeenhub-' + new Date().toISOString().slice(0, 10) + '.csv', '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8');
   }
 
   function adminItem(item, onChanged) {
@@ -134,7 +131,7 @@
         toast('Opgeslagen', { tone: 'success' });
         onChanged();
       } catch (error) {
-        toast('Opslaan mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+        kit.failed('Opslaan', error);
       } finally {
         save.disabled = false;
       }
@@ -148,7 +145,7 @@
         toast('Verwijderd');
         onChanged();
       } catch (error) {
-        toast('Verwijderen mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+        kit.failed('Verwijderen', error);
         remove.disabled = false;
       }
     });
@@ -231,7 +228,7 @@
         items = await ns.central.adminListIdeas();
         update();
       } catch (error) {
-        list.replaceChildren(el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [el('p', { className: 'notice__title', text: 'Laden mislukt' }), el('p', { text: error.message })])]));
+        list.replaceChildren(loadFailed(error));
         if (!ns.central.signedIn()) container.dispatchEvent(new CustomEvent('signedout'));
       }
     }
@@ -277,7 +274,7 @@
           toast(item.is_public ? 'Gepubliceerd: de toelichting staat nu bij de ' + (item.item_type === 'usecase' ? 'usecase' : 'prompt') : 'Verborgen', { tone: 'success' });
           update();
         } catch (error) {
-          toast('Mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+          kit.failed('Opslaan', error);
           publish.disabled = false;
         }
       });
@@ -290,7 +287,7 @@
           toast('Verwijderd');
           update();
         } catch (error) {
-          toast('Verwijderen mislukt: ' + error.message, { tone: 'warning', duration: 6000 });
+          kit.failed('Verwijderen', error);
           remove.disabled = false;
         }
       });
@@ -346,7 +343,7 @@
         update();
       } catch (error) {
         summary.replaceChildren();
-        list.replaceChildren(el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [el('p', { className: 'notice__title', text: 'Laden mislukt' }), el('p', { text: error.message })])]));
+        list.replaceChildren(loadFailed(error));
       }
     }
 
@@ -436,7 +433,7 @@
           el('p', { className: 'field__hint', text: 'Anonieme tellers: er wordt niet bijgehouden wie iets bekijkt of kopieert.' })
         );
       } catch (error) {
-        body.replaceChildren(el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [el('p', { className: 'notice__title', text: 'Laden mislukt' }), el('p', { text: error.message })])]));
+        body.replaceChildren(loadFailed(error));
       }
     }
 
@@ -540,7 +537,7 @@
               toast('Rol ingetrokken');
               load();
             } catch (err) {
-              toast('Niet gelukt: ' + err.message, { tone: 'warning', duration: 7000 });
+              kit.failed('Aanpassen', err, 7000);
             }
           });
           return el('li', { className: 'admin-person__role' }, [
@@ -568,10 +565,7 @@
           ...sorted.map(([address, roles]) => personCard(address, roles))
         );
       } catch (err) {
-        list.replaceChildren(el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [
-          el('p', { className: 'notice__title', text: 'Beheerders zijn niet te lezen' }),
-          el('p', { text: err.message + '. Is setup/supabase-audit-bewerken.sql (stap 7) al uitgevoerd?' })
-        ])]));
+        list.replaceChildren(notice({ tone: 'warning', title: 'Beheerders zijn niet te lezen', text: err.message + '. Is setup/supabase-audit-bewerken.sql (stap 7) al uitgevoerd?' }));
       }
     }
 
@@ -605,10 +599,7 @@
     let canLeave = null;
 
     if (!ns.central.isEnabled()) {
-      content.append(el('div', { className: 'notice' }, [icon('info'), el('div', {}, [
-        el('p', { className: 'notice__title', text: 'Geen centrale opslag ingesteld' }),
-        el('p', { text: 'Vul centralUrl en centralKey in in js/config.js en voer setup/supabase-audit.sql uit.' })
-      ])]));
+      content.append(notice({ title: 'Geen centrale opslag ingesteld', text: 'Vul centralUrl en centralKey in in js/config.js en voer setup/supabase-audit.sql uit.' }));
       return { node, title: 'Beheer' };
     }
     if (!ns.central.signedIn()) {
@@ -646,7 +637,7 @@
       panel
     );
     if (!allowedTabs.length) {
-      panel.append(el('div', { className: 'notice notice--warning' }, [icon('lock'), el('div', {}, [el('p', { text: `Je hebt geen rol in ${disciplineName}. Kies een andere discipline of vraag een hoofdbeheerder om rechten.` })])]));
+      panel.append(notice({ tone: 'warning', icon: 'lock', text: `Je hebt geen rol in ${disciplineName}. Kies een andere discipline of vraag een hoofdbeheerder om rechten.` }));
     } else if (tab === 'gebruik') usageTab(panel);
     else if (tab === 'beheerders') adminsTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);

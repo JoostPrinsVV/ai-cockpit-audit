@@ -95,7 +95,7 @@
 
   /**
    * Melding in de pagina. o: tone ('' | 'warning' | 'cta'), icon, title, text (tekst of nodes),
-   * action (knop of link), className (extra).
+   * more (nodes onder de tekst), action (knop of link, naast de tekst), className (extra).
    */
   function notice(o) {
     const tone = o.tone ? ' notice--' + o.tone : '';
@@ -103,7 +103,8 @@
       icon(o.icon || (o.tone === 'warning' ? 'alert' : 'info')),
       el('div', {}, [
         o.title ? el('p', { className: 'notice__title', text: o.title }) : null,
-        o.text ? el('p', {}, typeof o.text === 'string' ? [o.text] : o.text) : null
+        o.text ? el('p', {}, typeof o.text === 'string' ? [o.text] : o.text) : null,
+        ...(o.more || [])
       ]),
       o.action || null
     ]);

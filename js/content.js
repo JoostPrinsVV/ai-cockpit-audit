@@ -15,10 +15,10 @@
 (function (ns) {
   'use strict';
 
-  const { normalize } = ns.ui;
-  const ID_PATTERN = /^[a-z0-9-]+$/;
+  const { normalize, ACCENTS } = ns.ui;
+  // Adres van een item: kleine letters, cijfers en streepjes (ook de controle in Beheer)
+  const ID_PATTERN = /^[a-z0-9-]{1,80}$/;
   const DATE = /^\d{4}-\d{2}-\d{2}$/;
-  const ACCENTS = ['teal', 'crimson', 'steel', 'rose', 'deepteal', 'navy'];
   const TIP_ACCENTS = ['crimson', 'teal', 'steel', 'deepteal', 'rose', 'navy'];
 
   const state = {
@@ -781,5 +781,7 @@
     return state;
   }
 
-  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES });
+  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES,
+    // Dezelfde controles in Beheer (js/admin-content.js)
+    patterns: { ID_PATTERN, LOCAL_PATH, HTTPS_URL, LEGACY_ASSETS } });
 })(window.AIAudit);

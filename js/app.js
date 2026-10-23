@@ -355,7 +355,7 @@
      Bezoekers laden de beheercode niet (ruim een derde van alle JavaScript, plus css/admin.css).
      Wie ingelogd is of naar #/beheer gaat, krijgt hem erbij, met de bestanden in data/ (voor
      Overzetten en inrichten). De volgorde van de scripts is belangrijk. */
-  const ADMIN_SCRIPTS = ['js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/view-admin.js', 'js/editmode.js'];
+  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/view-admin.js', 'js/editmode.js'];
   let adminLoading = null;
 
   function loadAdmin() {
@@ -533,16 +533,16 @@
   function initTheme() {
     const saved = storage.get('theme', '');
     applyTheme(saved === 'licht' || saved === 'donker' ? saved : baseConfig.theme === 'donker' ? 'donker' : 'licht');
-    document.getElementById('theme-button').addEventListener('click', () => {
+    const button = document.getElementById('theme-button');
+    button.addEventListener('click', () => {
       const next = document.documentElement.dataset.theme === 'donker' ? 'licht' : 'donker';
-      applyTheme(next);
+      // Het nieuwe thema groeit als een cirkel vanuit de knop (js/motion.js)
+      ns.motion.reveal(button, () => applyTheme(next));
       storage.set('theme', next);
     });
   }
 
   /* ---- Kop en voet ----------------------------------------------------------------- */
-  const COUNT_WORDS = ['', 'Eén', 'Twee', 'Drie', 'Vier', 'Vijf', 'Zes', 'Zeven', 'Acht', 'Negen', 'Tien'];
-
   function fillChrome() {
     document.getElementById('brand-title').textContent = config.applicationTitle;
     ns.cockpit.renderSwitcher();
@@ -552,7 +552,7 @@
       el('li', { className: 'rules__item' }, [el('span', { className: 'rules__number', text: String(index + 1) }), el('span', { text: rule })])
     ));
     document.getElementById('rules-heading').textContent = rules.length <= 10
-      ? `${COUNT_WORDS[rules.length]} gouden ${rules.length === 1 ? 'regel' : 'regels'}`
+      ? `${ns.ui.countWord(rules.length)} gouden ${rules.length === 1 ? 'regel' : 'regels'}`
       : 'Gouden regels';
     document.getElementById('rules-section').hidden = !rules.length;
     document.getElementById('footer-updated').textContent = config.lastUpdated ? 'Laatst bijgewerkt: ' + config.lastUpdated : '';
@@ -573,15 +573,13 @@
         discipline: 'Audit',
         organizationName: 'Visser & Visser',
         theme: 'licht',
-        namespace: 'ai-audit',
         storageNamespace: 'ai-snackbar-audit'
       }, ns.config || {});
       ns.ui.init({ config: baseConfig });
       ns.central.init({ config: baseConfig });
-      // Welke discipline (zet ook de naamruimte voor inzendingen en tellers)
-      ns.cockpit.init({ config: baseConfig, admin: Boolean(ns.central.signedIn()) && ns.central.isAdmin() });
+      // Welke discipline: bepaalt de naamruimte van de inhoud, inzendingen en tellers (central leest die per verzoek)
+      baseConfig.namespace = ns.cockpit.init({ admin: Boolean(ns.central.signedIn()) && ns.central.isAdmin() });
       config = Object.assign({}, baseConfig);
-      storage.remove('inhoud'); // bewaarplek van vóór de disciplines
       initTheme();
       fillChrome();
       ns.instruments.init();

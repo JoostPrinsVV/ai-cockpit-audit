@@ -15,8 +15,8 @@
   'use strict';
 
   const { el, icon, toast, accentClass } = ns.ui;
+  const kit = ns.adminKit;
   const confirm = (message, options) => ns.ui.confirmDialog(message, options);
-  const ACCENT_LABELS = { teal: 'Turquoise', crimson: 'Rood', steel: 'Staalblauw', rose: 'Roze', deepteal: 'Donkerturquoise', navy: 'Donkerblauw' };
   const FIELDS = [
     { key: 'name', label: 'Naam', hint: 'In de kopbalk en de wisselaar.', required: true, half: true },
     { key: 'description', label: 'Korte omschrijving', hint: 'In de wisselaar, onder de naam.', half: true },
@@ -27,10 +27,6 @@
 
   let uid = 0;
   const nextId = () => 'dsc' + (++uid);
-
-  function slugify(value) {
-    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
-  }
 
   function field(label, input, hint, half) {
     const id = input.id || (input.id = nextId());
@@ -46,7 +42,7 @@
     let initial = JSON.stringify(list);
     let openDetails = '';
     const listNode = el('ol', { className: 'disc-list', attrs: { role: 'list' } });
-    const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
+    const formError = kit.formError();
 
     function row(discipline, index) {
       const isNew = Boolean(discipline._new);
@@ -73,7 +69,7 @@
           discipline[f.key] = input.value;
           if (f.key === 'name') {
             nameNode.textContent = input.value || 'Nieuwe discipline';
-            if (isNew && !discipline._idTouched && inputs.id) inputs.id.value = discipline.id = slugify(input.value);
+            if (isNew && !discipline._idTouched && inputs.id) inputs.id.value = discipline.id = kit.slug(input.value, 40);
           }
         });
         inputs[f.key] = input;
@@ -89,9 +85,9 @@
         inputs.id = idInput;
         fields.splice(1, 0, field('Code (id) *', idInput, 'Kleine letters, cijfers en streepjes. Komt in het adres (?d=…) en verandert daarna niet meer.', true));
       }
-      const iconSelect = el('select', { className: 'field__input' }, Array.from(document.querySelectorAll('svg.sprite symbol')).map((symbol) => symbol.id.replace(/^i-/, '')).sort().map((name) => el('option', { attrs: { value: name }, text: name })));
+      const iconSelect = el('select', { className: 'field__input' }, kit.iconNames().map((name) => el('option', { attrs: { value: name }, text: name })));
       iconSelect.value = discipline.icon;
-      const accentSelect = el('select', { className: 'field__input' }, ns.cockpit.ACCENTS.map((accent) => el('option', { attrs: { value: accent }, text: ACCENT_LABELS[accent] || accent })));
+      const accentSelect = el('select', { className: 'field__input' }, kit.accentOptions().map((o) => el('option', { attrs: { value: o.value }, text: o.label })));
       accentSelect.value = discipline.accent;
       const markNode = el('span', { className: 'disc__icon ' + accentClass(discipline.accent), attrs: { 'aria-hidden': 'true' } }, [icon(discipline.icon)]);
       iconSelect.addEventListener('change', () => {
@@ -195,12 +191,11 @@
 
     const save = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('check'), el('span', { text: 'Opslaan' })]);
     save.addEventListener('click', async () => {
-      formError.hidden = true;
+      formError.hide();
       const cleaned = clean();
       const message = problem(cleaned);
       if (message) {
-        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: message })]));
-        formError.hidden = false;
+        formError.show(message);
         return;
       }
       const names = (status) => cleaned.filter((d) => (status === 'open') === (d.status === 'open')).map((d) => d.name).join(', ') || 'geen';
@@ -212,8 +207,7 @@
         await ns.app.reloadContent();
         toast('Opgeslagen', { tone: 'success' });
       } catch (error) {
-        formError.replaceChildren(el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Opslaan mislukt: ' + error.message })]));
-        formError.hidden = false;
+        formError.show('Opslaan mislukt: ' + error.message);
       } finally {
         save.disabled = false;
       }
@@ -222,12 +216,9 @@
     draw();
     initial = JSON.stringify(list);
     const node = el('div', { className: 'cms' }, [
-      el('div', { className: 'notice' }, [icon('info'), el('div', {}, [
-        el('p', { className: 'notice__title', text: 'Open of op slot' }),
-        el('p', { text: 'Een discipline op slot staat in de wisselaar met een slotje: collega\'s kunnen er nog niet in. Jij als beheerder wel, zodat je de inhoud alvast klaarzet via Inhoud. Zet hem open zodra hij klaar is.' })
-      ])]),
+      ns.blocks.notice({ title: 'Open of op slot', text: 'Een discipline op slot staat in de wisselaar met een slotje: collega\'s kunnen er nog niet in. Jij als beheerder wel, zodat je de inhoud alvast klaarzet via Inhoud. Zet hem open zodra hij klaar is.' }),
       listNode,
-      formError,
+      formError.node,
       el('div', { className: 'cms-form__actions' }, [save, add])
     ]);
     return { node, canLeave: () => JSON.stringify(list) === initial };

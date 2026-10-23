@@ -261,28 +261,23 @@
   }
 
   /* ---- Thema: een cirkel vanuit de knop ---------------------------------------------------- */
-  let themeBusy = false;
-  document.addEventListener('click', (event) => {
-    const button = event.target.closest && event.target.closest('#theme-button');
-    if (!button || themeBusy || !canTransition()) return;
-    event.stopImmediatePropagation();
-    event.preventDefault();
-    const box = button.getBoundingClientRect();
+  /** Voert change() uit (bijv. het thema wisselen) met een cirkel die vanuit from (de knop) over de pagina groeit. */
+  function reveal(from, change) {
+    if (!canTransition()) {
+      change();
+      return;
+    }
+    const box = from.getBoundingClientRect();
     const x = box.left + box.width / 2;
     const y = box.top + box.height / 2;
     const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
     root.classList.add('vt-theme');
-    const transition = document.startViewTransition(() => {
-      // De gewone knop (js/app.js) wisselt het thema
-      themeBusy = true;
-      button.click();
-      themeBusy = false;
-    });
+    const transition = document.startViewTransition(change);
     transition.ready.then(() => {
       root.animate({ clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] }, { duration: 650, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', pseudoElement: '::view-transition-new(root)' });
     }).catch(() => null);
     settle(transition, () => root.classList.remove('vt-theme'));
-  }, true);
+  }
 
   /* ---- Kleine reacties ---------------------------------------------------------------------- */
   // In de vangfase: de kopieer- en bladwijzerknop geven hun klik niet door
@@ -318,6 +313,7 @@
   ns.motion = {
     swap,
     filter,
+    reveal,
     /** Vraagt de computer om minder beweging? (dan ook niet soepel scrollen) */
     calm
   };

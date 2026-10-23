@@ -121,20 +121,6 @@
     if (use) use.setAttribute('href', '#i-' + name);
   }
 
-  /** Knop of link met icoon en tekst. */
-  function button(label, options) {
-    const opts = options || {};
-    const tag = opts.href ? 'a' : 'button';
-    const attrs = Object.assign({}, opts.attrs);
-    if (opts.href) attrs.href = opts.href;
-    else attrs.type = opts.type || 'button';
-    const node = el(tag, { className: 'btn ' + (opts.className || 'btn--secondary'), attrs, on: opts.on }, [
-      opts.icon ? icon(opts.icon) : null,
-      el('span', { text: label })
-    ]);
-    return node;
-  }
-
   /* ---- Lokale opslag (alleen op dit apparaat) --------------------------------
      Kan leeg terugkomen of weigeren (privévenster, geblokkeerde opslag):
      alles werkt dan gewoon, alleen zonder onthouden. */
@@ -177,6 +163,16 @@
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
     return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  /** Vaste willekeurige code voor dit apparaat: één stem of review per item, zonder persoonsgegevens. */
+  function deviceId() {
+    let id = storage.get('voterId', '');
+    if (!id) {
+      id = randomId();
+      storage.set('voterId', id);
+    }
+    return id;
   }
 
   /* ---- Bewaren en recent bekeken (alleen in deze browser) -------------------------
@@ -553,9 +549,16 @@
   }
 
   /* ---- Kleine bouwstenen ------------------------------------------------------------ */
+  // De kleuren van de huisstijl (de klassen .accent-<kleur> in css/audit.css)
+  const ACCENTS = ['teal', 'crimson', 'steel', 'rose', 'deepteal', 'navy'];
+
   function accentClass(accent) {
     return 'accent-' + (accent || 'navy');
   }
+
+  const COUNT_WORDS = ['Nul', 'Eén', 'Twee', 'Drie', 'Vier', 'Vijf', 'Zes', 'Zeven', 'Acht', 'Negen', 'Tien'];
+  /** Aantal als woord aan het begin van een zin: 3 → 'Drie'; vanaf 11 het getal. */
+  const countWord = (n) => COUNT_WORDS[n] || String(n);
 
   function licenseBadge(license, options) {
     if (license !== true && license !== false) return null;
@@ -569,18 +572,19 @@
     return isNew(added) ? el('span', { className: 'badge badge--new' }, [icon('sparkle'), 'Nieuw']) : null;
   }
 
-  /** Alleen zichtbaar voor beheerders: inhoud die nog niet gepubliceerd is. */
-  /** Voor beheerders: concept, of een wijziging die nog niet live staat (zie js/editor.js). */
-  const CHANGE_BADGES = {
+  /** Wijzigingen die nog niet live staan, met hun label (zie changeOf in js/editor.js). */
+  const CHANGES = {
     'niet opgeslagen': { text: 'Niet opgeslagen', title: 'Gewijzigd, nog niet opgeslagen' },
     nieuw: { text: 'Nieuw', title: 'Nieuw item, nog niet gepubliceerd' },
     gewijzigd: { text: 'Gewijzigd', title: 'Opgeslagen wijziging, nog niet gepubliceerd' },
     voorstel: { text: 'Voorstel', title: 'Voorstel, wacht op publicatie door een beheerder' },
-    gepland: { text: 'Gepland', title: 'Gaat automatisch live op het geplande moment' }
+    gepland: { text: 'Gepland', title: 'Gaat automatisch live op het geplande moment' },
+    verwijderen: { text: 'Wordt verwijderd', title: 'Verdwijnt van de site zodra het gepubliceerd is' }
   };
+  /** Alleen voor beheerders: concept, of een wijziging die nog niet live staat. */
   function draftBadge(item) {
     if (!item) return null;
-    const change = CHANGE_BADGES[item.change];
+    const change = CHANGES[item.change];
     if (change) return el('span', { className: 'badge badge--change', attrs: { title: change.title } }, [icon('pencil-line'), change.text]);
     return item.draft ? el('span', { className: 'badge badge--draft', attrs: { title: 'Concept: alleen zichtbaar voor beheerders' } }, [icon('pencil-line'), 'Concept']) : null;
   }
@@ -590,10 +594,9 @@
     return el('span', { className: 'chip ' + (opts.className || '') }, [opts.icon ? icon(opts.icon) : null, text]);
   }
 
-  /** Paginakop: terugknop (optioneel), eyebrow, titel, lead. */
+  /** Paginakop van een overzicht: eyebrow, titel, lead (een detailpagina: ns.blocks.detailHeader). */
   function pageHeader(options) {
     return el('header', { className: 'page-head' }, [
-      options.back ? el('a', { className: 'btn btn--back btn--sm', attrs: { href: options.back.href } }, [icon('arrow-left'), el('span', { text: options.back.label })]) : null,
       options.eyebrow ? el('p', { className: 'page-head__eyebrow', text: options.eyebrow }) : null,
       el('h1', { className: 'page-head__title', text: options.title, attrs: { tabindex: '-1' } }),
       options.lead ? el('p', { className: 'page-head__lead', text: options.lead }) : null
@@ -665,12 +668,11 @@
     loadScripts,
     loadStyle,
     el,
-    append,
     icon,
     setIcon,
-    button,
     storage,
     randomId,
+    deviceId,
     saved,
     viewed,
     saveButton,
@@ -684,14 +686,15 @@
     normalize,
     matches,
     formatDate,
-    parseDate,
-    isNew,
     parsePlaceholders,
     fillPlaceholders,
     promptNodes,
+    ACCENTS,
     accentClass,
+    countWord,
     licenseBadge,
     newBadge,
+    CHANGES,
     draftBadge,
     chip,
     pageHeader,

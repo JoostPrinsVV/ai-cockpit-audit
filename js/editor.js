@@ -234,7 +234,10 @@
   }
 
   /* ---- Weergave: de site met werkversies erin --------------------------------------- */
-  function changeLabel(row) {
+  /** Wat er met een opgeslagen werkversie gebeurt bij publiceren: een sleutel uit ns.ui.CHANGES, of '' zonder werkversie. */
+  function changeOf(row) {
+    if (!row.draft) return '';
+    if (row.draft.status === 'trash') return 'verwijderen';
     if (row.publish_at) return 'gepland';
     if (row.draft_kind === 'voorstel') return 'voorstel';
     return row.status === 'draft' ? 'nieuw' : 'gewijzigd';
@@ -255,7 +258,7 @@
         data: state.data,
         position: state.position,
         status: state.status === 'trash' ? 'trash' : 'published',
-        _change: local ? 'niet opgeslagen' : changeLabel(row)
+        _change: local ? 'niet opgeslagen' : changeOf(row)
       });
     });
     pending.forEach((entry) => {
@@ -307,7 +310,7 @@
   function askConflict(item, result) {
     const who = result.draft_by || result.updated_by || '';
     const at = result.draft_at || result.updated_at;
-    const stamp = at ? ' (' + new Date(at).toLocaleString('nl-NL', { dateStyle: 'short', timeStyle: 'short' }) + ')' : '';
+    const stamp = at ? ' (' + ns.adminKit.moment(at) + ')' : '';
     // Zelf opgeslagen, bijvoorbeeld in een ander tabblad
     if (who && who.toLowerCase() === (ns.central.signedIn() || '').toLowerCase()) {
       return confirm(`Je hebt "${item.title || item.id}" intussen zelf opgeslagen${stamp}, misschien in een ander tabblad. Welke versie wil je houden?`, {
@@ -438,11 +441,11 @@
       const scheduled = (result && result.scheduled) || 0;
       const parts = [];
       if (done) parts.push(done === 1 ? '1 item staat live' : done + ' items staan live');
-      if (scheduled) parts.push(`${scheduled === 1 ? '1 item' : scheduled + ' items'} gepland op ${new Date(at).toLocaleString('nl-NL', { dateStyle: 'medium', timeStyle: 'short' })}`);
+      if (scheduled) parts.push(`${scheduled === 1 ? '1 item' : scheduled + ' items'} gepland op ${ns.adminKit.moment(at)}`);
       if (skipped.length) parts.push(`${skipped.length} overgeslagen (${skipped.map((s) => s.reason).join(', ')})`);
       toast(parts.join(' · ') || 'Niets gepubliceerd', { tone: skipped.length ? 'warning' : 'success', duration: 6000 });
     } catch (error) {
-      toast('Publiceren mislukt: ' + error.message, { tone: 'warning', duration: 8000 });
+      ns.adminKit.failed('Publiceren', error, 8000);
     } finally {
       busy = false;
       emit();
@@ -458,7 +461,7 @@
       toast('Weggegooid');
       return true;
     } catch (error) {
-      toast('Weggooien mislukt: ' + error.message, { tone: 'warning', duration: 7000 });
+      ns.adminKit.failed('Weggooien', error, 7000);
       return false;
     }
   }
@@ -891,6 +894,7 @@
     watch,
     setPageItem,
     setVisitorView,
-    savedState
+    savedState,
+    changeOf
   };
 })(window.AIAudit);

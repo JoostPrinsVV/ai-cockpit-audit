@@ -19,14 +19,13 @@
    *   headingTag  'h2' of 'h3' (standaard 'h3')
    *   copyLabel   Tekst op de kopieerknop
    *   onCopy      Wordt aangeroepen na kopiëren
-   *   fillable    false = geen 'Invullen'
    *   collapsed   true = lange prompt eerst ingeklapt
    */
   function create(options) {
     const opts = options || {};
     const id = 'pb-' + (++counter);
     const text = opts.text || '';
-    const fields = opts.fillable === false ? [] : parsePlaceholders(text);
+    const fields = parsePlaceholders(text);
     const values = {};
 
     const pre = el('pre', { className: 'prompt-box__text', attrs: { id: id + '-text', tabindex: '0', 'aria-label': opts.label ? 'Prompt: ' + opts.label : 'Prompt' } });

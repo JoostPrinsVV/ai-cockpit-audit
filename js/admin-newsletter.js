@@ -95,14 +95,13 @@
     // Alleen voor wie de nieuwsbrief kan maken (het tabblad is er alleen voor hoofdbeheerders)
     if (!lastDayOfMonth(today) || !ns.central.signedIn() || !ns.rights.isOwner()) return null;
     const name = MONTHS[parse(today).getMonth()];
-    return el('div', { className: 'notice notice--cta' }, [
-      icon('mail'),
-      el('div', {}, [
-        el('p', { className: 'notice__title', text: `Vandaag is de laatste dag van ${name}` }),
-        el('p', { text: 'De maandnieuwsbrief is compleet en staat klaar om te downloaden als PDF of e-mail.' })
-      ]),
-      el('a', { className: 'btn btn--primary btn--sm', attrs: { href: '#/beheer/nieuwsbrief' } }, [icon('mail'), el('span', { text: 'Naar de nieuwsbrief' })])
-    ]);
+    return ns.blocks.notice({
+      tone: 'cta',
+      icon: 'mail',
+      title: `Vandaag is de laatste dag van ${name}`,
+      text: 'De maandnieuwsbrief is compleet en staat klaar om te downloaden als PDF of e-mail.',
+      action: ns.blocks.linkButton('#/beheer/nieuwsbrief', 'mail', 'Naar de nieuwsbrief', 'btn--primary btn--sm')
+    });
   }
 
   /* ---- Verzamelen ------------------------------------------------------------------- */
@@ -450,15 +449,6 @@ ${row(`<div style="height:8px;"></div>` +
     ].join('\r\n');
   }
 
-  function download(name, text, type) {
-    const url = URL.createObjectURL(new Blob([text], { type }));
-    const link = el('a', { attrs: { href: url, download: name } });
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-  }
-
   /** PDF: het voorbeeld afdrukken, de rest van de pagina verborgen (zie @media print in css/audit.css). */
   function printPdf(doc, node) {
     const root = el('div', { className: 'nl-print', attrs: { id: 'nl-print' } }, [node.cloneNode(true)]);
@@ -599,7 +589,7 @@ ${row(`<div style="height:8px;"></div>` +
       const reset = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Standaardteksten en -keuze terugzetten' })]);
       pdf.addEventListener('click', () => printPdf(current.doc, previewSlot.querySelector('.nl-doc')));
       mail.addEventListener('click', () => {
-        download(`${current.doc.subject.replace(/[\\/:*?"<>|]+/g, '-')}.eml`, eml(current.doc), 'message/rfc822');
+        ns.adminKit.download(`${current.doc.subject.replace(/[\\/:*?"<>|]+/g, '-')}.eml`, eml(current.doc), 'message/rfc822');
         toast('E-mail gedownload: open het bestand, dan opent Outlook een nieuw bericht. Vul de ontvangers in en verstuur.', { duration: 7000 });
       });
       copy.addEventListener('click', async () => {
@@ -645,5 +635,5 @@ ${row(`<div style="height:8px;"></div>` +
     return { node };
   }
 
-  ns.adminNewsletter = { render, reminder, period, collect, documentFor, emailHtml, plainText };
+  ns.adminNewsletter = { render, reminder };
 })(window.AIAudit);

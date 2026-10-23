@@ -280,7 +280,6 @@
 
   /* ---- Naslagwerk: wat je meeneemt, aan de slag, uit de zaal, vervolg ------------------ */
   const KEYPOINT_ACCENTS = ['teal', 'steel', 'deepteal', 'navy'];
-  const COUNT_WORDS = ['', 'Eén', 'Twee', 'Drie', 'Vier', 'Vijf', 'Zes', 'Zeven', 'Acht', 'Negen', 'Tien'];
   // 'December' → 'december' (maar 'Q1' blijft 'Q1')
   const lowerFirst = (value) => (/^[A-Z][a-z]/.test(value) ? value.charAt(0).toLowerCase() + value.slice(1) : value);
 
@@ -412,7 +411,7 @@
     const parts = [];
     const points = training.takeaways.length;
     if (points) {
-      const intro = points === 1 ? 'Het belangrijkste om te onthouden, ook als je verder niets leest.' : `${COUNT_WORDS[points] || points} dingen om te onthouden, ook als je verder niets leest.`;
+      const intro = points === 1 ? 'Het belangrijkste om te onthouden, ook als je verder niets leest.' : `${ns.ui.countWord(points)} dingen om te onthouden, ook als je verder niets leest.`;
       parts.push(naslagSection('naslag-meenemen', 'Wat je meeneemt', intro, [keypointList(training)]));
     }
     if (training.actions.length) {

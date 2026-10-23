@@ -15,13 +15,12 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, accentClass, storage } = ns.ui;
+  const { el, icon, accentClass, storage, ACCENTS } = ns.ui;
   const PREFIX = 'ai-';
   const GENERAL = 'algemeen';
   const REGISTRY_ID = 'disciplines';
   const FILES_ID = 'audit'; // de discipline waarvan de eigen inhoud in data/ staat
   const ID_PATTERN = /^[a-z0-9-]{1,40}$/;
-  const ACCENTS = ['teal', 'crimson', 'steel', 'rose', 'deepteal', 'navy'];
 
   const text = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -73,7 +72,10 @@
   }
 
   /* ---- Opstarten ----------------------------------------------------------------- */
-  /** Kiest de discipline vóór het ophalen van de inhoud (lijst: laatst bekende uit de database, anders de bestanden). */
+  /**
+   * Kiest de discipline vóór het ophalen van de inhoud (lijst: laatst bekende uit de database,
+   * anders de bestanden). Geeft de naamruimte van die discipline.
+   */
   function init(options) {
     admin = Boolean(options.admin);
     const cached = storage.get('disciplines', null);
@@ -86,9 +88,9 @@
       window.history.replaceState(window.history.state, '', href(activeId, window.location.hash));
       if (find(requested)) window.setTimeout(() => ns.ui.toast(`${find(requested).name} staat nog op slot. Je bent in de cockpit van ${active().name}.`, { duration: 6000 }), 800);
     }
-    options.config.namespace = namespace(activeId);
     setupSwitcher();
     setupFit();
+    return namespace(activeId);
   }
 
   /** Na inloggen of uitloggen (zonder de pagina te herladen). */
@@ -320,23 +322,18 @@
     GENERAL_NAMESPACE: PREFIX + GENERAL,
     REGISTRY_ID,
     ID_PATTERN,
-    ACCENTS,
     init,
     setAdmin,
     updateRegistry,
-    normalize,
     activeId: () => activeId,
     active,
     find,
     registry: () => registry.slice(),
     namespace,
     href,
-    isAdmin: () => admin,
-    showShared,
     sharedBadge,
     sharedNote,
     lockBar,
-    renderSwitcher,
-    fit
+    renderSwitcher
   };
 })(window.AIAudit);
