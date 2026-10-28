@@ -221,12 +221,15 @@
       });
     }
 
-    // Tekenen op de echte breedte (scherp en leesbaar, ook op een telefoon), en opnieuw als die verandert
+    // Tekenen op de echte breedte (scherp en leesbaar, ook op een telefoon), en opnieuw als die verandert.
+    // De eerste melding kan komen voordat de grafiek in de pagina staat: dan wachten; pas stoppen als hij weer weg is.
+    let shown = false;
     const observer = new ResizeObserver((entries) => {
       if (!section.isConnected) {
-        observer.disconnect();
+        if (shown) observer.disconnect();
         return;
       }
+      shown = true;
       const next = Math.round(entries[0].contentRect.width);
       if (next && next !== width) {
         width = next;

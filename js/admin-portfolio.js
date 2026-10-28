@@ -388,11 +388,14 @@
       box.replaceChildren(root, readout);
     }
 
+    // De eerste melding kan komen voordat de matrix in de pagina staat: dan wachten; pas stoppen als hij weer weg is
+    let shown = false;
     const observer = new ResizeObserver((items) => {
       if (!box.isConnected) {
-        observer.disconnect();
+        if (shown) observer.disconnect();
         return;
       }
+      shown = true;
       const next = Math.round(items[0].contentRect.width);
       if (next && next !== width) {
         width = next;
