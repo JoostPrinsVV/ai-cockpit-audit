@@ -3,7 +3,7 @@
    inhoud laden, rechten, het soortenregister, de verzoeken naar Supabase
    (fetch nagebootst), de werkversies, het gereedschap van Beheer en het
    inlezen van het Copilot-gebruik (met een verzonnen bestand uit
-   fixture-copilot.js).
+   fixture-copilot.js) en de route van een idee per discipline.
    Draait in de browser (tests/index.html), zonder build of npm.
    ========================================================================== */
 (function (ns) {
@@ -457,6 +457,32 @@
       equal([standalone.length, standalone.filter((p) => p.promptBasic).length, standalone.filter((p) => p.followUps.length).length], [35, 17, 5]);
       // Alleen de gedeelde tips ontbreken hier (die komen uit de basis)
       equal(ns.content.issues.filter((issue) => !/tip/i.test(issue)), []);
+    });
+
+    /* ---- route van een idee ---- */
+    describe('Route van een idee (js/view-ideas.js, data/disciplines.js)');
+    const realCockpit = ns.cockpit;
+    const inDiscipline = (id, config) => {
+      ns.cockpit = { activeId: () => id };
+      try {
+        return ns.ideas.routeOf(config || {});
+      } finally {
+        ns.cockpit = realCockpit;
+      }
+    };
+    await test('standaard per discipline: Audit via team AI of team dAtA, een andere discipline zonder', () => {
+      const audit = inDiscipline('audit');
+      const other = inDiscipline('belastingadvies');
+      equal([audit.steps.length, other.steps.length], [8, 8]);
+      ok(audit.steps.some((step) => /team dAtA/.test(step.who)), 'Audit noemt team dAtA');
+      ok(!other.steps.some((step) => /dAtA/.test(step.who + step.text)) && !other.roles.some((role) => /dAtA/.test(role.name)), 'een andere discipline niet');
+      equal(audit.intro, ns.ideaRoutes.standaard.intro, 'de inleiding komt uit de standaard');
+    });
+    await test('Beheer gaat voor, per onderdeel; lege velden, stappen zonder titel en een link zonder https tellen niet', () => {
+      const route = inDiscipline('audit', { route: [{ title: 'Eigen stap', who: 'Wij' }, { who: 'zonder titel' }], routeRoles: [], routeIntro: '  ', routeLink: 'http://intranet/organogram' });
+      equal(route.steps, [{ title: 'Eigen stap', who: 'Wij' }]);
+      equal([route.roles.length, route.intro === ns.ideaRoutes.standaard.intro, route.link], [ns.ideaRoutes.audit.roles.length, true, '']);
+      equal(inDiscipline('audit', { routeLink: 'https://serviceplein.example/organogram' }).link, 'https://serviceplein.example/organogram');
     });
 
     describe('Copilot-gebruik opslaan (js/central.js, fetch nagebootst)');

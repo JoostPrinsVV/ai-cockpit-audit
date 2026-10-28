@@ -450,6 +450,77 @@
     };
   }
 
+  /* ---- Wat gebeurt er met je idee? (route van een idee) ------------------------------- */
+  /** De route van deze discipline: Beheer → Inhoud → Teksten gaat voor, anders de standaard uit data/disciplines.js. */
+  function routeOf(config) {
+    const defaults = ns.ideaRoutes || {};
+    const standard = Object.assign({}, defaults.standaard, defaults[ns.cockpit.activeId()]);
+    const filled = (value) => (Array.isArray(value) ? value.length > 0 : typeof value === 'string' && value.trim() !== '');
+    const pick = (setting, key) => (filled(config[setting]) ? config[setting] : standard[key]);
+    const link = String(pick('routeLink', 'link') || '').trim();
+    return {
+      intro: pick('routeIntro', 'intro') || '',
+      steps: (pick('route', 'steps') || []).filter((step) => step && step.title),
+      roles: (pick('routeRoles', 'roles') || []).filter((role) => role && role.name),
+      link: /^https:\/\//.test(link) ? link : ''
+    };
+  }
+
+  /** PDF (bijv. voor het Serviceplein): alleen de route afdrukken, de rest van de pagina verborgen (zie @media print in css/audit.css). */
+  function printRoute(section, config) {
+    const root = el('div', { className: 'route-print' }, [
+      el('p', { className: 'route-print__eyebrow', text: `${config.organizationName} · ${config.applicationTitle} ${config.discipline}` }),
+      section.cloneNode(true)
+    ]);
+    const title = document.title;
+    document.body.append(root);
+    document.body.classList.add('is-printing-route');
+    document.title = `Route van een idee - ${config.discipline}`;
+    const done = () => {
+      document.body.classList.remove('is-printing-route');
+      root.remove();
+      document.title = title;
+      window.removeEventListener('afterprint', done);
+    };
+    window.addEventListener('afterprint', done);
+    window.print();
+    window.setTimeout(() => { if (document.body.contains(root)) done(); }, 1500);
+  }
+
+  function routeBlock(config) {
+    const route = routeOf(config);
+    if (!route.steps.length) return null;
+    const steps = el('ol', { className: 'route__steps', attrs: { role: 'list' } }, route.steps.map((step, index) =>
+      el('li', { className: 'route__step' }, [
+        el('span', { className: 'route__number', text: String(index + 1), attrs: { 'aria-hidden': 'true' } }),
+        el('div', { className: 'route__body' }, [
+          el('h3', { className: 'route__title' }, [el('span', { className: 'sr-only', text: `Stap ${index + 1}: ` }), step.title]),
+          step.who ? el('p', { className: 'route__who' }, [icon('users'), el('span', { text: step.who })]) : null,
+          step.text ? el('p', { className: 'route__text', text: step.text }) : null,
+          step.exit ? el('p', { className: 'route__exit' }, [icon('arrow-right'), el('span', {}, [el('strong', { text: 'Afslag: ' }), step.exit])]) : null
+        ])
+      ])
+    ));
+    const roles = route.roles.length || route.link ? el('aside', { className: 'side-card route__roles', attrs: { 'aria-labelledby': 'roles-title' } }, [
+      el('h3', { className: 'side-card__title', attrs: { id: 'roles-title' } }, [icon('users'), el('span', { text: 'Wie doet wat' })]),
+      route.roles.length ? el('dl', { className: 'facts' }, route.roles.map((role) =>
+        el('div', { className: 'facts__row' }, [el('dt', { text: role.name }), role.text ? el('dd', { text: role.text }) : null])
+      )) : null,
+      route.link ? el('a', { className: 'section__link route__link', attrs: { href: route.link, target: '_blank', rel: 'noopener' } }, [
+        el('span', { text: 'Wie dat zijn: het organogram op het Serviceplein' }), icon('external')
+      ]) : null
+    ]) : null;
+    const section = el('section', { className: 'section section--tight route accent-teal', attrs: { id: 'route', 'aria-labelledby': 'route-title' } }, [
+      el('div', { className: 'section__head' }, [
+        el('h2', { className: 'section__title', text: 'Wat gebeurt er met je idee?', attrs: { id: 'route-title', tabindex: '-1' } }),
+        el('button', { className: 'btn btn--quiet btn--sm route__print', attrs: { type: 'button' }, on: { click: () => printRoute(section, config) } }, [icon('download'), el('span', { text: 'Afdrukken als PDF' })])
+      ]),
+      route.intro ? el('p', { className: 'section__lead', text: route.intro }) : null,
+      el('div', { className: 'route__layout' + (roles ? '' : ' route__layout--single') }, [steps, roles])
+    ]);
+    return section;
+  }
+
   function render(params, config) {
     const preselect = params[0] || '';
     const mine = mineBlock();
@@ -486,6 +557,7 @@
       done
     );
 
+    const route = routeBlock(config);
     const how = el('section', { className: 'side-card', attrs: { 'aria-labelledby': 'how-title' } }, [
       el('h2', { className: 'side-card__title', attrs: { id: 'how-title' } }, [icon('info'), el('span', { text: 'Zo werkt het' })]),
       ns.blocks.stepsList([
@@ -493,7 +565,12 @@
         'Het AI-team bekijkt iedere inzending en reageert.',
         'Goede ideeën worden een usecase, prompt of tip op dit platform.',
         'Antwoorden die voor iedereen nuttig zijn, zetten we (zonder naam) in de hub.'
-      ], 'small')
+      ], 'small'),
+      route ? el('a', { className: 'section__link', attrs: { href: '#route' }, on: { click: (event) => {
+        event.preventDefault();
+        route.scrollIntoView({ behavior: ns.motion.calm() ? 'auto' : 'smooth', block: 'start' });
+        route.querySelector('#route-title').focus({ preventScroll: true });
+      } } }, [el('span', { text: 'Van idee tot toepassing: de hele route' }), icon('arrow-down')]) : null
     ]);
 
     const node = el('div', { className: 'page container' }, [
@@ -503,12 +580,13 @@
         lead: 'Dit platform groeit met wat jullie inbrengen. Heb je een idee voor een usecase, loop je ergens tegenaan, wil je een demo voor je team of heb je een prompt die goed werkt? Laat het weten.'
       }),
       el('div', { className: 'ideas-layout' }, [formCard, el('div', { className: 'ideas-layout__side' }, [how, mine.node])]),
+      route,
       hubList(mine)
     ]);
     return { node, title: 'Ideeënhub' };
   }
 
-  ns.ideas = { KINDS, STATUSES, statusBadge, kindChip };
+  ns.ideas = { KINDS, STATUSES, statusBadge, kindChip, routeOf };
   ns.views = ns.views || {};
   ns.views.ideas = { render };
 })(window.AIAudit);

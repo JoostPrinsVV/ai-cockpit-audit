@@ -637,8 +637,8 @@
   /* ---- Bronnen: bestanden of database ------------------------------------------------ */
   const TYPES = ['phase', 'usecase', 'prompt', 'tip', 'training', 'agent'];
   // Teksten die je in Beheer kunt aanpassen (de rest van de instellingen blijft in js/config.js;
-  // de naam van de discipline komt uit Beheer → Disciplines)
-  const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules'];
+  // de naam van de discipline komt uit Beheer → Disciplines; de standaardroute van een idee uit data/disciplines.js)
+  const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules', 'routeIntro', 'route', 'routeRoles', 'routeLink'];
   // Bij het samenvoegen: eigen fasen, usecases en prompts vóór die van de basis; tips, trainingen en agents erna
   const OWN_FIRST = { phase: true, usecase: true, prompt: true };
   const filesId = () => (ns.cockpit ? ns.cockpit.FILES_ID : 'audit');

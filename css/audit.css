@@ -1982,6 +1982,34 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .mine__item .status { justify-self: start; }
 .mine__date { justify-self: end; color: var(--color-text-muted); font-size: var(--fs-xs); }
 
+/* Wat gebeurt er met je idee? (de route, js/view-ideas.js) */
+.route { margin-top: var(--space-7); }
+.route__layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+.route__layout--single { grid-template-columns: minmax(0, 1fr); max-width: 52rem; }
+.route__steps { display: grid; margin: 0; padding: 0; list-style: none; }
+.route__step { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); padding-bottom: var(--space-5); }
+.route__step:last-child { padding-bottom: 0; }
+/* De lijn van nummer naar nummer (een rand: blijft ook in hoog contrast zichtbaar) */
+.route__step:not(:last-child)::before { content: ''; position: absolute; top: 2.4rem; bottom: 0; left: calc(1.2rem - 1px); border-left: 2px solid var(--color-border-strong); }
+/* Een cijfer op een vol vlak: de tekstveilige variant, ook op papier */
+.route__number { display: grid; flex: none; place-items: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; background: var(--accent-ink); color: var(--color-on-ink); font-weight: var(--fw-bold); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.route__body { display: grid; justify-items: start; gap: var(--space-1); min-width: 0; padding-top: 0.35rem; }
+.route__title { font-size: var(--fs-md); }
+.route__who { display: flex; align-items: center; gap: var(--space-2); color: var(--accent-ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.route__who .icon { flex: none; }
+.route__text { color: var(--color-text-body); }
+/* Afslag: waar een idee de route verlaat */
+.route__exit { display: flex; align-items: flex-start; gap: var(--space-2); margin-top: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px dashed var(--color-border-input); border-radius: var(--radius-sm); background: var(--color-surface); color: var(--color-text-body); font-size: var(--fs-sm); }
+.route__exit .icon { flex: none; margin-top: 0.2em; color: var(--color-text-muted); }
+.route__exit strong { color: var(--color-text); }
+/* Namen van teams zoals ze geschreven worden (team dAtA), dus geen kapitalen */
+.route__roles dt { color: var(--color-text); font-size: var(--fs-sm); letter-spacing: normal; text-transform: none; }
+.route-print { display: none; }
+/* Breed scherm: 'Wie doet wat' blijft in beeld langs de stappen */
+@media (min-width: 1081px) {
+  .route__roles { position: sticky; top: calc(var(--sticky-top, 0px) + var(--space-5)); }
+}
+
 /* Uit de hub */
 .hub { margin-top: var(--space-7); }
 .hub__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: var(--grid-gap); }
@@ -2225,7 +2253,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 @media (max-width: 1080px) {
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .detail__layout { grid-template-columns: minmax(0, 1fr); }
-  .ideas-layout { grid-template-columns: minmax(0, 1fr); }
+  .ideas-layout, .route__layout { grid-template-columns: minmax(0, 1fr); }
   .kind-picker__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -2371,9 +2399,16 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   body { background: none; }
   .topbar, .footer, .skip-link, .toast-region, .edit-bar, .filters, .search, .fav, .hero__rose, .heading-tape,
   .prompt-box__actions, .prompt-box__expand, .p-card__actions, .player, .review__form, .cta, .detail .side-card, .related,
-  .empty__actions, .slides__strip, .naslag__toc, .checklist__progress { display: none !important; }
+  .empty__actions, .slides__strip, .naslag__toc, .checklist__progress, .route__print { display: none !important; }
   .page { padding-block: 0; }
-  .detail__layout, .ideas-layout, .naslag { grid-template-columns: minmax(0, 1fr); }
+  .detail__layout, .ideas-layout, .naslag, .route__layout { grid-template-columns: minmax(0, 1fr); }
+  /* Alleen de route (Ideeënhub → Afdrukken als PDF; js/view-ideas.js zet een kopie in .route-print) */
+  body.is-printing-route > *:not(.route-print) { display: none !important; }
+  body.is-printing-route > .route-print { display: block; }
+  .route-print__eyebrow { margin-bottom: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-sm); }
+  .route-print .route { margin-top: 0; padding-top: 0; }
+  .route__step, .route__roles { break-inside: avoid; }
+  .route__roles { box-shadow: none; }
   /* Prompts helemaal, ook als ze op het scherm ingeklapt zijn */
   .prompt-box__text, .p-card__preview .prompt-box__text { max-height: none; overflow: visible; }
   .prompt-box__body.is-collapsed::after { display: none; }

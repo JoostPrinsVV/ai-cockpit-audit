@@ -53,6 +53,14 @@
   const asOptions = (values) => values.map((value) => ({ value, label: value }));
   // Lijsten waaruit je bij 'refs' kiest
   const REF_LISTS = { usecase: 'usecases', tip: 'tips', training: 'trainings', phase: 'phases' };
+  // De standaardroute van een idee voor de omgeving waarin je werkt (data/disciplines.js): stappen of rollen
+  const routeDefaults = (key) => (ctx) => {
+    const routes = ns.ideaRoutes || {};
+    // Het zijpaneel in de bewerkmodus geeft alleen de naamruimte mee ('ai-<id>')
+    const match = ns.cockpit.registry().find((discipline) => ns.cockpit.namespace(discipline.id) === ctx.where.namespace);
+    const own = ctx.where.kind === 'basis' ? null : routes[ctx.where.id || (match ? match.id : '')];
+    return ((own && own[key]) || (routes.standaard || {})[key] || []).map((item) => Object.assign({}, item));
+  };
   const PUBLIC_WARNING = 'De site is openbaar bereikbaar: zet hier alleen informatie voor gebruikers. Geen configuratie, systeemprompts, technische instellingen of goedkeuringsdocumenten; voor de formele registratie link je naar het AI-register.';
 
   /* ---- Velden per soort ---------------------------------------------------------- */
@@ -243,7 +251,20 @@
         { key: 'applicationTitle', label: 'Naam van het platform', type: 'text', half: true },
         { key: 'tagline', label: 'Slogan onder de titel', type: 'text', placeholder: 'Jij bepaalt de koers, Copilot navigeert mee.' },
         { key: 'applicationSubtitle', label: 'Uitleg onder de slogan op de startpagina', type: 'textarea' },
-        { key: 'rules', label: 'Gouden regels (onderaan iedere pagina)', type: 'list', hint: 'Eén regel per regel' }
+        { key: 'rules', label: 'Gouden regels (onderaan iedere pagina)', type: 'list', hint: 'Eén regel per regel' },
+        { key: '_route', label: 'Route van een idee (Ideeënhub)', type: 'heading', hint: 'Leeg = de route uit de gedeelde basis, of anders de standaardroute uit data/disciplines.js. Eigen stappen vervangen alle standaardstappen (zo ook bij de rollen): neem de standaard over en pas hem aan. De site is openbaar: noem rollen en teams, geen namen.' },
+        { key: 'routeIntro', label: 'Inleiding boven de route', type: 'textarea' },
+        { key: 'route', label: 'Stappen', type: 'group', itemLabel: 'Stap', defaults: routeDefaults('steps'), fields: [
+          { key: 'title', label: 'Stap', type: 'text', required: true, placeholder: 'bijv. Beoordeling', half: true },
+          { key: 'who', label: 'Wie', type: 'text', placeholder: 'bijv. Innovatieteam of kartrekker', half: true },
+          { key: 'text', label: 'Wat er gebeurt', type: 'textarea' },
+          { key: 'exit', label: 'Afslag (optioneel)', type: 'text', placeholder: 'bijv. Kan het al met Copilot? Dan wordt het een prompt of tip.' }
+        ] },
+        { key: 'routeRoles', label: 'Wie doet wat', type: 'group', itemLabel: 'Rol', defaults: routeDefaults('roles'), fields: [
+          { key: 'name', label: 'Rol of team', type: 'text', required: true, half: true },
+          { key: 'text', label: 'Wat ze doen', type: 'text', half: true }
+        ] },
+        { key: 'routeLink', label: 'Link naar het organogram (Serviceplein)', type: 'url', hint: 'Optioneel. Daar staan de namen; de cockpit toont alleen de link.' }
       ]
     }
   };
@@ -536,6 +557,7 @@
             const next = items[index] || items[index - 1];
             (next ? next.remove : add).focus();
             ns.ui.announce(`${title.textContent} verwijderd`);
+            syncFill();
           });
           items.push(item);
           listNode.append(node);
@@ -565,9 +587,25 @@
           const item = addItem(null);
           const first = item.node.querySelector('input, textarea, select');
           if (first) first.focus();
+          syncFill();
         });
+        // Zolang de groep leeg is: de standaard overnemen om die aan te passen (bijv. de route van een idee)
+        const defaults = typeof field.defaults === 'function' ? field.defaults(ctx) : null;
+        const fill = defaults && defaults.length ? el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Standaard overnemen om aan te passen' })]) : null;
+        function syncFill() {
+          if (fill) fill.hidden = items.length > 0;
+        }
+        if (fill) {
+          fill.addEventListener('click', () => {
+            defaults.forEach((v) => addItem(v));
+            syncFill();
+            items[0].node.querySelector('input, textarea, select').focus();
+            ns.ui.announce(`${items.length} ${items.length === 1 ? 'item' : 'items'} overgenomen`);
+          });
+          syncFill();
+        }
         return {
-          node: el('fieldset', { className: 'field field--wide repeater' }, [el('legend', { className: 'field__label', text: field.label }), listNode, add, groupError]),
+          node: el('fieldset', { className: 'field field--wide repeater' }, [el('legend', { className: 'field__label', text: field.label }), listNode, add, fill, groupError]),
           get: () => {
             const result = items.map((item) => {
               const obj = {};

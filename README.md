@@ -59,7 +59,7 @@ buiten staan alleen in de inhoud (bijv. de opname van een training of een agent)
 | `#/tips`, `#/tip/<id>` | Tips & tricks, o.a. eigen instructies, Facilitator en geplande prompts |
 | `#/trainingen`, `#/training/<id>` | Opnames van trainingen en sessies om terug te kijken, met hoofdstukken en materiaal, en per training een naslagwerk: slides, wat je meeneemt, acties om af te vinken, uit de zaal en het vervolg |
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
-| `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; gepubliceerde inzendingen met antwoord en 'Ik ook' |
+| `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; de route van een idee tot toepassing; gepubliceerde inzendingen met antwoord en 'Ik ook' |
 | `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk |
 | `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, ideeën in het portfolio zetten (AI Value Matrix), de nieuwsbrief maken, gebruik bekijken, het Copilot-gebruik per periode volgen, en het overzicht voor het bestuur |
 
@@ -443,6 +443,22 @@ het verschil met de 30 dagen ervoor, en de ideeën), het gebruik van de cockpit 
 Copilot-gebruik per discipline (laatste import), de ideeënhub en het portfolio, en de laatste trainingen. Met
 **Afdrukken als PDF** maak je er een document van, bijvoorbeeld voor het bestuur. Alles komt uit wat er al is: wat live
 staat, de anonieme tellers, de ideeënhub en de totalen van de Copilot-export; er is geen aparte SQL voor nodig.
+
+## Route van een idee (Ideeënhub)
+
+In de ideeënhub staat onder het formulier **Wat gebeurt er met je idee?**: de stappen van een idee op de werkvloer tot
+een toepassing in gebruik, met per stap wie het doet en waar een idee de route kan verlaten (de afslagen: het kan al
+met Copilot, te weinig waarde, nog niet goed genoeg). Ernaast staat **Wie doet wat**, de rollen van iedereen tot de
+CTO. Met **Afdrukken als PDF** maak je er een document van, bijvoorbeeld voor het Serviceplein.
+
+- **Per discipline:** de standaard staat in `ideaRoutes` in `data/disciplines.js`. Audit heeft een eigen route (team
+  AI en team dAtA beoordelen mee en bouwen zelf in goedgekeurde tooling); een andere discipline krijgt `standaard`
+  (na het besluit direct naar DIU).
+- **Aanpassen** in Beheer → Inhoud → Teksten (alleen die discipline) of in de gedeelde basis (voor iedereen): de
+  inleiding, de stappen, de rollen en een link naar het organogram op het Serviceplein. Met *Standaard overnemen om
+  aan te passen* staan de standaardstappen klaar in het formulier. Eigen stappen vervangen alle standaardstappen.
+- **Openbaar:** de site is openbaar bereikbaar. Noem rollen en teams, geen namen; de namen staan in het organogram op
+  het Serviceplein, de cockpit linkt ernaartoe.
 
 ## Portfolio en ideeën beoordelen (Beheer → Portfolio, stap 10)
 

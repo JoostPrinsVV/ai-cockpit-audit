@@ -92,3 +92,57 @@ window.AIAudit.sharedBasis = {
 window.AIAudit.disciplineExamples = {
   accountancy: 'data/voorbeelden/accountancy.js'
 };
+
+/* Route van een idee (Ideeënhub → 'Wat gebeurt er met je idee?'). 'standaard' geldt voor
+   iedere discipline; een discipline met eigen stappen of rollen staat eronder (alleen wat
+   anders is). Aanpassen in Beheer → Inhoud → Teksten (per discipline) of in de gedeelde
+   basis (voor iedereen); wat daar staat, gaat voor.
+     intro   Inleiding boven de route.
+     steps   De stappen: title, who (rol, liever geen naam), text, exit (afslag, optioneel).
+     roles   'Wie doet wat': name en text.
+   De site is openbaar: rollen en teams, geen namen. Namen staan in het organogram op het
+   Serviceplein (de link zet je in Beheer). */
+window.AIAudit.ideaRoutes = {
+  standaard: {
+    intro: 'Van een idee op de werkvloer tot een toepassing die iedereen gebruikt. Niet ieder idee loopt alle stappen: veel kan al met Copilot, en stoppen is ook een uitkomst. Bij iedere stap hoor je wat er met je idee gebeurt.',
+    steps: [
+      { title: 'Je dient je idee in', who: 'Iedereen', text: 'Via het formulier hierboven. Beschrijf vooral het probleem in je werk, niet alleen de oplossing.' },
+      { title: 'Eerste check', who: 'Innovatieteam of kartrekker', text: 'Is het idee duidelijk, en loopt het al ergens anders?', exit: 'Kan het al met Copilot? Dan wordt het een prompt, tip of training en kun je er meteen mee aan de slag.' },
+      { title: 'Beoordeling', who: 'Innovatieteam of kartrekker', text: 'Met de AI Value Matrix: wat levert het op aan kwaliteit en uren, en is het haalbaar?', exit: 'Te weinig waarde of niet haalbaar? Dan stopt het hier, met de reden erbij.' },
+      { title: 'Besluit', who: 'Directie van de discipline', text: 'Gaan we het bouwen, en met welke prioriteit?' },
+      { title: 'Check op data en risico', who: 'Compliance, met DIU', text: 'Alleen als er klantdata in gaat of het risico midden of hoog is: mag het, en onder welke voorwaarden?' },
+      { title: 'Bouwen', who: 'DIU', text: 'DIU maakt een prototype in de eigen testomgeving.' },
+      { title: 'Testen', who: 'Jouw team, met de bouwers', text: 'Werkt het in de praktijk, en klopt de uitkomst met de bron?', exit: 'Nog niet goed genoeg? Terug naar bouwen, of stoppen.' },
+      { title: 'In gebruik', who: 'Een eigenaar uit de praktijk', text: 'Iedereen kan ermee aan de slag, met uitleg en een demo in deze cockpit. De eigenaar houdt het bij en het wordt op een vast moment opnieuw beoordeeld.' }
+    ],
+    roles: [
+      { name: 'Iedereen', text: 'Ziet in het werk waar het beter kan en dient dat in.' },
+      { name: 'Innovatieteams en kartrekkers', text: 'Eerste aanspreekpunt: checken, beoordelen en terugkoppelen.' },
+      { name: 'Directie per discipline', text: 'Besluit wat er gebouwd wordt en geeft DIU de opdracht.' },
+      { name: 'Compliance', text: 'Kijkt mee zodra er klantdata in een toepassing gaat.' },
+      { name: 'DIU (Data Intelligence Unit)', text: 'Bouwt prototypes en toepassingen in opdracht van de directie, waar nodig met ontwikkelaars van Growteq.' },
+      { name: 'CTO', text: 'Bepaalt de kaders voor AI: beleid, architectuur en budget.' }
+    ]
+  },
+  audit: {
+    steps: [
+      { title: 'Je dient je idee in', who: 'Iedereen', text: 'Via het formulier hierboven. Beschrijf vooral het probleem in je werk, niet alleen de oplossing.' },
+      { title: 'Eerste check', who: 'Innovatieteam of kartrekker', text: 'Is het idee duidelijk, en loopt het al ergens anders?', exit: 'Kan het al met Copilot? Dan wordt het een prompt, tip of training en kun je er meteen mee aan de slag.' },
+      { title: 'Beoordeling', who: 'Innovatieteam, met team AI of team dAtA', text: 'Met de AI Value Matrix: wat levert het op aan kwaliteit en uren, en is het haalbaar?', exit: 'Te weinig waarde of niet haalbaar? Dan stopt het hier, met de reden erbij.' },
+      { title: 'Besluit', who: 'Directie Audit', text: 'Gaan we het bouwen, en met welke prioriteit?' },
+      { title: 'Check op data en risico', who: 'Compliance, met DIU', text: 'Alleen als er klantdata in gaat of het risico midden of hoog is: mag het, en onder welke voorwaarden?' },
+      { title: 'Bouwen', who: 'Team AI of team dAtA, of DIU', text: 'Kan het in goedgekeurde tooling, dan bouwt team AI of team dAtA het. Is er meer nodig, dan maakt DIU een prototype in de eigen testomgeving.' },
+      { title: 'Testen', who: 'Jouw team, met de bouwers', text: 'Werkt het in de praktijk, en klopt de uitkomst met de bron?', exit: 'Nog niet goed genoeg? Terug naar bouwen, of stoppen.' },
+      { title: 'In gebruik', who: 'Een eigenaar uit de praktijk', text: 'Iedereen kan ermee aan de slag, met uitleg en een demo in deze cockpit. De eigenaar houdt het bij en het wordt op een vast moment opnieuw beoordeeld.' }
+    ],
+    roles: [
+      { name: 'Iedereen', text: 'Ziet in het werk waar het beter kan en dient dat in.' },
+      { name: 'Innovatieteams en kartrekkers', text: 'Eerste aanspreekpunt: checken, beoordelen en terugkoppelen.' },
+      { name: 'Team AI en team dAtA', text: 'De AI- en dataspecialisten van Audit: beoordelen mee en bouwen zelf in goedgekeurde tooling.' },
+      { name: 'Directie Audit', text: 'Besluit wat er gebouwd wordt en geeft DIU de opdracht.' },
+      { name: 'Compliance', text: 'Kijkt mee zodra er klantdata in een toepassing gaat.' },
+      { name: 'DIU (Data Intelligence Unit)', text: 'Bouwt prototypes en toepassingen in opdracht van de directie, waar nodig met ontwikkelaars van Growteq.' },
+      { name: 'CTO', text: 'Bepaalt de kaders voor AI: beleid, architectuur en budget.' }
+    ]
+  }
+};
