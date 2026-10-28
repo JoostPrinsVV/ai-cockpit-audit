@@ -9,7 +9,12 @@
 .admin { display: grid; gap: var(--space-5); }
 .admin__bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
 .admin__bar .toggle { text-decoration: none; }
-.admin__user { display: inline-flex; align-items: center; gap: var(--space-2); margin-left: auto; color: var(--color-text-muted); font-size: var(--fs-sm); }
+/* Titel links, rechtsboven wie er is ingelogd en Uitloggen; op een smal scherm daaronder */
+.admin__top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0 var(--space-6); }
+.admin__top > .page-head { flex: 1 1 30rem; }
+.admin__session { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-5); }
+.admin__session:empty { display: none; }
+.admin__user { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .admin__panel { display: grid; gap: var(--space-4); }
 
 .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: var(--space-3); }
@@ -504,7 +509,7 @@
 .seed > .icon { color: var(--accent-steel-ink); }
 
 @media (max-width: 720px) {
-  .admin__user { margin-left: 0; flex-basis: 100%; }
+  .admin__session { justify-content: flex-start; margin-top: calc(-1 * var(--space-3)); }
   .admin-item__date { min-width: 0; }
   .form-grid { grid-template-columns: minmax(0, 1fr); }
   /* Geneste groepen: minder inspringing, zodat de velden breed genoeg blijven */

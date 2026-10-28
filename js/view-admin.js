@@ -597,8 +597,13 @@
     const allowedTabs = ns.central.signedIn() ? visibleTabs() : TABS;
     const tab = allowedTabs.some((t) => t.id === params[0]) ? params[0] : (allowedTabs[0] || TABS[0]).id;
     const content = el('div', { className: 'admin' });
+    // Rechtsboven, naast de titel: wie er is ingelogd en Uitloggen (leeg zolang je niet bent ingelogd)
+    const session = el('div', { className: 'admin__session' });
     const node = el('div', { className: 'page container' }, [
-      pageHeader({ eyebrow: 'Beheer', title: 'Beheer van het platform', lead: 'Voor het AI-team: de inhoud per discipline en de gedeelde basis aanpassen, disciplines openzetten of op slot houden, inzendingen uit de ideeënhub beantwoorden en zien wat er gebruikt wordt.' }),
+      el('div', { className: 'admin__top' }, [
+        pageHeader({ eyebrow: 'Beheer', title: 'Beheer van het platform', lead: 'Voor het AI-team: de inhoud per discipline en de gedeelde basis aanpassen, disciplines openzetten of op slot houden, inzendingen uit de ideeënhub beantwoorden en zien wat er gebruikt wordt.' }),
+        session
+      ]),
       content
     ]);
     let canLeave = null;
@@ -623,22 +628,22 @@
       ])
     ));
     const reminder = tab === 'nieuwsbrief' ? null : ns.adminNewsletter.reminder();
+    session.append(
+      el('p', { className: 'admin__user' }, [icon('lock'), el('span', { text: 'Ingelogd als ' + ns.central.signedIn() })]),
+      el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: async () => {
+        if (canLeave && !canLeave() && !(await ns.ui.confirmDialog('Je hebt wijzigingen die nog niet zijn opgeslagen.', { title: 'Toch uitloggen?', confirmLabel: 'Uitloggen zonder opslaan', cancelLabel: 'Blijven', danger: true }))) return;
+        // Eerst je werk wegzetten (onder je eigen naam) en je afmelden bij wat je open had
+        ns.editor.reset();
+        ns.central.signOut();
+        canLeave = null;
+        window.location.hash = '#/beheer';
+        ns.app.reloadContent();
+      } } }, [icon('logout'), el('span', { text: 'Uitloggen' })])
+    );
     content.append(
       ...(reminder ? [reminder] : []),
       ...(TABS.find((t) => t.id === tab).perDiscipline ? [disciplineChooser(tab)] : []),
-      el('div', { className: 'admin__bar' }, [
-        tabs,
-        el('p', { className: 'admin__user' }, [icon('lock'), el('span', { text: 'Ingelogd als ' + ns.central.signedIn() })]),
-        el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: async () => {
-          if (canLeave && !canLeave() && !(await ns.ui.confirmDialog('Je hebt wijzigingen die nog niet zijn opgeslagen.', { title: 'Toch uitloggen?', confirmLabel: 'Uitloggen zonder opslaan', cancelLabel: 'Blijven', danger: true }))) return;
-          // Eerst je werk wegzetten (onder je eigen naam) en je afmelden bij wat je open had
-          ns.editor.reset();
-          ns.central.signOut();
-          canLeave = null;
-          window.location.hash = '#/beheer';
-          ns.app.reloadContent();
-        } } }, [icon('logout'), el('span', { text: 'Uitloggen' })])
-      ]),
+      el('div', { className: 'admin__bar' }, [tabs]),
       panel
     );
     if (!allowedTabs.length) {
