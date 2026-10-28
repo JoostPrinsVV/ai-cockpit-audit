@@ -27,8 +27,15 @@
                   'Copilot in Outlook', 'Copilot in Teams', 'Researcher', 'Analyst'.
      license      true = Microsoft 365 Copilot-licentie nodig; false = kan met de
                   gratis Copilot Chat (bestand toevoegen of tekst plakken).
-     prompt*      De prompt.
+     prompt*      De prompt (bij meer stappen: de eerste).
      note         Korte toelichting: waar en hoe gebruik je hem?
+     followUps    Optioneel: vervolgprompts in dezelfde chat, ieder met een eigen kopieerknop:
+                  [{ label: 'Stap 2 · Conceptantwoord', text: `...` }]
+     promptLabel  Optioneel, bij vervolgprompts: kop boven de eerste prompt (leeg = 'Stap 1').
+     promptBasic  Optioneel, alleen bij license: true: dezelfde (eerste) prompt voor de gratis
+                  Copilot Chat (je plakt de tekst of voegt het bestand toe). Bij de prompt kies je
+                  dan 'Met licentie' of 'Zonder licentie'; de vervolgprompts zijn voor beide gelijk.
+     noteBasic    Toelichting bij de versie zonder licentie.
      tip          Praktische tip.
      added        Datum van toevoegen (JJJJ-MM-DD), voor het label 'Nieuw'.
      author       Optioneel: wie de prompt heeft aangedragen (bijv. via de ideeënhub).

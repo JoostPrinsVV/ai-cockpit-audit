@@ -560,9 +560,11 @@
   /** Aantal als woord aan het begin van een zin: 3 → 'Drie'; vanaf 11 het getal. */
   const countWord = (n) => COUNT_WORDS[n] || String(n);
 
+  /** license: true, false, of 'both' (een prompt met licentie die ook een versie zonder licentie heeft). */
   function licenseBadge(license, options) {
-    if (license !== true && license !== false) return null;
+    if (license !== true && license !== false && license !== 'both') return null;
     const opts = options || {};
+    if (license === 'both') return el('span', { className: 'badge badge--free', attrs: { title: 'Met een licentie, en met een versie voor de gratis Copilot Chat' } }, [icon('check'), opts.short ? 'Ook zonder licentie' : 'Met en zonder licentie']);
     return license
       ? el('span', { className: 'badge badge--license', attrs: { title: 'Werkt met een Microsoft 365 Copilot-licentie' } }, [icon('key'), opts.short ? 'Licentie' : 'Met licentie'])
       : el('span', { className: 'badge badge--free', attrs: { title: 'Kan ook met de gratis Copilot Chat' } }, [icon('check'), opts.short ? 'Zonder licentie' : 'Ook zonder licentie']);

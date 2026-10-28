@@ -86,8 +86,10 @@ De cockpit is er per discipline (Audit, Accountancy, Belastingadvies, Salarisadm
   basis. Voor Audit verandert er niets. Daarna pas je ze aan bij *Gedeelde basis*; op de site zie je als beheerder het
   label 'Voor iedereen'. Collega's zien dat label pas als er meer dan één discipline open is.
 - **Nieuwe discipline:** open in Beheer de cockpit van die discipline. Zolang hij leeg is, kies je *Begin met een lege
-  cockpit* (eerst de fasen toevoegen) of *Voorbeeldinhoud overnemen* (voor Accountancy: `data/voorbeelden/accountancy.js`,
-  usecases gebaseerd op de snacks van de AI Snackbar).
+  cockpit* (eerst de fasen toevoegen) of *Voorbeeldinhoud overnemen*. Voor Accountancy (`data/voorbeelden/accountancy.js`)
+  is dat de AI Snackbar van de Boost & Learn: de zes snacks als usecases met hun demo, en de dertig bijgerechten als
+  losse prompts (met de versie zonder licentie en de vervolgstappen). De pro-versie van snack 4 (met Claude) staat er
+  bewust niet in: in de cockpit werk je alleen met Copilot. Is Accountancy al ingericht, dan biedt Beheer dit niet meer aan.
 - **Teksten per discipline:** Beheer → Inhoud → Teksten in een discipline gaat voor de teksten in de gedeelde basis, en
   die weer voor `js/config.js`. Hoe de discipline in lopende tekst heet ('Waarom handig in de audit', 'Per fase van de
   controle') stel je in bij Disciplines.
@@ -206,6 +208,10 @@ de terugval. Uitleg per veld staat bovenin elk bestand.
 | `demos/scripts.js` | De gesprekken van de nagespeelde Copilot-demo's |
 
 - **Usecase toevoegen:** kopieer een blok `{ … }` in `data/usecases.js` en geef het een nieuwe `id`.
+- **Prompt met meer stappen of zonder licentie:** een losse prompt kan vervolgprompts hebben (`followUps`, in dezelfde
+  chat) en, als hij een licentie nodig heeft, een versie voor de gratis Copilot Chat (`promptBasic`, `noteBasic`). Bij
+  de prompt kies je dan *Met licentie* of *Zonder licentie*; het filter *Zonder licentie* laat hem ook zien. In Beheer
+  staan dezelfde velden onder de prompttekst.
 - **Prompt toevoegen:** idem in `data/prompts.js`. Schrijf plaatshouders als `[KLANTNAAM]` of `[PROCES, bijv. inkoopproces]`
   (hoofdletter vooraan); collega's kunnen ze dan invullen vóór het kopiëren. Een prompt uit de ideeënhub? Zet de naam bij `author`.
 - **Tip van de week:** een tip met `release: 'JJJJ-MM-DD'` (een vrijdag) zit op slot tot die dag. Collega's zien dan
@@ -501,7 +507,7 @@ Het doel is WCAG 2.2 niveau AA. Wat daarvoor in de code zit (en wat je bij nieuw
 
 `tests/index.html` test de kern zonder build of npm: plaatshouders, zoeken, de controles op adressen en paden, inhoud
 laden, rechten, het soortenregister, de verzoeken naar Supabase (met een nagebootste verbinding), de werkversies, het
-gereedschap van Beheer en het inlezen van het Copilot-gebruik. Dat laatste met een verzonnen Excel-bestand dat de test
+gereedschap van Beheer, de voorbeeldinhoud van Accountancy en het inlezen van het Copilot-gebruik. Dat laatste met een verzonnen Excel-bestand dat de test
 zelf maakt (`tests/fixture-copilot.js`, zelfde opbouw als het echte bestand), nooit met een echte export. Open hem via een lokale webserver (`/tests/`) of op de live site
 (`…/ai-cockpit-audit/tests/`). De uitkomst staat bovenaan en in de titel van het tabblad (✓ of ✗); er wordt niets
 opgeslagen of verstuurd. Een nieuwe test zet je in `tests/tests.js` (`await test('…', () => equal(…))`).

@@ -4,12 +4,20 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, switchButton, emptyState, copyButton, copilotButton, saveButton, matches } = ns.ui;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, switchButton, toggleGroup, emptyState, copyButton, copilotButton, saveButton, matches } = ns.ui;
   const B = ns.blocks;
   const { detailHeader, relatedList, infoNote, tipCallout } = B;
 
   // Zoekterm, filters en volgorde blijven staan zolang de site open is
   const filters = { query: '', phase: 'all', license: 'all', demo: false, saved: false, sort: 'phase' };
+  // Bij een prompt met ook een versie zonder licentie: welke je laatst koos (of 'Zonder licentie' in het filter)
+  let basicChosen = false;
+
+  /** Met licentie, zonder, of allebei (een prompt met licentie die ook een versie zonder licentie heeft). */
+  const licenseOf = (prompt) => (prompt.promptBasic ? 'both' : prompt.license);
+  const showsBasic = (prompt) => Boolean(prompt.promptBasic) && (filters.license === 'no' || (filters.license === 'all' && basicChosen));
+  /** De (eerste) prompt die je kopieert: de versie zonder licentie als die gekozen is. */
+  const textOf = (prompt) => (showsBasic(prompt) ? prompt.promptBasic : prompt.prompt);
 
   /** withTask: false als de taak al bovenaan de kaart staat. */
   function chipsFor(prompt, withTask) {
@@ -18,7 +26,8 @@
       ns.cockpit.sharedBadge(prompt),
       prompt.tool ? chip(prompt.tool, { icon: 'robot' }) : null,
       prompt.task && withTask !== false ? chip(prompt.task) : null,
-      licenseBadge(prompt.license, { short: true }),
+      prompt.followUps.length ? chip(`${prompt.followUps.length + 1} stappen`, { icon: 'checklist' }) : null,
+      licenseBadge(licenseOf(prompt), { short: true }),
       prompt.usecase && prompt.usecase.hasDemo ? el('span', { className: 'badge badge--demo' }, [icon('play-circle'), 'Met demo']) : null,
       ns.reviews.ratingChip('prompt', prompt.id),
       newBadge(prompt.added)
@@ -42,8 +51,9 @@
     ]);
     toggle.addEventListener('click', () => {
       const open = preview.hidden;
-      if (open && !preview.firstChild) {
-        preview.append(el('pre', { className: 'prompt-box__text prompt-box__text--plain', attrs: { tabindex: '0', role: 'region', 'aria-label': 'Prompt: ' + prompt.title } }, ns.ui.promptNodes(prompt.prompt)));
+      // Iedere keer opnieuw: de getoonde versie (met of zonder licentie) kan intussen anders zijn
+      if (open) {
+        preview.replaceChildren(el('pre', { className: 'prompt-box__text prompt-box__text--plain', attrs: { tabindex: '0', role: 'region', 'aria-label': 'Prompt: ' + prompt.title } }, ns.ui.promptNodes(textOf(prompt))));
       }
       preview.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));
@@ -59,8 +69,9 @@
       prompt.description ? el('p', { className: 'p-card__desc', text: prompt.description }) : null,
       el('div', { className: 'chips' }, chipsFor(prompt, !grouped)),
       el('div', { className: 'p-card__actions' }, [
-        copyButton(() => prompt.prompt, { label: 'Kopieer', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
-        copilotButton(() => prompt.prompt, { label: 'Copilot', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
+        // Bij meer stappen kopieer je hier de eerste; de rest staat bij de prompt zelf
+        copyButton(() => textOf(prompt), { label: prompt.followUps.length ? 'Kopieer stap 1' : 'Kopieer', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
+        copilotButton(() => textOf(prompt), { label: 'Copilot', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
         toggle,
         el('a', { className: 'btn btn--quiet btn--sm', attrs: { href: '#/prompt/' + prompt.id, 'aria-label': 'Invullen en details: ' + prompt.title } }, [icon('pencil-line'), el('span', { text: 'Invullen' })])
       ]),
@@ -85,7 +96,7 @@
       const savedIds = saved.ids();
       let items = all.filter((p) =>
         (filters.phase === 'all' || p.phase.id === filters.phase) &&
-        B.licenseMatch(filters.license, p.license) &&
+        B.licenseMatch(filters.license, licenseOf(p)) &&
         (!filters.demo || (p.usecase && p.usecase.hasDemo)) &&
         (!filters.saved || savedIds.includes(p.id)) &&
         matches(p.haystack, filters.query)
@@ -180,6 +191,43 @@
   }
 
   /* ---- Eén prompt ------------------------------------------------------------------ */
+  /**
+   * De prompt (en de vervolgprompts in dezelfde chat) met de toelichting. Heeft de prompt ook een
+   * versie zonder licentie, dan kies je bovenaan welke; je keuze geldt ook voor de volgende prompt.
+   */
+  function promptBlock(prompt) {
+    const block = el('div', { className: 'prompt-steps' });
+    const boxes = el('div', { className: 'prompt-steps__boxes' });
+    const onCopy = () => ns.central.track('copy_prompt', prompt.id);
+    let basic = showsBasic(prompt);
+
+    function fill() {
+      const many = prompt.followUps.length > 0;
+      boxes.replaceChildren(
+        ns.promptBox.create({ text: basic ? prompt.promptBasic : prompt.prompt, label: many ? prompt.promptLabel : 'De prompt', headingTag: 'h2', onCopy }),
+        ...prompt.followUps.map((step) => ns.promptBox.create({ text: step.text, label: step.label, headingTag: 'h2', onCopy })),
+        infoNote(basic && prompt.noteBasic ? prompt.noteBasic : prompt.note)
+      );
+    }
+
+    if (prompt.promptBasic) {
+      block.append(el('div', { className: 'prompt-steps__variant' }, [
+        el('p', { className: 'prompt-steps__variant-label', text: 'Welke versie?' }),
+        toggleGroup('Versie van de prompt', [
+          { value: 'licensed', label: 'Met licentie', icon: 'key' },
+          { value: 'basic', label: 'Zonder licentie', icon: 'check' }
+        ], basic ? 'basic' : 'licensed', (value) => {
+          basic = value === 'basic';
+          basicChosen = basic;
+          fill();
+        }, { className: 'toggles--compact', animate: false })
+      ]));
+    }
+    fill();
+    block.append(boxes);
+    return block;
+  }
+
   function renderDetail(id) {
     const prompt = ns.content.promptById.get(id);
     if (!prompt) return null;
@@ -210,8 +258,7 @@
         icon('arrow-right', { className: 'usecase-link__go' })
       ]) : null,
 
-      ns.promptBox.create({ text: prompt.prompt, label: 'De prompt', headingTag: 'h2', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
-      infoNote(prompt.note),
+      promptBlock(prompt),
       tipCallout(prompt.tip),
       prompt.author ? el('p', { className: 'detail__credit', text: 'Aangedragen door ' + prompt.author }) : null,
       ns.reviews.block('prompt', prompt),

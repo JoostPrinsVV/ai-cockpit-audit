@@ -181,8 +181,9 @@
       update();
     }, { className: 'toggles--compact' });
   }
-  // Zonder opgegeven licentie (null) valt een item bij Met en bij Zonder weg
-  const licenseMatch = (wanted, license) => wanted === 'all' || license === (wanted === 'yes');
+  // Zonder opgegeven licentie (null) valt een item bij Met en bij Zonder weg; 'both' (een prompt met
+  // ook een versie zonder licentie) blijft bij allebei staan
+  const licenseMatch = (wanted, license) => wanted === 'all' || license === 'both' || license === (wanted === 'yes');
 
   /** Volgorde: de gewone, of best beoordeeld door collega's. Zonder reviews: null. */
   function ratingSort(filters, update, normal) {

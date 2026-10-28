@@ -39,7 +39,8 @@
   const KNOWN_MEDIA = [
     'demos/player.html#risicoanalyse', 'demos/player.html#walkthrough', 'demos/player.html#cijferanalyse',
     'demos/player.html#journaalposten', 'demos/player.html#notulen', 'demos/player.html#managementletter',
-    'assets/demos/snack-01.html', 'assets/videos/snack-02.mp4', 'assets/videos/snack-03.mp4'
+    'assets/demos/snack-01.html', 'assets/videos/snack-02.mp4', 'assets/videos/snack-03.mp4', 'assets/videos/snack-04.mp4',
+    'assets/videos/snack-05.mp4', 'assets/videos/snack-06.mp4'
   ];
 
   // De omgeving waarin je in Beheer werkt (zie render): { kind: 'discipline'|'basis', namespace, base, name, id, files }.
@@ -97,6 +98,13 @@
         { key: 'license', label: 'Licentie', type: 'license', half: true },
         { key: 'prompt', label: 'Prompttekst', type: 'code', required: true, hint: 'Plaatshouders in hoofdletters tussen blokhaken: [KLANTNAAM], [PROCES, bijv. inkoopproces]' },
         { key: 'note', label: 'Toelichting', type: 'textarea', hint: 'Waar en hoe gebruik je hem?' },
+        { key: 'followUps', label: 'Vervolgprompts (in dezelfde chat)', type: 'group', itemLabel: 'Vervolgprompt', fields: [
+          { key: 'label', label: 'Kop', type: 'text', placeholder: 'bijv. Stap 2 · Conceptantwoord' },
+          { key: 'text', label: 'Prompttekst', type: 'code', required: true }
+        ] },
+        { key: 'promptLabel', label: 'Kop boven de eerste prompt', type: 'text', placeholder: 'bijv. Stap 1 · Alle punten op een rij', hint: 'Alleen bij vervolgprompts; leeg = Stap 1.' },
+        { key: 'promptBasic', label: 'Versie zonder licentie', type: 'code', hint: 'Alleen bij een prompt met licentie: dezelfde (eerste) prompt voor de gratis Copilot Chat, waarin je de tekst plakt of een bestand toevoegt. Collega\'s kiezen dan zelf welke versie ze gebruiken.' },
+        { key: 'noteBasic', label: 'Toelichting bij de versie zonder licentie', type: 'textarea' },
         { key: 'tip', label: 'Tip', type: 'textarea' },
         { key: 'added', label: 'Toegevoegd op', type: 'date', half: true },
         { key: 'author', label: 'Aangedragen door', type: 'text', half: true }
@@ -1129,7 +1137,8 @@
       rows = example ? exampleRows(example) : [];
       if (!rows.length) return;
       const count = (type) => rows.filter((row) => row.type === type).length;
-      exampleText.textContent = `Er is voorbeeldinhoud klaargezet: ${count('phase')} fasen, ${count('usecase')} usecases, ${count('prompt')} losse prompts en ${count('tip')} tip. Neem die over en pas hem daarna hier aan.`;
+      const summary = ns.content.TYPES.filter(count).map((type) => `${count(type)} ${count(type) === 1 ? SCHEMAS[type].one : SCHEMAS[type].many}`);
+      exampleText.textContent = `Er is voorbeeldinhoud klaargezet: ${summary.slice(0, -1).join(', ')}${summary.length > 1 ? ' en ' : ''}${summary[summary.length - 1]}. Neem die over en pas hem daarna hier aan.`;
       exampleText.hidden = false;
       fromExample.hidden = false;
     });

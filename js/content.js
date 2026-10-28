@@ -184,6 +184,13 @@
         return;
       }
       const phase = phaseFor(text(item.phase), `Prompt '${id}'`);
+      const license = bool(item.license);
+      // Optioneel: vervolgprompts in dezelfde chat, en bij een prompt met licentie een versie
+      // zonder licentie (van de eerste prompt; de vervolgprompts zijn voor beide gelijk)
+      const followUps = (Array.isArray(item.followUps) ? item.followUps : [])
+        .filter((step) => text(step && step.text))
+        .map((step, n) => ({ label: text(step.label) || `Stap ${n + 2}`, text: text(step.text) }));
+      const promptBasic = license === true ? text(item.promptBasic) : '';
       const entry = {
         id,
         order: 1000 + index,
@@ -193,8 +200,12 @@
         accent: phase.accent,
         task: text(item.task),
         tool: text(item.tool),
-        license: bool(item.license),
+        license,
         prompt,
+        promptLabel: text(item.promptLabel) || (followUps.length ? 'Stap 1' : ''),
+        followUps,
+        promptBasic,
+        noteBasic: promptBasic ? text(item.noteBasic) : '',
         note: text(item.note),
         tip: text(item.tip),
         added: text(item.added),
@@ -230,6 +241,10 @@
           tool: usecase.tools[0] || '',
           license: usecase.license,
           prompt: step.text,
+          promptLabel: '',
+          followUps: [],
+          promptBasic: '',
+          noteBasic: '',
           note: usecase.promptNote,
           tip: n === 0 ? usecase.tip : '',
           added: usecase.added,
@@ -563,7 +578,7 @@
       usecase.haystack = normalize([usecase.title, usecase.subtitle, usecase.intro, usecase.phase.label, usecase.tools.join(' '), usecase.steps.join(' '), usecase.prompts.map((p) => p.label + ' ' + p.text).join(' ')].join(' '));
     });
     state.prompts.forEach((prompt) => {
-      prompt.haystack = normalize([prompt.title, prompt.description, prompt.phase.label, prompt.task, prompt.tool, prompt.prompt, prompt.note, prompt.usecase ? prompt.usecase.title : ''].join(' '));
+      prompt.haystack = normalize([prompt.title, prompt.description, prompt.phase.label, prompt.task, prompt.tool, prompt.prompt, prompt.promptBasic, prompt.followUps.map((step) => step.label + ' ' + step.text).join(' '), prompt.note, prompt.usecase ? prompt.usecase.title : ''].join(' '));
     });
     state.tips.forEach((tip) => {
       tip.haystack = normalize([tip.title, tip.summary, tip.category.label, tip.why, tip.steps.join(' '), tip.example ? tip.example.text : '', tip.note].join(' '));

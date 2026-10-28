@@ -135,6 +135,22 @@
       equal(found.usecases.map((u) => u.id), ['notulen']);
       ok(found.prompts.length >= 2, 'de prompts uit de usecase');
     });
+    await test('losse prompt: vervolgstappen en een versie zonder licentie (alleen bij licentie)', () => {
+      const extra = rows.concat([
+        { namespace: 'ai-test', type: 'prompt', id: 'twee-stappen', data: { title: 'Mail beantwoorden', phase: 'planning', license: true, prompt: 'Zoek de mail [ONDERWERP]', promptBasic: 'Lees de geplakte mail', noteBasic: 'Plak de mail', followUps: [{ label: 'Stap 2 · Antwoord', text: 'Schrijf een antwoord' }, { label: 'Leeg', text: ' ' }, { text: 'Korter' }] }, position: 40, status: 'published' },
+        { namespace: 'ai-test', type: 'prompt', id: 'gratis', data: { title: 'Gratis', phase: 'planning', license: false, prompt: 'Tekst', promptBasic: 'Overbodig' }, position: 50, status: 'published' }
+      ]);
+      ns.content.load(ns.content.fromRows(extra));
+      const prompt = ns.content.promptById.get('twee-stappen');
+      equal([prompt.promptLabel, prompt.followUps, prompt.promptBasic, prompt.noteBasic], ['Stap 1', [{ label: 'Stap 2 · Antwoord', text: 'Schrijf een antwoord' }, { label: 'Stap 3', text: 'Korter' }], 'Lees de geplakte mail', 'Plak de mail']);
+      equal(ns.content.promptById.get('gratis').promptBasic, '', 'geen versie zonder licentie bij een gratis prompt');
+      equal(ns.content.promptById.get('notulen-1').followUps, [], 'prompt uit een usecase');
+      equal(ns.content.search('geplakte').prompts.map((p) => p.id), ['twee-stappen'], 'zoeken in de versie zonder licentie');
+    });
+    await test('licenseMatch: een prompt met ook een versie zonder licentie past bij ieder filter', () => {
+      equal(['all', 'no', 'yes'].map((wanted) => ns.blocks.licenseMatch(wanted, 'both')), [true, true, true]);
+      equal(['no', 'yes'].map((wanted) => ns.blocks.licenseMatch(wanted, true)), [false, true]);
+    });
 
     /* ---- kinds ---- */
     describe('Soortenregister (js/kinds.js)');
@@ -357,6 +373,20 @@
       equal(sample, fixture.copilotSample({ seed: 3 }), 'zelfde seed');
       const read = await copilot.readExport(fileOf(await fixture.copilotWorkbook(sample)));
       equal([read.weeks, read.people, read.licences.premium.people], [27, 104, 24]);
+    });
+
+    /* ---- voorbeeldinhoud ---- */
+    describe('Voorbeeldinhoud Accountancy (data/voorbeelden/accountancy.js)');
+    await test('de zes snacks met demo, 35 prompts en geen fouten in fasen of adressen', () => {
+      const example = ns.examples.accountancy;
+      ns.content.load({ phase: example.phases, usecase: example.usecases, prompt: example.prompts, tip: example.tips, training: example.trainings || [], agent: [], setting: {} });
+      const usecases = ns.content.usecases;
+      equal(usecases.length, 6, 'usecases');
+      ok(usecases.every((u) => u.hasDemo), 'iedere usecase heeft een demo');
+      const standalone = ns.content.prompts.filter((p) => !p.usecase);
+      equal([standalone.length, standalone.filter((p) => p.promptBasic).length, standalone.filter((p) => p.followUps.length).length], [35, 17, 5]);
+      // Alleen de gedeelde tips ontbreken hier (die komen uit de basis)
+      equal(ns.content.issues.filter((issue) => !/tip/i.test(issue)), []);
     });
 
     describe('Copilot-gebruik opslaan (js/central.js, fetch nagebootst)');

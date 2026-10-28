@@ -1326,6 +1326,10 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
    Prompts
    ========================================================================== */
 .prompt-box { display: grid; gap: var(--space-3); }
+/* Eén prompt met vervolgprompts en/of een versie zonder licentie (#/prompt/<id>) */
+.prompt-steps, .prompt-steps__boxes { display: grid; gap: var(--space-5); }
+.prompt-steps__variant { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.prompt-steps__variant-label { color: var(--color-text-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 .prompt-box__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-3); }
 .prompt-box__label { color: var(--color-text); font-size: var(--fs-base); font-weight: var(--fw-bold); }
 h2.prompt-box__label { font-size: var(--fs-lg); }
