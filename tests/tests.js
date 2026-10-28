@@ -363,16 +363,83 @@
       const newer = { weekly: [{ week: '2026-01-11', n: 2 }, { week: '2026-01-18', n: 2 }] };
       equal(copilot.timeline([older, newer]).map((week) => week.week + ':' + week.n), ['2026-01-04:1', '2026-01-11:2', '2026-01-18:2']);
     });
-    await test('niceTicks: ronde stappen tot minstens het maximum', () => {
-      equal(copilot.niceTicks(57), [0, 20, 40, 60]);
-      equal(copilot.niceTicks(2021), [0, 500, 1000, 1500, 2000, 2500]);
-      equal(copilot.niceTicks(0), [0]);
+    await test('niceTicks (js/admin-chart.js): ronde stappen tot minstens het maximum', () => {
+      equal(ns.adminChart.niceTicks(57), [0, 20, 40, 60]);
+      equal(ns.adminChart.niceTicks(2021), [0, 500, 1000, 1500, 2000, 2500]);
+      equal(ns.adminChart.niceTicks(0), [0]);
     });
     await test('verzonnen voorbeeld: altijd dezelfde cijfers, en goed te lezen', async () => {
       const sample = fixture.copilotSample({ seed: 3 });
       equal(sample, fixture.copilotSample({ seed: 3 }), 'zelfde seed');
       const read = await copilot.readExport(fileOf(await fixture.copilotWorkbook(sample)));
       equal([read.weeks, read.people, read.licences.premium.people], [27, 104, 24]);
+    });
+
+    /* ---- portfolio ---- */
+    describe('Portfolio: AI Value Matrix (js/admin-portfolio.js)');
+    const P = ns.adminPortfolio;
+    const scored = (A, B, C, D, extra) => Object.assign({ scores: { A, B, C, D }, risk: 'midden' }, extra);
+    await test('outcome: de ijkpunten van de matrix komen in het goede kwadrant', () => {
+      const of = (a) => { const r = P.outcome(a); return [r.value, r.feasibility, r.quadrant.id, r.borderline]; };
+      equal(of(scored(3, 3, 5, 5)), [6, 10, 'direct', false], 'verwerking klantinterviews');
+      equal(of(scored(5, 3, 2, 2)), [8, 4, 'strategisch', true], 'documentanalyse contracten en notulen');
+      equal(of(scored(3, 2, 4, 4)), [5, 8, 'quickwin', true], 'conceptmemo bedrijfsbeschrijving');
+      equal(of(scored(1, 0, 1, 1)), [1, 2, 'stoppen', false], 'stoppen');
+    });
+    await test('outcome: een knock-out gaat voor; zonder vier scores geen kwadrant', () => {
+      const ko = P.outcome(scored(5, 5, 5, 5, { knockouts: ['K2', 'X9'] }));
+      equal([ko.knockouts, ko.quadrant], [['K2'], null]);
+      equal(P.outcome({ scores: { A: 3, B: 2, C: 6, D: 1 } }).complete, false, 'score 6 bestaat niet');
+      equal(P.outcome(null), null);
+    });
+    await test('hoursScore: uren per jaar naar score B', () => {
+      equal([0, 49, 50, 149, 150, 400, 799, 800, 1500, 1501].map(P.hoursScore), [0, 0, 1, 1, 2, 3, 3, 4, 4, 5]);
+    });
+    await test('ranked en registerRow: volgorde van de kwadranten, nummers en de registerregel', () => {
+      const ideas = [
+        { id: 1, title: 'Quick', kind: 'idee', status: 'nieuw', assessment: scored(3, 2, 4, 4) },
+        { id: 2, title: 'Direct', kind: 'idee', status: 'nieuw', assessment: scored(3, 3, 5, 5, { hours: 300, decision: 'Uitvoeren', assessedAt: '2026-10-28T10:00:00Z' }) },
+        { id: 3, title: 'Knock-out', kind: 'idee', status: 'nieuw', assessment: scored(3, 3, 5, 5, { knockouts: ['K1'] }) },
+        { id: 4, title: 'Open', kind: 'verzoek', status: 'nieuw', assessment: null }
+      ];
+      equal(P.ranked(ideas).map((entry) => entry.number + ':' + entry.idea.title), ['1:Direct', '2:Quick']);
+      const row = P.registerRow(ideas[1]);
+      equal(row.length, P.REGISTER.length);
+      equal(row.slice(5, 17), [3, 3, 5, 5, 6, 10, 'Direct uitvoeren', 'midden', '', 300, 'Uitvoeren', '2026-10-28']);
+      equal(P.registerRow(ideas[2])[11], 'Knock-out K1');
+      equal(ideas.filter(P.isCandidate).length, 4);
+    });
+
+    /* ---- overzicht ---- */
+    describe('Overzicht (js/admin-overview.js)');
+    const O = ns.adminOverview;
+    await test('weekOf: de maandag van de week', () => {
+      equal([O.weekOf(Date.parse('2026-10-28T09:00:00Z')), O.weekOf(Date.parse('2026-10-26T00:00:00Z')), O.weekOf(Date.parse('2026-11-01T23:00:00Z'))], ['2026-10-26', '2026-10-26', '2026-10-26']);
+    });
+    await test('countEvents: 30 dagen, de 30 dagen ervoor, per discipline en per volle week', () => {
+      const now = Date.parse('2026-10-28T12:00:00Z');
+      const at = (days) => new Date(now - days * 86400000).toISOString();
+      const result = O.countEvents([
+        { namespace: 'ai-audit', kind: 'view_usecase', occurred_at: at(1) },
+        { namespace: 'ai-audit', kind: 'copy_prompt', occurred_at: at(3) },
+        { namespace: 'ai-accountancy', kind: 'play_demo', occurred_at: at(9) },
+        { namespace: 'ai-audit', kind: 'copy_tip', occurred_at: at(40) },
+        { namespace: 'ai-audit', kind: 'onbekend', occurred_at: at(2) }
+      ], now);
+      equal([result.recent, result.before, result.perNamespace.get('ai-audit'), result.weeks.length], [{ viewed: 2, copied: 1 }, { viewed: 0, copied: 1 }, 2, 12]);
+      // 25 oktober is een zondag: die hoort bij de week van maandag 19 oktober
+      equal(result.weeks[11], { week: '2026-10-19', values: { viewed: 1, copied: 1 } }, 'de laatste volle week');
+    });
+    await test('countContent: usecases met demo, prompts met de stappen uit de usecases', () => {
+      const counts = O.countContent([
+        { namespace: 'ai-audit', type: 'usecase', video: 'assets/videos/x.mp4', prompts: [{}, {}] },
+        { namespace: 'ai-audit', type: 'usecase', demo: null, prompts: [{}] },
+        { namespace: 'ai-audit', type: 'prompt' },
+        { namespace: 'ai-algemeen', type: 'tip' },
+        { namespace: 'ai-audit', type: 'meta' }
+      ]);
+      equal(counts.get('ai-audit'), { usecases: 2, demos: 1, prompts: 4, tips: 0, trainings: 0 });
+      equal(counts.get('ai-algemeen').tips, 1);
     });
 
     /* ---- voorbeeldinhoud ---- */
@@ -409,6 +476,19 @@
           equal(net.calls[0].init.headers.Authorization, 'Bearer test-token');
           const body = JSON.parse(net.calls[0].init.body);
           equal([body.namespace, body.period_start, body.period_end, body.source], ['ai-test', '2026-01-04', '2026-02-22', 'analyse']);
+        } finally {
+          net.restore();
+        }
+      });
+      await test('Overzicht: alle disciplines (namespace like ai-*) en de velden die het telt', async () => {
+        const net = fakeFetch([[200, []], [200, []]]);
+        try {
+          await ns.central.adminListIdeas({ all: true });
+          await ns.central.contentOverview();
+          const ideas = new URL(net.calls[0].url).searchParams;
+          const content = new URL(net.calls[1].url).searchParams;
+          equal([ideas.get('namespace'), content.get('namespace'), content.get('status')], ['like.ai-*', 'like.ai-*', 'eq.published']);
+          ok(content.get('select').includes('video:data->>video'), 'alleen de velden die het telt');
         } finally {
           net.restore();
         }

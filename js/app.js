@@ -355,7 +355,7 @@
      Bezoekers laden de beheercode niet (ruim een derde van alle JavaScript, plus css/admin.css).
      Wie ingelogd is of naar #/beheer gaat, krijgt hem erbij, met de bestanden in data/ (voor
      Overzetten en inrichten). De volgorde van de scripts is belangrijk. */
-  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-copilot.js', 'js/view-admin.js', 'js/editmode.js'];
+  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/view-admin.js', 'js/editmode.js'];
   let adminLoading = null;
 
   function loadAdmin() {

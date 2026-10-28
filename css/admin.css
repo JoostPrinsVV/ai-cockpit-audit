@@ -564,8 +564,8 @@
 .chart__legend li { display: inline-flex; align-items: center; gap: var(--space-2); }
 /* Een kort lijnstuk in de kleur van de reeks (legenda en uitleesvak) */
 .chart__key { display: inline-block; flex: none; width: 1rem; height: 2px; border-radius: 1px; }
-.chart__key--basic { background: var(--series-basic); }
-.chart__key--premium { background: var(--series-premium); }
+.chart__key--1 { background: var(--series-1); }
+.chart__key--2 { background: var(--series-2); }
 .chart__plot { position: relative; min-width: 0; margin-top: var(--space-2); }
 .chart__svg { display: block; overflow: visible; touch-action: pan-y; }
 .chart__svg:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); border-radius: var(--radius-sm); }
@@ -575,11 +575,11 @@
 .chart__end { font-size: 13px; }
 .chart__end-value { fill: var(--color-text); font-weight: var(--fw-semibold); }
 .chart__line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
-.chart__line--basic { stroke: var(--series-basic); }
-.chart__line--premium { stroke: var(--series-premium); }
+.chart__line--1 { stroke: var(--series-1); }
+.chart__line--2 { stroke: var(--series-2); }
 .chart__dot { stroke: var(--color-surface); stroke-width: 2; }
-.chart__dot--basic { fill: var(--series-basic); }
-.chart__dot--premium { fill: var(--series-premium); }
+.chart__dot--1 { fill: var(--series-1); }
+.chart__dot--2 { fill: var(--series-2); }
 .chart__leader, .chart__cross { stroke: var(--color-text-muted); stroke-width: 1; shape-rendering: crispEdges; }
 .chart__hit { fill: transparent; }
 .chart__readout {
@@ -612,14 +612,103 @@
 .bars__label { max-width: 10rem; color: var(--color-text); overflow-wrap: anywhere; }
 .bars__track { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 /* De langste balk laat ruimte voor zijn waarde (bijv. '2.780 · 86%') */
-.bars__bar { flex: none; width: calc(var(--share, 0) * (100% - 6.5rem)); height: 14px; border-radius: 0 4px 4px 0; background: var(--series-basic); }
+.bars__bar { flex: none; width: calc(var(--share, 0) * (100% - 6.5rem)); height: 14px; border-radius: 0 4px 4px 0; background: var(--series-1); }
 .bars__value { color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* ---- Portfolio en beoordelen (js/admin-portfolio.js) -------------------------------------- */
+/* Kwadrant als label: dezelfde kleuren als de andere labels; de tekst zegt het, niet de kleur */
+.quadrant--direct { background: var(--badge-free-bg); color: var(--badge-free-ink); }
+.quadrant--strategisch { background: var(--badge-demo-bg); color: var(--badge-demo-ink); }
+.quadrant--quickwin { background: var(--badge-license-bg); color: var(--badge-license-ink); }
+.quadrant--stoppen { background: var(--color-surface-muted); color: var(--color-text-muted); }
+.quadrant--ko { background: var(--badge-new-bg); color: var(--badge-new-ink); }
+
+.portfolio, .portfolio__body { display: grid; gap: var(--space-5); }
+.portfolio__intro { max-width: 72ch; }
+.portfolio__grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+.portfolio__legend { display: grid; gap: var(--space-2); margin: 0; font-size: var(--fs-sm); }
+.portfolio__legend > div { display: grid; gap: 0.15rem; }
+.portfolio__legend dt { color: var(--color-text); font-weight: var(--fw-semibold); }
+.portfolio__legend dd { margin: 0; color: var(--color-text-muted); }
+.portfolio__subtitle { margin-top: var(--space-4); }
+.portfolio__list { display: grid; gap: var(--space-2); }
+.portfolio__list li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); font-size: var(--fs-sm); }
+.portfolio__title { flex: 1 1 14rem; color: var(--color-text); font-weight: var(--fw-semibold); }
+
+/* De matrix: rustige vlakken, een duidelijke grens en genummerde punten met een rand in de kleur van het vlak */
+.matrix { position: relative; min-width: 0; margin-top: var(--space-3); }
+.matrix__svg { display: block; overflow: visible; }
+.matrix__area { fill: var(--color-surface-muted); }
+.matrix__area--direct { fill: var(--badge-free-bg); }
+.matrix__label { fill: var(--color-text-muted); font-size: 12px; font-weight: var(--fw-semibold); }
+.matrix__axis { fill: var(--color-text-muted); font-size: 12px; }
+.matrix__boundary { stroke: var(--color-border-strong); stroke-width: 1.5; }
+.matrix__hit { fill: transparent; }
+.matrix__dot { fill: var(--color-inverse); stroke: var(--color-surface); stroke-width: 2; }
+.matrix__number { fill: var(--color-on-inverse); font-size: 11px; font-weight: var(--fw-bold); pointer-events: none; }
+.matrix__point { outline: none; }
+.matrix__point:focus-visible .matrix__dot { stroke: var(--color-focus); stroke-width: 3; }
+.matrix__readout { transform: translate(var(--x, 0), var(--y, 0)); max-width: 18rem; }
+.matrix__readout-title { color: var(--color-text); font-weight: var(--fw-semibold); }
+
+.assess, .assess__group, .assess__dimension { display: grid; gap: var(--space-3); }
+.assess__group { margin: 0; padding: 0; border: 0; }
+.assess__group > legend { margin-bottom: var(--space-2); padding: 0; }
+.assess__next { display: block; color: var(--color-text-muted); font-size: var(--fs-xs); }
+.assess__dimension { gap: var(--space-2); padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.assess__sum { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--color-text-body); font-size: var(--fs-sm); }
+.assess__hours { width: 6rem; }
+.assess__total { color: var(--color-text-muted); }
+.assess__outcome { display: grid; gap: var(--space-2); }
+.assess__result { display: grid; gap: var(--space-2); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface-muted); font-size: var(--fs-sm); }
+.assess__score { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); color: var(--color-text); font-weight: var(--fw-semibold); }
+.assess__borderline { color: var(--color-warning); }
+.assess__idea summary { color: var(--color-link); font-size: var(--fs-sm); font-weight: var(--fw-semibold); cursor: pointer; }
+.assess__idea p { margin-top: var(--space-2); white-space: pre-wrap; font-size: var(--fs-sm); }
+.assess__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.assess-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--color-border); }
+.assess-row__none, .assess-row__score { color: var(--color-text-muted); font-size: var(--fs-sm); }
+
+/* ---- Overzicht (js/admin-overview.js) ------------------------------------------------------ */
+.overview, .overview__body { display: grid; gap: var(--space-5); }
+.overview__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); }
+.overview__stamp { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.overview__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.overview__kpis { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+.kpis .kpi { align-content: start; }
+.kpi__note { color: var(--color-text-muted); font-size: var(--fs-xs); }
+.overview__quadrants { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: var(--space-3); border-radius: var(--radius-sm); overflow: hidden; }
+.overview__quadrant { display: grid; gap: 0.1rem; padding: var(--space-3); background: var(--color-surface-muted); }
+.overview__quadrant--direct { background: var(--badge-free-bg); }
+.overview__quadrant-count { color: var(--color-text); font-family: var(--font-mono); font-size: var(--fs-xl); line-height: 1.1; }
+.overview__quadrant-label { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.overview__first { margin-top: var(--space-4); }
+.overview__first ul { display: grid; gap: var(--space-1); padding-left: 1.2rem; font-size: var(--fs-sm); }
+.overview__trainings { display: grid; gap: var(--space-2); }
+.overview__trainings li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding-bottom: var(--space-2); border-bottom: 1px solid var(--color-border); font-size: var(--fs-sm); }
+.overview__training-title { flex: 1 1 14rem; color: var(--color-text); font-weight: var(--fw-semibold); }
+.overview__source { max-width: 80ch; }
+
+/* Afdrukken als PDF: alleen het overzicht (js/admin-overview.js zet een kopie in .ov-print) */
+.ov-print { display: none; }
+@media print {
+  body.is-printing-overview { background: var(--vv-white); }
+  body.is-printing-overview > *:not(.ov-print) { display: none !important; }
+  body.is-printing-overview > .ov-print { display: block; }
+  .ov-print .overview__actions, .ov-print .chart__table, .ov-print .chart__readout { display: none !important; }
+  .ov-print .chart__svg { width: 100%; height: auto; }
+  .ov-print .kpi, .ov-print .usage-table, .ov-print .chart { break-inside: avoid; box-shadow: none; }
+  .ov-print, .ov-print * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+@media (max-width: 900px) {
+  .portfolio__grid { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 600px) {
   .copilot__definitions dl > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
-/* Hoge-contrastmodus: de kleuren van de reeksen blijven, Premium krijgt een gestippelde lijn erbij */
+/* Hoge-contrastmodus: de kleuren van de reeksen blijven, reeks 2 krijgt een gestippelde lijn erbij */
 @media (forced-colors: active) {
   .chart__key, .chart__line, .chart__dot, .bars__bar { forced-color-adjust: none; }
-  .chart__line--premium { stroke-dasharray: 6 4; }
+  .chart__line--2 { stroke-dasharray: 6 4; }
 }

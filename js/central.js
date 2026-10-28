@@ -514,9 +514,12 @@
   /* ---- Beheer: ideeënhub, reviews en tellers ------------------------------------------- */
   const rowById = (table, id) => tablePath(table, { id: 'eq.' + id });
 
-  /** Alle inzendingen, met naam en e-mailadres. Alleen voor een beheerder. */
-  function adminListIdeas() {
-    return readAll(TABLES.ideas, { select: '*', order: 'created_at.desc' });
+  // Met options.all: alle disciplines en de gedeelde basis (Beheer → Overzicht), anders deze discipline
+  const scope = (options) => (options && options.all ? { namespace: 'like.ai-*' } : {});
+
+  /** Alle inzendingen, met naam en e-mailadres (en de beoordeling, na stap 10). Alleen voor een beheerder. */
+  function adminListIdeas(options) {
+    return readAll(TABLES.ideas, Object.assign({ select: '*', order: 'created_at.desc' }, scope(options)));
   }
 
   /** Status, antwoord en publicatie aanpassen; geeft de bijgewerkte inzending. */
@@ -543,15 +546,26 @@
   }
 
   /** Tellers van de afgelopen dagen. */
-  function adminEvents(days) {
+  function adminEvents(days, options) {
     const since = new Date(Date.now() - (days || 90) * 86400000).toISOString();
-    return readAll(TABLES.events, { select: 'kind,item_id,occurred_at', occurred_at: 'gte.' + since, order: 'id.asc' }, 'tellers lezen');
+    return readAll(TABLES.events, Object.assign({ select: 'namespace,kind,item_id,occurred_at', occurred_at: 'gte.' + since, order: 'id.asc' }, scope(options)), 'tellers lezen');
+  }
+
+  /** Wat er live staat, in alle disciplines en de basis: per rij de soort en de paar velden die Overzicht telt. */
+  function contentOverview() {
+    return readAll(TABLES.content, {
+      select: 'namespace,type,id,title:data->>title,date:data->>date,video:data->>video,demo:data->>demo,prompts:data->prompts',
+      namespace: 'like.ai-*',
+      status: 'eq.published',
+      order: 'namespace.asc'
+    }, 'inhoud tellen');
   }
 
   /* ---- Beheer: Copilot-gebruik per periode (stap 9) ---------------------------------------- */
-  /** De opgeslagen periodes van deze discipline, oudste eerst; null zolang stap 9 niet is uitgevoerd. */
-  async function listCopilotUsage() {
-    const response = await request(tablePath(TABLES.copilot, { select: COPILOT_COLUMNS, namespace: inNamespace(), order: 'period_end.asc', limit: 500 }), { headers: await adminHeaders() });
+  /** De opgeslagen periodes van deze discipline (options.all: van alle), oudste eerst; null zolang stap 9 niet is uitgevoerd. */
+  async function listCopilotUsage(options) {
+    const params = Object.assign({ select: 'namespace,' + COPILOT_COLUMNS, namespace: inNamespace(), order: 'period_end.asc', limit: 500 }, scope(options));
+    const response = await request(tablePath(TABLES.copilot, params), { headers: await adminHeaders() });
     if (await isMissingTable(response)) return null;
     if (!response.ok) throw await failure(response, 'Copilot-gebruik lezen');
     return response.json();
@@ -717,6 +731,7 @@
     adminUpdateReview,
     adminDeleteReview,
     adminEvents,
+    contentOverview,
     listCopilotUsage,
     saveCopilotUsage,
     deleteCopilotUsage

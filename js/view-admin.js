@@ -1,16 +1,20 @@
 /* ==========================================================================
-   Beheer (#/beheer/inhoud, /basis, /disciplines, /inzendingen, /gebruik, /copilot)
+   Beheer (#/beheer/overzicht, /inhoud, /basis, /disciplines, /inzendingen, /portfolio, /gebruik, /copilot)
    --------------------------------------------------------------------------
    Voor het AI-team: inloggen met een Supabase-gebruiker van wie het
    e-mailadres in audit_admins staat (zie setup/supabase-audit.sql).
-   Bovenaan wissel je van discipline: Inhoud, Inzendingen en Gebruik gaan
-   over de discipline waarin je zit.
+   Bovenaan wissel je van discipline: Inhoud, Inzendingen, Portfolio, Gebruik
+   en Copilot-gebruik gaan over de discipline waarin je zit.
+   - Overzicht: de stand van zaken over alle disciplines, voor het bestuur
+     (af te drukken als PDF; js/admin-overview.js).
    - Inhoud: usecases, prompts, tips, trainingen, agents & tools, fasen en
      teksten van deze discipline (js/admin-content.js).
    - Gedeelde basis: wat in iedere cockpit staat (zelfde formulieren).
    - Disciplines: welke er zijn en welke open of op slot (js/admin-disciplines.js).
    - Inzendingen: lezen (met naam en e-mail), status zetten, beantwoorden,
-     publiceren in de hub, verwijderen en exporteren (CSV).
+     publiceren in de hub, beoordelen, verwijderen en exporteren (CSV).
+   - Portfolio: de beoordeelde ideeën in de AI Value Matrix, met de
+     registerregels (js/admin-portfolio.js).
    - Reviews: sterren en toelichtingen bij usecases en prompts; toelichting
      publiceren of verwijderen (js/reviews.js).
    - Nieuwsbrief: weekupdate of maandnieuwsbrief als PDF of e-mail
@@ -30,10 +34,12 @@
   const view = { status: 'open', kind: 'all', days: 90, reviews: 'todo' };
   const PLAIN_EMAIL = /^[^\s@?&#%]+@[^\s@?&#%]+$/;
   const TABS = [
+    { id: 'overzicht', label: 'Overzicht', icon: 'grid' },
     { id: 'inhoud', label: 'Inhoud', icon: 'pencil-line', perDiscipline: true },
     { id: 'basis', label: 'Gedeelde basis', icon: 'globe' },
     { id: 'disciplines', label: 'Disciplines', icon: 'layers' },
     { id: 'inzendingen', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true },
+    { id: 'portfolio', label: 'Portfolio', icon: 'flag', perDiscipline: true },
     { id: 'reviews', label: 'Reviews', icon: 'star', perDiscipline: true },
     { id: 'nieuwsbrief', label: 'Nieuwsbrief', icon: 'mail', perDiscipline: true },
     { id: 'gebruik', label: 'Gebruik', icon: 'chart', perDiscipline: true },
@@ -103,17 +109,9 @@
   }
 
   /* ---- Inzendingen ---------------------------------------------------------------- */
-  function csvCell(value) {
-    let text = value == null ? '' : String(value);
-    // Geen formules laten uitvoeren als het bestand in Excel wordt geopend
-    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
-    return '"' + text.replace(/"/g, '""') + '"';
-  }
-
   function exportCsv(items) {
     const columns = ['id', 'created_at', 'kind', 'status', 'is_public', 'allow_public', 'votes', 'phase', 'title', 'body', 'name', 'email', 'answer', 'answered_at'];
-    const lines = [columns.join(';')].concat(items.map((item) => columns.map((column) => csvCell(item[column])).join(';')));
-    ns.adminKit.download('ideeenhub-' + new Date().toISOString().slice(0, 10) + '.csv', '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+    kit.downloadCsv('ideeenhub-' + new Date().toISOString().slice(0, 10) + '.csv', columns, items.map((item) => columns.map((column) => item[column])));
   }
 
   function adminItem(item, onChanged) {
@@ -160,6 +158,7 @@
         ns.ideas.kindChip(item.kind),
         el('span', { className: 'admin-item__title', text: item.title }),
         ns.ideas.statusBadge(item.status),
+        ns.adminPortfolio.badge(ns.adminPortfolio.outcome(item.assessment)),
         item.is_public ? el('span', { className: 'badge badge--free', attrs: { title: 'Zichtbaar in de hub' } }, [icon('eye'), 'Gepubliceerd']) : null,
         item.votes ? el('span', { className: 'badge', attrs: { title: 'Stemmen' } }, [icon('thumb'), String(item.votes)]) : null,
         icon('chevron-down', { className: 'admin-item__chevron' })
@@ -173,6 +172,8 @@
           el('div', {}, [el('dt', { text: 'Publiceren' }), el('dd', { text: item.allow_public ? 'Mag (zonder naam)' : 'Liever niet' })])
         ]),
         el('p', { className: 'admin-item__text', text: item.body }),
+        // Ideeën en verzoeken (of wat al beoordeeld is): de AI Value Matrix, zie js/admin-portfolio.js
+        ns.adminPortfolio.isCandidate(item) || item.assessment ? ns.adminPortfolio.summaryRow(item, onChanged) : null,
         el('div', { className: 'admin-item__form' }, [
           el('div', { className: 'field' }, [el('label', { className: 'field__label', text: 'Status', attrs: { for: 'st-' + item.id } }), status]),
           el('div', { className: 'field field--wide' }, [el('label', { className: 'field__label', text: 'Reactie', attrs: { for: 'an-' + item.id } }), answer]),
@@ -582,7 +583,8 @@
   /* ---- Pagina ------------------------------------------------------------------------ */
   /**
    * Welke onderdelen zie je? Inhoud en Gedeelde basis met een rol voor die omgeving; de rest
-   * (disciplines, inzendingen, reviews, nieuwsbrief, gebruik, Copilot-gebruik, beheerders) alleen als hoofdbeheerder.
+   * (overzicht, disciplines, inzendingen, portfolio, reviews, nieuwsbrief, gebruik, Copilot-gebruik, beheerders)
+   * alleen als hoofdbeheerder.
    */
   function visibleTabs() {
     if (ns.rights.isOwner()) return TABS;
@@ -642,6 +644,8 @@
     if (!allowedTabs.length) {
       panel.append(notice({ tone: 'warning', icon: 'lock', text: `Je hebt geen rol in ${disciplineName}. Kies een andere discipline of vraag een hoofdbeheerder om rechten.` }));
     } else if (tab === 'gebruik') usageTab(panel);
+    else if (tab === 'overzicht') panel.append(ns.adminOverview.render().node);
+    else if (tab === 'portfolio') panel.append(ns.adminPortfolio.render().node);
     else if (tab === 'copilot') panel.append(ns.adminCopilot.render().node);
     else if (tab === 'beheerders') adminsTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);

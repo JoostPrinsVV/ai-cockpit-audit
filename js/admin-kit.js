@@ -44,6 +44,19 @@
     window.setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
+  /** Eén cel in een CSV voor Excel: tussen aanhalingstekens, en geen formules laten uitvoeren. */
+  function csvCell(value) {
+    let text = value == null ? '' : String(value);
+    if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+    return '"' + text.replace(/"/g, '""') + '"';
+  }
+
+  /** CSV (puntkomma's, met BOM zodat Excel de accenten goed leest) downloaden: kopjes en rijen. */
+  function downloadCsv(name, columns, rows) {
+    const lines = [columns.map(csvCell).join(';')].concat(rows.map((row) => row.map(csvCell).join(';')));
+    download(name, '﻿' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+  }
+
   /** Foutmelding onder een formulier: { node, show(text), hide() }. */
   function formError() {
     const node = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
@@ -80,5 +93,5 @@
     };
   }
 
-  ns.adminKit = { accentOptions, moment, slug, fileName, iconNames, download, formError, failed, busy };
+  ns.adminKit = { accentOptions, moment, slug, fileName, iconNames, download, csvCell, downloadCsv, formError, failed, busy };
 })(window.AIAudit);

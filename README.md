@@ -43,7 +43,7 @@ assets/branding/      Logo: logo-dark.svg (zonder vierkant, voor de donkere kopb
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …)
-setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), en stap 9 (Copilot-gebruik)
+setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), stap 9 (Copilot-gebruik) en 10 (portfolio)
 ```
 
 Alle paden zijn relatief binnen deze repository (geen `../`). De pagina zelf linkt niet naar andere sites; links naar
@@ -61,7 +61,7 @@ buiten staan alleen in de inhoud (bijv. de opname van een training of een agent)
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
 | `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; gepubliceerde inzendingen met antwoord en 'Ik ook' |
 | `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk |
-| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, de nieuwsbrief maken, gebruik bekijken, het Copilot-gebruik per periode volgen |
+| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, ideeën in het portfolio zetten (AI Value Matrix), de nieuwsbrief maken, gebruik bekijken, het Copilot-gebruik per periode volgen, en het overzicht voor het bestuur |
 
 Ieder adres is deelbaar, bijvoorbeeld in Teams: `https://joostprinsvv.github.io/ai-cockpit-audit/#/tip/facilitator`.
 Met `#/ideeen/vraag` (of `idee`, `verzoek`, `prompt`) staat de soort in de ideeënhub alvast goed.
@@ -435,6 +435,33 @@ hoe vaak mensen actief zijn en het aandeel van de tien meest actieve personen sa
 persoon en geen bestandsnaam. Is een groep heel klein (een licentie met een of twee personen), dan liggen de totalen
 dicht bij cijfers per persoon; houd daar rekening mee. Een echte export hoort nooit in deze (openbare) repository.
 
+## Overzicht (Beheer → Overzicht)
+
+De stand van zaken over alle disciplines op één scherm, voor hoofdbeheerders (en het eerste tabblad van Beheer):
+kerncijfers (Copilot-adoptie, usecases met demo, prompts, hoe vaak er in 30 dagen iets is bekeken en gekopieerd, met
+het verschil met de 30 dagen ervoor, en de ideeën), het gebruik van de cockpit per week, een tabel per discipline, het
+Copilot-gebruik per discipline (laatste import), de ideeënhub en het portfolio, en de laatste trainingen. Met
+**Afdrukken als PDF** maak je er een document van, bijvoorbeeld voor het bestuur. Alles komt uit wat er al is: wat live
+staat, de anonieme tellers, de ideeënhub en de totalen van de Copilot-export; er is geen aparte SQL voor nodig.
+
+## Portfolio en ideeën beoordelen (Beheer → Portfolio, stap 10)
+
+Ideeën en verzoeken uit de ideeënhub beoordeel je met de **AI Value Matrix**, bij Inzendingen (*Beoordelen met de AI
+Value Matrix*) of in Portfolio:
+
+1. **Knock-outs** (K1 tot en met K5): één treffer en het idee stopt, met de vervolgstap erbij.
+2. **Scores** van 0 tot 5: A kwaliteitseffect, B capaciteitseffect (vul uren per keer × keren per jaar in, dan zet de
+   pagina de score), C technische haalbaarheid en D time-to-value, ieder met een regel onderbouwing.
+3. **Kwadrant**: waarde (A + B) en haalbaarheid (C + D), grens bij 6: Direct uitvoeren, Strategisch ontwikkelen, Quick
+   win of Stoppen. Twee punten of minder onder de grens is een grensgeval: opnieuw scoren bij het ontwerp.
+4. **Risicoklasse** (laag, midden, hoog): bepaalt de route erna, niet het kwadrant. Daarna de technische route, het
+   besluit en de open vragen.
+
+Portfolio toont alle beoordelingen van de discipline in de matrix (genummerde punten, met de cijfers bij aanwijzen of
+Tab) en als lijst, met de knock-outs en wat nog te beoordelen is. **Registerregels (CSV)** geeft per idee de regel
+voor het AI-register. Eenmalig: voer `setup/supabase-audit-portfolio.sql` uit (stap 10, na stap 1): die zet één kolom
+`assessment` bij de inzendingen. Alleen hoofdbeheerders lezen hem; bezoekers van de hub zien hem nooit.
+
 ## Supabase instellen (eenmalig, voor beheer en ideeënhub)
 
 Beheer, de ideeënhub en de tellers gebruiken hetzelfde Supabase-project als de snackbar, met eigen tabellen. Tot die
@@ -446,7 +473,8 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
 2. Supabase → SQL Editor → New query → plak het hele bestand → Run. Doe daarna hetzelfde met
    `setup/supabase-audit-bewerken.sql` (stap 7) en `setup/supabase-audit-beveiligen.sql` (stap 8), in die volgorde.
    Stap 1 en 8 opnieuw uitvoeren kan geen kwaad; stap 7 weigert na stap 8 (zie hierboven). Voor Beheer →
-   Copilot-gebruik ook `setup/supabase-audit-copilot.sql` (stap 9, mag op ieder moment na stap 1).
+   Copilot-gebruik ook `setup/supabase-audit-copilot.sql` (stap 9), en voor Beheer → Portfolio
+   `setup/supabase-audit-portfolio.sql` (stap 10); beide mogen op ieder moment na stap 1 en opnieuw.
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').
@@ -456,7 +484,8 @@ Een ander Supabase-project? Zet het adres in `centralUrl` in `js/config.js` én 
 
 Rechten in het kort: iedereen kan gepubliceerde inhoud lezen en alleen tóévoegen in de hub (inzending, stem, anonieme
 teller). Inhoud wijzigen gaat via de rollen van stap 7 (opslaan en publiceren, door de database gecontroleerd);
-inzendingen, reviews, gebruik, Copilot-gebruik, disciplines en beheerders zijn voor hoofdbeheerders (`audit_admins`). Iedereen ziet in
+overzicht, inzendingen, portfolio, reviews, gebruik, Copilot-gebruik, disciplines en beheerders zijn voor hoofdbeheerders
+(`audit_admins`). Iedereen ziet in
 de hub alleen wat een beheerder publiceert, en nooit naam of e-mailadres. Een inzender kan aangeven dat de inzending
 privé moet blijven; die kun je dan niet publiceren. Optioneel: zet in `js/config.js` een `ideaFallbackEmail`, dan kan
 een collega bij een storing de inzending ook per mail sturen.
