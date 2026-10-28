@@ -11,8 +11,10 @@
    - de zes snacks als usecases, ieder met de demo van de snackkaart
      (snack 1 als HTML-demo, snack 2 t/m 6 als video in assets/videos/);
      de pro-versie van snack 4 niet: die werkt met Claude, buiten Copilot;
-   - de dertig bijgerechten als losse prompts (onderaan), met de versie
-     zonder licentie (promptBasic) en de vervolgstappen (followUps).
+   - de dertig bijgerechten als losse prompts, met de versie zonder
+     licentie (promptBasic) en de vervolgstappen (followUps);
+   - de training 'Van AI-hype naar toepassing' (26 oktober 2026) met het
+     naslagwerk, voor zover dat op een openbare site mag (zie daar).
    De fasen 'communicatie' en 'eigen-werk' staan hier zelf in: de gedeelde
    basis heeft (nog) geen fasen. Alle namen en organisaties zijn verzonnen.
    ========================================================================== */
@@ -1857,6 +1859,176 @@ Aantekeningen:
       note: 'Werkt ook met de gratis Copilot Chat. Leg de checklist daarna naast de kantoorrichtlijnen.',
       tip: 'Bewaar de checklist in OneNote of Loop. Dan vink je hem iedere keer af en verbeter je hem samen met je team.',
       added: '2026-10-28'
+    }
+  ],
+
+  /* ---- Trainingen ------------------------------------------------------------------- */
+  // Het naslagwerk van de ochtendsessie van de Boost & Learn (26 oktober 2026). Het volledige
+  // naslagwerk (met de video, alle slides, de Mentimeter-uitkomsten en de 21 groepsideeën) is
+  // alleen voor intern gebruik en staat versleuteld op de snackbar; deze site is openbaar. Hier
+  // dus alleen wat voor iedereen mag: 19 van de 27 slides (zonder het programma, de
+  // Mentimeter-codes, de opdrachtinstructie en het scherm van het ideeënloket), en de inbreng
+  // van collega's in algemene vorm. De video kan als link naar Stream of SharePoint (veld link).
+  trainings: [
+    {
+      id: 'van-ai-hype-naar-toepassing',
+      title: 'Van AI-hype naar toepassing',
+      subtitle: 'Boost & Learn: de ochtendsessie van de discipline Accountancy',
+      date: '2026-10-26',
+      category: 'Boost & Learn',
+      level: 'Starter',
+      license: false,
+      description: 'Wat betekent AI voor ons vak, onze dienstverlening en onze ontwikkeling? Bekijk de slides terug en lees wat je meeneemt: kalibreren, wat wel en niet mag met gegevens, de beste ideeën uit de praktijksessie en hoe je morgen verder kunt.',
+      materials: [
+        { label: 'Het volledige naslagwerk, met de video en alle ideeën (open de link uit het Teams-bericht)', href: 'https://joostprinsvv.github.io/AI-snackbar-platform/boost-learn-ai.html' }
+      ],
+      usecases: ['weekplanning', 'icbo-jaarrekening', 'klantoverleg', 'klantpresentatie', 'klantgesprek-voorbereiden', 'contract-vertalen'],
+      tips: ['schildje', 'controleren'],
+      added: '2026-10-28',
+
+      slides: [
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-01.jpg', title: 'Van AI-hype naar toepassing' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-02.jpg', title: 'Waarom deze sessie?' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-03.jpg', title: 'De route van vandaag' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-04.jpg', title: 'Wat gebeurt er in de wereld?' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-05.jpg', title: 'Van techniek naar toepassing' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-06.jpg', title: 'Zo werkt kalibreren in de praktijk' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-07.jpg', title: 'Onze uitgangspunten' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-08.jpg', title: 'Wie willen wij blijven?' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-09.jpg', title: 'Vier soorten gegevens' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-10.jpg', title: 'Een simpele vuistregel en ons beleid' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-11.jpg', title: 'Ethiek' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-12.jpg', title: 'De drie domeinen' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-13.jpg', title: 'Werkwijze in zes stappen' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-14.jpg', title: 'AI Snackbar' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-15.jpg', title: 'Wat hebben we geleerd?' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-16.jpg', title: 'De koers voor Accountancy' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-17.jpg', title: 'Van bewustwording naar ontwikkeling' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-18.jpg', title: 'Jouw eerste stap' },
+        { image: 'assets/trainingen/van-ai-hype-naar-toepassing/slide-19.jpg', title: 'Afsluiting' }
+      ],
+
+      takeaways: [
+        { title: 'Versnellen en verbeteren: ja. Vervangen: nee.', text: 'Routinewerk sneller en met minder fouten, betere analyses, hogere kwaliteit en rijker advies. Het professionele oordeel blijft altijd bij de mens.' },
+        { title: 'AI is geen technologieproject, maar onderdeel van onze dienstverlening.', text: 'AI raakt administratie, samenstellen én advies. De vraag is niet óf ons vak verandert, maar hoe wij daar richting aan geven.' },
+        { title: 'Kalibreren: vertrouwen waar het kan, controleren waar het moet.', text: 'Je hoeft niet te weten hoe AI werkt. Wel wát er beschikbaar is, wannéér je het gebruikt en wanneer je moet contróleren. AI levert snel iets op dat er af uitziet; het vakmanschap zit in kritisch kijken en bijsturen.' },
+        { title: 'Klant- en persoonsgegevens alleen in Copilot, met je werkaccount.', text: 'Vuistregel: zou je het niet hardop vertellen op een verjaardag? Zet het dan ook niet zomaar in een AI-tool.', warning: true },
+        { title: 'AI ondersteunt, de professional beslist.', text: 'AI zoekt, ordent, vat samen en signaleert. Jij beoordeelt, kalibreert, tekent en adviseert. We zijn transparant over waar AI is gebruikt, kunnen elke uitkomst verantwoorden en werken binnen de kaders voor data.' }
+      ],
+
+      actions: [
+        {
+          title: 'Maak je "Morgen ga ik…" concreet en zet het in je agenda',
+          text: 'Eén toepassing, klein genoeg om morgen te doen. Schrijf het op, deel het met een collega en plan nu al het moment om het te proberen.',
+          slide: 18
+        },
+        {
+          title: 'Proef één snack',
+          text: 'De zes snacks van de AI Snackbar staan bij Usecases, ieder met de demo en de prompts. Begin met een snack op niveau Starter, bijvoorbeeld "Van overleg naar actielijst".',
+          slide: 14
+        },
+        {
+          title: 'Check de soort gegevens vóór je iets in een AI-tool zet',
+          text: 'Hoe gevoeliger de gegevens, hoe voorzichtiger. Bij twijfel: niet doen, of vraag het de interne helpdesk.',
+          slide: 9,
+          more: 'Vier soorten gegevens en ons beleid',
+          howto: [
+            { title: 'Vier soorten gegevens', steps: [
+              'Openbaar (mag overal): algemene informatie, gepubliceerde teksten, openbare cijfers.',
+              'Persoonsgegevens (voorzichtig): namen, BSN, e-mailadressen. Alleen in de veilige Microsoft 365-omgeving.',
+              'Vertrouwelijk klantmateriaal (extra alert): dossiers, contracten, financiële details van klanten.',
+              'Hoog-risico (niet delen): zeer gevoelige of beschermde informatie. Bij twijfel: niet doen.'
+            ] },
+            { title: 'Het beleid van Visser & Visser', steps: [
+              'Gebruik Copilot alleen met je werkaccount in de Microsoft 365-omgeving.',
+              'Geen klant- of persoonsgegevens in openbare AI-tools zoals ChatGPT, Claude of Gemini.',
+              'Blijf zelf verantwoordelijk voor wat je gebruikt en verstuurt.',
+              'Twijfel je? Vraag het de interne helpdesk. Liever één keer te vaak.'
+            ] }
+          ],
+          note: 'De vuistregel: welke feiten zou jij wél delen op een verjaardag?'
+        },
+        {
+          title: 'Kalibreer bewust',
+          text: 'Lees de uitkomst na zoals je het werk van een nieuwe junior beoordeelt: wat klopt, wat is aangenomen of verzonnen?',
+          slide: 6,
+          howto: [
+            { title: 'Zo werkt kalibreren', steps: [
+              'Opdracht geven: een herkenbare vraag uit de praktijk, met fictieve gegevens.',
+              'AI levert op: snel, overtuigend geformuleerd en ogenschijnlijk af.',
+              'Kritisch kijken: waar klopt het niet? Wat is aangenomen of verzonnen? Dáár zit het vakmanschap.',
+              'Kalibreren: bijsturen, controleren en zelf het oordeel vellen.'
+            ] }
+          ]
+        },
+        {
+          title: 'Probeer een idee uit de praktijksessie',
+          text: 'Drie ideeën uit de praktijksessie gingen door naar de plenaire zaal. Na de sessie zijn ze uitgewerkt tot een voorzet om zelf te proberen. Gebruik Microsoft 365 Copilot met je werkaccount (dit is vertrouwelijk klantmateriaal) en pas de [PLAATSHOUDERS] aan.',
+          slide: 13,
+          prompts: [
+            {
+              label: 'Risicoanalyse kwalitatief verbeteren',
+              text: `Je bent een ervaren samenstellend accountant. Ik voeg toe: de bedrijfsbeschrijving van [KLANT], de jaarrekening van vorig jaar en [BENCHMARK OF BRANCHE-INFORMATIE]. Bereid de risicoanalyse voor de samenstelopdracht over boekjaar [JAAR] voor.
+
+1. Benoem mogelijke risico's op een onjuiste of onvolledige jaarrekening, gegroepeerd naar: bedrijfsactiviteiten en markt, financiële positie en continuïteit, specifieke posten, en verslaggeving.
+2. Geef per risico: omschrijving, bron (document en passage), betrokken jaarrekeningpost(en) en het belang (hoog/middel/laag) met onderbouwing.
+3. Selecteer daarna maximaal vijf risico's die het meest relevant zijn voor deze opdracht en leg uit waarom.
+
+Regels:
+- Gebruik alleen de bijgevoegde stukken en markeer aannames als aanname.
+- Vul ontbrekende informatie niet zelf in, maar zet het onder "Vragen aan de klant".`
+            },
+            {
+              label: 'Fiscale posities sneller en met minder fouten opstellen',
+              text: `Je bent een ervaren fiscalist. Ik voeg toe: het maatschapscontract van [MAATSCHAP] en de cijfers over [JAAR].
+
+1. Vat de afspraken over de winstverdeling samen per maat, met verwijzing naar het artikel in het contract.
+2. Werk op basis daarvan de fiscale positie per maat uit in een tabel, met per regel de bron en de berekening.
+3. Benoem mogelijkheden om de belastingdruk te optimaliseren, met per mogelijkheid de voorwaarden en de risico's.
+4. Lever een korte bespreeknotitie op voor het gesprek met de maten.
+
+Regels:
+- Reken alleen met bedragen uit de bijgevoegde stukken en laat je berekening zien.
+- Noem een tarief, grens of wetsartikel alleen als je daar zeker van bent; markeer het anders als "Nagaan".
+- Zet onderaan wat je niet uit de stukken kunt halen.`
+            },
+            {
+              label: 'Bedrijfsbeschrijving en ICBO laten checken',
+              text: `Je bent een ervaren samenstellend accountant. Ik voeg de bedrijfsbeschrijving en de ICBO van [KLANT] over boekjaar [JAAR] toe.
+
+1. Beoordeel de bedrijfsbeschrijving op volledigheid: activiteiten, organisatie, markt, financiering en belangrijke ontwikkelingen. Noem wat ontbreekt.
+2. Noem relevante marktontwikkelingen voor deze branche, met per ontwikkeling de bron.
+3. Leg de ICBO naast de bedrijfsbeschrijving: welke bevindingen worden niet verklaard, en welke ontwikkelingen zie je niet terug in de cijfers?
+4. Doe een eerste opzet voor de risicoanalyse en geef maximaal vijf adviespunten voor gesprekken door het jaar heen.
+
+Maak steeds onderscheid tussen wat uit de stukken komt en wat jouw suggestie is. Vul ontbrekende informatie niet zelf in.`
+            }
+          ],
+          note: 'Een maatschapscontract bevat persoonsgegevens: gebruik alleen Microsoft 365 Copilot met je werkaccount. Tarieven en wetsartikelen controleer je altijd zelf. Voor de ICBO zelf staat de usecase "ICBO op een concept jaarrekening" klaar.'
+        },
+        {
+          title: 'Dien je idee in bij het ideeënloket',
+          text: 'Vraagt je idee om een agent, koppeling of tool? Laat het achter in het ideeënloket van Ilse Lab. Je hoort binnen twee weken of en hoe we ermee verdergaan.'
+        }
+      ],
+
+      ideas: [
+        { title: 'Risicoanalyse kwalitatief verbeteren', text: 'Met Copilot een analyse op meer bronnen tegelijk: de bedrijfsbeschrijving, marktontwikkelingen, benchmarks en verslaggeving. Laat AI de risico\'s in beeld brengen en kies zelf de belangrijkste: AI stelt al snel te veel risico\'s vast.' },
+        { title: 'Fiscale posities sneller en met minder fouten', text: 'Copilot analyseert het maatschapscontract op de winstverdeling en zet de fiscale positie per maat op, als stuk ter bespreking. Uitgaan van actuele wetgeving, en de adviseur toetst altijd de uitkomst.' },
+        { title: 'Bedrijfsbeschrijving en ICBO laten checken', text: 'Copilot checkt de bedrijfsbeschrijving en de ICBO op volledigheid, marktontwikkelingen en adviesmogelijkheden door het jaar heen, als opzet voor de risicoanalyse. Valideer wat je terugkrijgt, en: gewoon proberen.' }
+      ],
+      questions: [
+        'Hoe leren junioren het vak goed als AI een deel van het basiswerk overneemt?',
+        'Wat betekent het voor ons advies als klanten zelf AI gebruiken?',
+        'Hoe houden we het tempo van alle ontwikkelingen bij?'
+      ],
+
+      timelineIntro: 'De koers voor de discipline Accountancy: we bouwen stap voor stap, van bewustwording via toepassing en vakmanschap naar structurele ontwikkeling.',
+      timeline: [
+        { month: 'Nu', title: 'Eerste toepassingen', text: 'Eerste AI-toepassingen in de praktijk, kaders voor dataveiligheid en ethiek, de Boost & Learn en de AI Snackbar.', current: true },
+        { month: '1 tot 2 jaar', title: 'Koplopers en kennisbank', text: 'AI-koplopers vanuit het werkveld, werkprocessen in kaart brengen en een kennisbank met praktijkvoorbeelden.' },
+        { month: 'Richting 2030', title: 'AI structureel in de praktijk', text: 'Proactief signaleren bij klanten en meer ruimte voor advies.' }
+      ]
     }
   ],
 

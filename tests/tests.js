@@ -377,9 +377,12 @@
 
     /* ---- voorbeeldinhoud ---- */
     describe('Voorbeeldinhoud Accountancy (data/voorbeelden/accountancy.js)');
-    await test('de zes snacks met demo, 35 prompts en geen fouten in fasen of adressen', () => {
+    await test('de zes snacks met demo, 35 prompts, het naslagwerk en geen fouten in fasen of adressen', () => {
       const example = ns.examples.accountancy;
       ns.content.load({ phase: example.phases, usecase: example.usecases, prompt: example.prompts, tip: example.tips, training: example.trainings || [], agent: [], setting: {} });
+      const training = ns.content.trainingById.get('van-ai-hype-naar-toepassing');
+      equal([training.slides.length, training.takeaways.length, training.actions.length, training.actions.filter((a) => a.slide).length, training.hasNaslag], [19, 5, 6, 5, true], 'naslagwerk');
+      ok(training.usecases.every((id) => ns.content.usecaseById.has(id)), 'de snacks bij de training bestaan');
       const usecases = ns.content.usecases;
       equal(usecases.length, 6, 'usecases');
       ok(usecases.every((u) => u.hasDemo), 'iedere usecase heeft een demo');

@@ -88,8 +88,12 @@ De cockpit is er per discipline (Audit, Accountancy, Belastingadvies, Salarisadm
 - **Nieuwe discipline:** open in Beheer de cockpit van die discipline. Zolang hij leeg is, kies je *Begin met een lege
   cockpit* (eerst de fasen toevoegen) of *Voorbeeldinhoud overnemen*. Voor Accountancy (`data/voorbeelden/accountancy.js`)
   is dat de AI Snackbar van de Boost & Learn: de zes snacks als usecases met hun demo, en de dertig bijgerechten als
-  losse prompts (met de versie zonder licentie en de vervolgstappen). De pro-versie van snack 4 (met Claude) staat er
-  bewust niet in: in de cockpit werk je alleen met Copilot. Is Accountancy al ingericht, dan biedt Beheer dit niet meer aan.
+  losse prompts (met de versie zonder licentie en de vervolgstappen), en de training *Van AI-hype naar toepassing* met
+  het naslagwerk van de ochtendsessie (19 slides in `assets/trainingen/van-ai-hype-naar-toepassing/`). Het volledige
+  naslagwerk is alleen voor intern gebruik en staat versleuteld op de snackbar: in de cockpit staat wat openbaar mag,
+  met een link ernaartoe; de video kan als link naar Stream of SharePoint (Beheer → Trainingen → Link). De pro-versie van
+  snack 4 (met Claude) staat er bewust niet in: in de cockpit werk je alleen met Copilot. Is Accountancy al ingericht,
+  dan biedt Beheer dit niet meer aan.
 - **Teksten per discipline:** Beheer → Inhoud → Teksten in een discipline gaat voor de teksten in de gedeelde basis, en
   die weer voor `js/config.js`. Hoe de discipline in lopende tekst heet ('Waarom handig in de audit', 'Per fase van de
   controle') stel je in bij Disciplines.
