@@ -151,7 +151,8 @@ Na het uitvoeren van `setup/supabase-audit-bewerken.sql` werkt beheer in drie la
    versie heeft nog niemand bekeken).
 
 **De bewerkbalk** staat bovenin zodra je bent ingelogd: je rol, **Bewerken**, de status, Ongedaan maken, Opnieuw,
-Opslaan, Publiceren, **Logboek** (wie wat wanneer deed, met per item de eerdere versies om terug te zetten) en
+Opslaan, Publiceren, **Logboek** (wie wat wanneer deed, per dag in te klappen en te doorzoeken op naam, actie, titel
+of datum, met per item de eerdere versies om terug te zetten) en
 **Als collega** (de site zoals collega's hem zien). Iemand anders hetzelfde item open? Dan zie je een melding.
 Sloeg iemand het intussen op, dan kies je of jouw versie of die van de ander blijft.
 

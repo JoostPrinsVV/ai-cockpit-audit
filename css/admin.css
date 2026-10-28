@@ -156,8 +156,31 @@
 .publish-when { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
 .publish-when .btn { margin-left: auto; }
 
-.log-day + .log-day { margin-top: var(--space-5); }
-.log-day__title { margin-bottom: var(--space-2); color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: var(--fw-medium); letter-spacing: var(--ls-instrument); text-transform: uppercase; }
+/* Logboek: zoeken (blijft bovenin staan tijdens het scrollen) en per dag in te klappen */
+.log-tools {
+  position: sticky;
+  top: calc(-1 * var(--space-4));
+  z-index: 1;
+  display: grid;
+  gap: var(--space-2);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-5)) var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.search--log { max-width: none; }
+.search--log .search__input { min-height: 2.25rem; font-size: var(--fs-sm); }
+.log-tools__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-1) var(--space-3); }
+.log-tools__status { color: var(--color-text-muted); font-size: var(--fs-xs); }
+.log-day + .log-day { margin-top: var(--space-1); }
+.log-day__head { display: flex; align-items: center; gap: var(--space-2); min-height: 2.75rem; padding: var(--space-1) 0; border-bottom: 1px solid var(--color-border-strong); cursor: pointer; list-style: none; }
+.log-day__head::-webkit-details-marker { display: none; }
+.log-day__title { flex: 1; color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: var(--fw-medium); letter-spacing: var(--ls-instrument); text-transform: uppercase; }
+.log-day__head:hover .log-day__title { color: var(--color-text); }
+.log-day__count { color: var(--color-text-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+.log-day__chevron { flex: none; color: var(--color-text-muted); transition: transform var(--duration) var(--ease-out); }
+.log-day[open] .log-day__chevron { transform: rotate(180deg); }
+.log-day[open] > .log-list { margin-bottom: var(--space-3); }
 .log-list { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
 .log-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); font-size: var(--fs-sm); }
 .log-item__time { flex: none; min-width: 3.2rem; color: var(--color-text-muted); font-family: var(--font-mono); font-size: 0.8rem; }

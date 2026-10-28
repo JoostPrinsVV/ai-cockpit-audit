@@ -619,13 +619,21 @@
     const handle = drawer('Publiceren', body, footer);
   }
 
-  /** Paneel Logboek: wie deed wat, met per item de eerdere versies. */
+  const LOG_LIMIT = 1000;
+  // Welke dagen in het logboek openstaan, zolang de site open is (eerste keer: alleen de nieuwste)
+  let logOpenDays = null;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+  /**
+   * Paneel Logboek: wie deed wat, per dag in te klappen en te doorzoeken (naam, actie, titel,
+   * soort of datum), met per item de eerdere versies.
+   */
   async function openLog() {
     const body = el('div', {}, [el('p', { className: 'drawer__lead', text: 'Logboek laden…' })]);
-    drawer('Logboek', body);
+    const handle = drawer('Logboek', body);
     let entries = [];
     try {
-      entries = await ns.central.listLog(cockpitNamespaces(), 300);
+      entries = await ns.central.listLog(cockpitNamespaces(), LOG_LIMIT);
     } catch (error) {
       body.replaceChildren(el('p', { className: 'drawer__lead', text: 'Het logboek is niet te lezen: ' + error.message }));
       return;
@@ -640,23 +648,115 @@
       if (!days.has(day)) days.set(day, []);
       days.get(day).push(entry);
     });
-    body.replaceChildren(...Array.from(days.entries()).map(([day, list]) => el('section', { className: 'log-day' }, [
-      el('h3', { className: 'log-day__title', text: day }),
-      el('ul', { className: 'log-list', attrs: { role: 'list' } }, list.map((entry) => {
+    if (!logOpenDays) logOpenDays = new Set([days.keys().next().value]);
+    let searching = false;
+
+    const groups = Array.from(days.entries()).map(([day, list]) => {
+      const items = list.map((entry) => {
+        const time = new Date(entry.at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
         const page = entry.item_id ? pageOf(entry.type, entry.item_id) : '';
+        const kind = entry.type ? ns.kinds.label(entry.type) : '';
         const versions = entry.type && entry.item_id ? el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Versies' })]) : null;
         if (versions) versions.addEventListener('click', () => openVersions(entry.namespace, entry.type, entry.item_id, entry.title));
-        return el('li', { className: 'log-item' }, [
-          el('span', { className: 'log-item__time', text: new Date(entry.at).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) }),
+        const node = el('li', { className: 'log-item' }, [
+          el('span', { className: 'log-item__time', text: time }),
           el('span', { className: 'log-item__text' }, [
             el('strong', { text: shortName(entry.actor) }), ' ', entry.action, entry.title ? ' · ' : '',
             entry.title ? (page ? el('a', { attrs: { href: page }, text: entry.title }) : el('span', { text: entry.title })) : null,
-            entry.type ? el('span', { className: 'log-item__type', text: ' (' + ns.kinds.label(entry.type) + ')' }) : null
+            kind ? el('span', { className: 'log-item__type', text: ' (' + kind + ')' }) : null
           ]),
           versions
         ]);
-      }))
-    ])));
+        // Naam zonder domein: anders vindt 'visser' iedere regel
+        return { node, haystack: ns.ui.normalize([shortName(entry.actor), entry.action, entry.title, kind, entry.item_id, day, time].join(' ')) };
+      });
+      const count = el('span', { className: 'log-day__count' });
+      const details = el('details', { className: 'log-day', attrs: { open: logOpenDays.has(day) } }, [
+        el('summary', { className: 'log-day__head' }, [
+          el('span', { className: 'log-day__title', text: day }),
+          count,
+          icon('chevron-down', { className: 'log-day__chevron' })
+        ]),
+        el('ul', { className: 'log-list', attrs: { role: 'list' } }, items.map((item) => item.node))
+      ]);
+      return { day, details, items, count, total: list.length };
+    });
+
+    const toggleAll = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [el('span')]);
+    const status = el('p', { className: 'log-tools__status', attrs: { role: 'status' } });
+    const visible = () => groups.filter((group) => !group.details.hidden);
+    const syncToggleAll = () => {
+      toggleAll.firstChild.textContent = visible().some((group) => !group.details.open) ? 'Alles uitklappen' : 'Alles inklappen';
+    };
+
+    // Zelf in- of uitgeklapt (niet tijdens het zoeken): onthouden voor de volgende keer
+    groups.forEach((group) => group.details.addEventListener('toggle', () => {
+      if (!searching) {
+        if (group.details.open) logOpenDays.add(group.day);
+        else logOpenDays.delete(group.day);
+      }
+      syncToggleAll();
+    }));
+    toggleAll.addEventListener('click', () => {
+      const open = visible().some((group) => !group.details.open);
+      visible().forEach((group) => { group.details.open = open; });
+      syncToggleAll();
+    });
+
+    const input = el('input', { className: 'search__input', attrs: { id: 'log-search', type: 'search', placeholder: 'Zoek op naam, actie, titel of datum', autocomplete: 'off', enterkeyhint: 'search' } });
+    /** Alleen de regels die passen; dagen met een treffer gaan open. Leeg zoekveld: zoals je het had. */
+    function update() {
+      const query = input.value.trim();
+      searching = Boolean(query);
+      let found = 0;
+      groups.forEach((group) => {
+        let hits = 0;
+        group.items.forEach((item) => {
+          const hit = !searching || ns.ui.matches(item.haystack, query);
+          item.node.hidden = !hit;
+          if (hit) hits += 1;
+        });
+        found += hits;
+        group.details.hidden = searching && !hits;
+        group.details.open = searching ? hits > 0 : logOpenDays.has(group.day);
+        group.count.textContent = searching ? `${hits} van ${group.total}` : plural(group.total, 'wijziging', 'wijzigingen');
+      });
+      const daysFound = visible().length;
+      status.textContent = !searching
+        ? `${plural(entries.length, 'wijziging', 'wijzigingen')} op ${plural(groups.length, 'dag', 'dagen')}${entries.length >= LOG_LIMIT ? ` (de laatste ${LOG_LIMIT})` : ''}.`
+        : found
+          ? `${plural(found, 'wijziging', 'wijzigingen')} gevonden op ${plural(daysFound, 'dag', 'dagen')}.`
+          : `Niets gevonden voor "${query}". Zoek op een naam, een actie (bijv. gepubliceerd), een titel of een datum (bijv. 23 okt).`;
+      toggleAll.hidden = searching && !found;
+      syncToggleAll();
+    }
+    let timer = 0;
+    input.addEventListener('input', () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(update, 120);
+    });
+    // Escape maakt eerst het zoekveld leeg; pas daarna sluit hij het paneel
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !input.value) return;
+      event.preventDefault();
+      event.stopPropagation();
+      input.value = '';
+      update();
+    });
+    const search = el('form', { className: 'search search--log', attrs: { role: 'search', novalidate: true } }, [
+      el('label', { className: 'sr-only', text: 'Zoek in het logboek', attrs: { for: 'log-search' } }),
+      icon('search', { className: 'search__icon' }),
+      input
+    ]);
+    search.addEventListener('submit', (event) => event.preventDefault());
+
+    body.replaceChildren(
+      el('div', { className: 'log-tools' }, [search, el('div', { className: 'log-tools__row' }, [status, toggleAll])]),
+      ...groups.map((group) => group.details)
+    );
+    update();
+    // Het paneel stond al open tijdens het laden: dan direct kunnen zoeken
+    if (handle.dialog.contains(document.activeElement)) input.focus();
   }
 
   /** Eerdere gepubliceerde versies van één item; terugzetten maakt er een werkversie van. */
