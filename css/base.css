@@ -97,6 +97,11 @@ ol[role='list'] {
   padding: 0;
 }
 
+/* Opsommingstekens in Turquoise (merkplatform) */
+ul > li::marker {
+  color: var(--accent-teal);
+}
+
 img,
 svg,
 video {

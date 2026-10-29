@@ -325,7 +325,7 @@
 }
 
 /* Het document zelf: altijd licht (zoals de PDF en de e-mail), dus met de vaste merkkleuren */
-.nl-doc { max-width: 46rem; margin: 0 auto; border: 1px solid var(--vv-gray-200); background: var(--vv-white); color: var(--vv-gray-700); box-shadow: var(--shadow-card); font-size: 1rem; line-height: 1.6; }
+.nl-doc { max-width: 46rem; margin: 0 auto; border: 1px solid var(--vv-gray-200); background: var(--vv-white); color: var(--vv-navy); box-shadow: var(--shadow-card); font-size: 1rem; line-height: 1.6; }
 .nl-doc__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1.5rem; padding: 1.35rem 2rem; border-bottom: 4px solid var(--vv-teal); background: var(--vv-navy); color: var(--vv-white); }
 .nl-doc__brand { display: flex; align-items: center; gap: 0.65rem; }
 .nl-doc__mark { display: block; flex: none; box-sizing: border-box; width: 2.3rem; height: 2.3rem; padding: 0.18rem; border: 1px solid var(--on-dark-line); border-radius: 0.65rem; background: var(--on-dark-fill); }
@@ -336,20 +336,20 @@
 .nl-doc__body { padding: 1.75rem 2rem 1.25rem; }
 .nl-doc__title { color: var(--vv-navy); font-size: 1.95rem; line-height: 1.15; letter-spacing: -0.02em; }
 .nl-doc__intro { margin-top: 0.6rem; font-size: 1.02rem; }
-.nl-doc__summary { margin-top: 1rem; padding: 0.6rem 0.9rem; border-radius: 0.5rem; background: var(--vv-gray-75); color: var(--vv-gray-600); font-size: 0.88rem; }
+.nl-doc__summary { margin-top: 1rem; padding: 0.6rem 0.9rem; border-radius: 0.5rem; background: var(--vv-gray-75); color: var(--vv-navy-75); font-size: 0.88rem; }
 .nl-doc__summary strong { color: var(--vv-navy); }
-.nl-doc__empty { margin-top: 1.5rem; color: var(--vv-gray-600); font-style: italic; }
+.nl-doc__empty { margin-top: 1.5rem; color: var(--vv-navy-75); font-style: italic; }
 
 .nl-section { margin-top: 1.8rem; }
 .nl-section__title { display: flex; align-items: center; gap: 0.5rem; padding-bottom: 0.4rem; border-bottom: 2px solid var(--vv-teal); color: var(--vv-navy); font-size: 1.1rem; break-after: avoid; }
-.nl-section__title .icon { width: 1.15rem; height: 1.15rem; color: var(--vv-teal-700); }
+.nl-section__title .icon { width: 1.15rem; height: 1.15rem; color: var(--vv-link); }
 .nl-section__list { display: grid; gap: 0.95rem; margin: 0.95rem 0 0; padding: 0; list-style: none; }
 .nl-section--compact .nl-section__list { gap: 0.15rem; padding-left: 1.2rem; list-style: disc; }
 
 .nl-item,
 .nl-qa,
 .nl-rank { break-inside: avoid; }
-.nl-item__meta { color: var(--vv-teal-700); font-size: 0.78rem; font-weight: var(--fw-semibold); letter-spacing: 0.02em; }
+.nl-item__meta { color: var(--vv-link); font-size: 0.78rem; font-weight: var(--fw-semibold); letter-spacing: 0.02em; }
 .nl-item__title { color: var(--vv-navy); font-size: 1.02rem; font-weight: var(--fw-bold); line-height: 1.35; text-decoration: none; }
 .nl-item__title:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 .nl-item__text { margin-top: 0.2rem; font-size: 0.94rem; }
@@ -359,24 +359,24 @@
 .nl-qa p { display: grid; grid-template-columns: 5.25rem minmax(0, 1fr); gap: 0.5rem; }
 .nl-qa__q { color: var(--vv-navy); font-weight: var(--fw-bold); }
 .nl-qa__a { margin-top: 0.15rem; font-size: 0.94rem; }
-.nl-qa__label { padding-top: 0.2em; color: var(--vv-teal-700); font-size: 0.7rem; font-weight: var(--fw-bold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
+.nl-qa__label { padding-top: 0.2em; color: var(--vv-link); font-size: 0.7rem; font-weight: var(--fw-bold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
 
 .nl-rank { display: flex; align-items: flex-start; gap: 0.75rem; }
 .nl-rank__n { display: grid; flex: none; place-items: center; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: var(--vv-navy); color: var(--vv-white); font-size: 0.82rem; font-weight: var(--fw-bold); }
 .nl-rank__body { display: grid; gap: 0.1rem; }
-.nl-rank .nl-item__meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: var(--vv-gray-600); font-weight: var(--fw-medium); }
+.nl-rank .nl-item__meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; color: var(--vv-navy-75); font-weight: var(--fw-medium); }
 .nl-compact a { color: var(--vv-navy); }
 .nl-doc .stars__on { color: var(--vv-amber-600); }
 .nl-doc .stars__off { color: var(--vv-gray-200); }
-.nl-quote { margin: 1rem 0 0; padding: 0.55rem 1rem; border-left: 3px solid var(--vv-gray-200); color: var(--vv-gray-600); font-style: italic; }
+.nl-quote { margin: 1rem 0 0; padding: 0.55rem 1rem; border-left: 3px solid var(--vv-gray-200); color: var(--vv-navy-75); font-style: italic; }
 .nl-quote cite { display: block; margin-top: 0.2rem; font-size: 0.8rem; font-style: normal; }
 
 .nl-doc__closing { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--vv-gray-200); }
 .nl-doc__signature { margin-top: 0.4rem; color: var(--vv-navy); font-weight: var(--fw-bold); }
 .nl-doc__buttons { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.1rem; }
-.nl-button { display: inline-block; padding: 0.55rem 1.2rem; border: 2px solid var(--vv-crimson-600); border-radius: var(--radius-pill); background: var(--vv-crimson-600); color: var(--vv-white); font-size: 0.9rem; font-weight: var(--fw-bold); text-decoration: none; }
+.nl-button { display: inline-block; padding: 0.55rem 1.2rem; border: 2px solid var(--vv-rose); border-radius: var(--radius-pill); background: var(--vv-rose); color: var(--vv-white); font-size: 0.9rem; font-weight: var(--fw-bold); text-decoration: none; }
 .nl-button--quiet { border-color: var(--vv-gray-200); background: transparent; color: var(--vv-navy); }
-.nl-doc__foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; padding: 0.9rem 2rem; border-top: 1px solid var(--vv-gray-200); background: var(--vv-gray-75); color: var(--vv-gray-600); font-size: 0.78rem; }
+.nl-doc__foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 1rem; padding: 0.9rem 2rem; border-top: 1px solid var(--vv-gray-200); background: var(--vv-gray-75); color: var(--vv-navy-75); font-size: 0.78rem; }
 
 @media (max-width: 600px) {
   .nl-doc__head, .nl-doc__body, .nl-doc__foot { padding-inline: 1.1rem; }

@@ -24,7 +24,7 @@
   const { el, icon, toast, storage } = ns.ui;
   const MONTHS = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
   const KINDS = { week: 'Weekupdate', maand: 'Maandnieuwsbrief' };
-  const COLORS = { navy: '#101d4f', teal: '#00b49c', tealInk: '#007a69', crimson: '#d2123f', text: '#343b52', muted: '#4c5269', border: '#dde0e8', page: '#f1f3f7', wash: '#e8f6f3' };
+  const COLORS = { navy: '#101d4f', teal: '#00b49c', tealInk: '#156f7e', crimson: '#ae3255', text: '#101d4f', muted: '#4c567b', border: '#dde0e8', page: '#f1f3f7', wash: '#e8f6f3' };
 
   /* ---- Datums en periode ------------------------------------------------------------- */
   const pad = (n) => String(n).padStart(2, '0');
@@ -339,7 +339,7 @@
 
   /* ---- E-mail: tabellen en inline opmaak, zodat het ook in Outlook goed staat --------------- */
   const esc = (value) => String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const FONT = "font-family:'Segoe UI',-apple-system,Helvetica,Arial,sans-serif;";
+  const FONT = "font-family:Arial,Helvetica,sans-serif;";
 
   function emailItem(section, item, index) {
     const title = `<a href="${esc(item.href)}" style="${FONT}font-size:16px;font-weight:700;line-height:1.35;color:${COLORS.navy};text-decoration:none;">${esc(item.title)}</a>`;
