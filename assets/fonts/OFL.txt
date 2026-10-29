@@ -1,4 +1,4 @@
-IBM Plex Sans / IBM Plex Mono (Latin subset, as distributed via Google Fonts)
+IBM Plex Sans (Latin subset, as distributed via Google Fonts)
 Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

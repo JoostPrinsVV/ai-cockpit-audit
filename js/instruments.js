@@ -124,8 +124,9 @@
     if (tape) steer(tape, heading, tape.clientWidth / 2);
   }
 
-  // Breedte van één letter van een koerspunt (IBM Plex Mono 15px: 0,6em plus 0,06em letterafstand)
-  const LABEL_CHAR = 9.9;
+  // Breedte van één letter van een koerspunt (IBM Plex Sans 15px in kapitalen, met letterafstand:
+  // gemeten 9,2 tot 10,7; de ruimste, zodat het klikvlak elk woord dekt)
+  const LABEL_CHAR = 10.8;
   const HIT_PAD = 12;
 
   const point = (deg, r) => {
@@ -156,7 +157,7 @@
       const side = text.x > 20 ? 'end' : text.x < -20 ? 'start' : 'middle';
       const link = svg('a', { class: 'rose__waypoint', href: '#/' + w.id, tabindex: '-1' });
       // Onzichtbaar klikvlak, ruimer dan het stipje en het woord: een cirkel om de stip en een vlak om
-      // het woord. Het woord staat in een mono-letter, dus de breedte is te berekenen.
+      // het woord. De breedte van het woord is geschat (LABEL_CHAR per letter), met marge.
       const width = w.short.length * LABEL_CHAR + 2 * HIT_PAD;
       const left = side === 'end' ? text.x - width + HIT_PAD : side === 'start' ? text.x - HIT_PAD : text.x - width / 2;
       link.append(svg('circle', { class: 'rose__hit', cx: marker.x, cy: marker.y, r: 26 }));

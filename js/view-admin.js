@@ -525,7 +525,7 @@
       const info = roles[0];
       const account = info.has_account
         ? el('span', { className: 'badge badge--free' }, [icon('check'), info.last_sign_in ? 'Laatst ingelogd ' + formatDate(info.last_sign_in) : 'Account actief, nog niet ingelogd'])
-        : el('span', { className: 'badge badge--license', attrs: { title: 'Maak in Supabase een gebruiker aan met dit e-mailadres' } }, [icon('alert'), 'Nog geen account']);
+        : el('span', { className: 'badge badge--warning', attrs: { title: 'Maak in Supabase een gebruiker aan met dit e-mailadres' } }, [icon('alert'), 'Nog geen account']);
       return el('div', { className: 'admin-person' }, [
         el('div', { className: 'admin-person__head' }, [
           el('p', { className: 'admin-person__email', text: address + (address === me ? ' (jij)' : '') }),

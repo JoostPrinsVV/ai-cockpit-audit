@@ -41,14 +41,13 @@
   --vv-gray-500: #858ca1;   /* rand van invoervelden: 3,3:1 op wit */
   --vv-navy-75: #4c567b;    /* Donkerblauw, iets lichter: bijzaak, 7,2:1 op wit */
 
-  /* Amber: waarschuwingen, licenties, beoordelingen en plaatshouders */
+  /* Amber: alleen voor waarschuwingen en niet-opgeslagen werk in Beheer. Geen merkkleur, maar
+     een waarschuwing moet je herkennen. Licenties, sterren en plaatshouders staan in merkkleuren. */
   --vv-amber-50: #fdf1dc;
-  --vv-amber-100: #fff1c7;
   --vv-amber-200: #f1d9a6;
   --vv-amber-300: #ffd98a;  /* tekst op donker */
-  --vv-amber-400: #ffc24d;  /* iconen en sterren op donker */
+  --vv-amber-400: #ffc24d;  /* iconen op donker */
   --vv-amber-500: #e9b949;
-  --vv-amber-600: #c47f00;  /* sterren op licht: 3,3:1 op wit */
   --vv-amber-800: #7a4f00;  /* tekst op licht: 6,3:1 op de zachte vlakken */
 
   /* ---- Betekenis (gebruik deze in componenten) -------------------------- */
@@ -114,28 +113,29 @@
   --color-focus-on-dark: var(--vv-teal);
 
   /* Labels en markeringen */
-  --badge-license-bg: var(--vv-amber-50);
-  --badge-license-ink: var(--vv-amber-800);
+  --badge-license-bg: var(--vv-link);      /* effen Petrolblauw-donker, wit erop 5,8:1 */
+  --badge-license-ink: var(--vv-white);
   --badge-free-bg: #dcf4f0;
   --badge-free-ink: var(--vv-link);
   --badge-new-bg: #fde4ea;
   --badge-new-ink: var(--vv-rose);
   --badge-demo-bg: #e3e6f0;
   --badge-demo-ink: var(--vv-navy);
-  --highlight-bg: var(--vv-amber-100);     /* plaatshouders, wijzigingen, jouw inzendingen */
-  --highlight-ink: var(--vv-amber-800);
+  --highlight-bg: #fde4ea;                 /* plaatshouders (nog in te vullen), wijzigingen, jouw inzendingen */
+  --highlight-ink: var(--vv-rose);         /* 5,2:1 op de tint */
   --ph-filled-bg: #dcf4f0;
   --ph-filled-ink: var(--vv-link);
   --prompt-bg: #f6f7fa;
   --copilot-bg: var(--color-surface);
-  --star-color: var(--vv-amber-600);
+  --star-color: var(--vv-teal-deep);       /* 3,9:1 op wit */
 
-  /* Reeksen in grafieken (Beheer, js/admin-chart.js): 1 turquoise en 2 amber; bij Copilot-gebruik
-     Basic en Premium, net als de labels 'gratis' en 'licentie'. Getoetst op het vlak van beide
-     thema's: helderheid, verzadiging, onderscheid bij kleurenblindheid en minstens 3:1 contrast.
+  /* Reeksen in grafieken (Beheer, js/admin-chart.js): 1 Donker-Turquoise en 2 Rood; bij
+     Copilot-gebruik Basic en Premium. Getoetst op het vlak van beide thema's: helderheid,
+     verzadiging, onderscheid bij kleurenblindheid en minstens 3:1 contrast. Petrolblauw naast
+     turquoise valt af: te weinig verzadigd en ook met gewone ogen nauwelijks te onderscheiden.
      Tekst krijgt nooit deze kleuren. */
   --series-1: var(--vv-teal-deep);
-  --series-2: var(--vv-amber-600);
+  --series-2: var(--vv-crimson);
 
   /* ---- Accentkleuren per onderdeel ----------------------------------------
      accent  = decoratieve kleur (vlakken, iconen)
@@ -179,7 +179,7 @@
   /* ---- Typografie -------------------------------------------------------- */
   /* IBM Plex Sans is de letter van het merk; Arial het vaste vervangende lettertype */
   --font-sans: 'IBM Plex Sans', Arial, sans-serif;
-  --font-mono: 'IBM Plex Mono', Consolas, 'SF Mono', ui-monospace, monospace;
+  --font-code: Consolas, 'SF Mono', ui-monospace, monospace;  /* alleen technische velden en foutmeldingen */
 
   /* Je leest dit platform aan je bureau: 16px (telefoon, laptop) tot maximaal 17px (groot scherm) */
   --font-size-root: clamp(1rem, 0.2vw + 0.85rem, 1.0625rem);
@@ -205,7 +205,7 @@
   --ls-tight: -0.022em;
   --ls-eyebrow: 0.14em;     /* kapitalen boven een kop */
   --ls-caps: 0.08em;        /* kleine kapitalen in labels */
-  --ls-instrument: 0.12em;  /* mono-labels in de stijl van een instrumentenpaneel */
+  --ls-instrument: 0.12em;  /* labels in kapitalen in de stijl van een instrumentenpaneel */
 
   /* ---- Afstanden en indeling ---------------------------------------------- */
   --space-1: 0.25rem;
@@ -305,22 +305,22 @@
   --shadow-card-hover: 0 2px 4px rgba(0, 0, 0, 0.3), 0 18px 40px rgba(0, 0, 0, 0.42);
   --shadow-lg: 0 12px 34px rgba(0, 0, 0, 0.4);
 
-  --badge-license-bg: rgba(255, 184, 77, 0.16);
-  --badge-license-ink: var(--vv-amber-300);
+  --badge-license-bg: var(--vv-link);
+  --badge-license-ink: var(--vv-white);
   --badge-free-bg: rgba(0, 180, 156, 0.16);
   --badge-free-ink: #6fe0cd;
   --badge-new-bg: rgba(239, 23, 77, 0.2);
   --badge-new-ink: #ff9ab3;
   --badge-demo-bg: rgba(90, 109, 184, 0.3);
   --badge-demo-ink: #c9d2f5;
-  --highlight-bg: rgba(255, 207, 133, 0.18);
-  --highlight-ink: var(--vv-amber-300);
+  --highlight-bg: rgba(239, 23, 77, 0.2);
+  --highlight-ink: #ff9ab3;                /* 7:1 op de rode wash */
   --ph-filled-bg: rgba(0, 180, 156, 0.22);
   --ph-filled-ink: #7fe6d4;
   --prompt-bg: #0e1a49;
   --copilot-bg: transparent;
-  --star-color: var(--vv-amber-400);
-  --series-1: #00a894;                 /* de amber van reeks 2 past op beide vlakken */
+  --star-color: var(--vv-teal);
+  --series-1: #00a894;                 /* het Rood van reeks 2 past op beide vlakken */
 
   /* Tekstveilige accentvarianten op een donkere ondergrond (navy erop: 6:1 of meer) */
   --color-on-ink: var(--vv-navy);

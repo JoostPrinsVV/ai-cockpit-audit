@@ -46,10 +46,9 @@
   text-transform: uppercase;
 }
 
-/* Instrumentlabels: mono-letter in kapitalen, net als in het Lab */
+/* Instrumentlabels: kapitalen met ruime letterafstand */
 .hero__eyebrow, .page-head__eyebrow, .personal__title {
-  font-family: var(--font-mono);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-semibold);
   letter-spacing: var(--ls-instrument);
   text-transform: uppercase;
 }
@@ -228,7 +227,7 @@ body[data-view='home'] .topbar .heading-tape { display: none; } /* daar zit hij 
 .heading-tape__band { position: absolute; left: 0; top: 0; max-width: none; }
 .heading-tape__tick { stroke: rgba(255, 255, 255, 0.28); stroke-width: 1; }
 .heading-tape__tick--major { stroke: rgba(255, 255, 255, 0.55); stroke-width: 1.5; }
-.heading-tape__label { fill: rgba(255, 255, 255, 0.6); font-family: var(--font-mono); font-size: 10.5px; font-weight: var(--fw-medium); letter-spacing: 0.04em; }
+.heading-tape__label { fill: rgba(255, 255, 255, 0.6); font-size: 10.5px; font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 .heading-tape__label--north { fill: var(--color-glow); }
 
 .heading-tape__bug {
@@ -531,7 +530,7 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .rose__cross { stroke: rgba(255, 255, 255, 0.05); }
 .rose__tick { stroke: rgba(255, 255, 255, 0.1); stroke-width: 1; }
 .rose__tick--major { stroke: rgba(255, 255, 255, 0.2); stroke-width: 1.6; }
-.rose__label { fill: rgba(255, 255, 255, 0.22); font-family: var(--font-mono); font-size: 13px; font-weight: var(--fw-medium); }
+.rose__label { fill: rgba(255, 255, 255, 0.22); font-size: 13px; font-weight: var(--fw-medium); font-variant-numeric: tabular-nums; }
 .rose__label--north { fill: color-mix(in srgb, var(--color-glow) 75%, transparent); }
 .rose__course { stroke: color-mix(in srgb, var(--vv-teal) 55%, transparent); stroke-width: 2; stroke-dasharray: 6 6; }
 
@@ -542,7 +541,7 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .rose__waypoint { pointer-events: auto; cursor: pointer; outline: none; }
 .rose__hit { fill: transparent; } /* het ruime klikvlak (doorzichtig, maar wel aan te wijzen) */
 .rose__marker { fill: var(--color-chrome); stroke: color-mix(in srgb, var(--color-glow) 70%, transparent); stroke-width: 2.5; transform-box: fill-box; transform-origin: center; transition: transform var(--duration) var(--ease-out), fill var(--duration) var(--ease-out); }
-.rose__waypoint-label { fill: rgba(255, 255, 255, 0.62); font-family: var(--font-mono); font-size: 15px; font-weight: var(--fw-medium); letter-spacing: 0.06em; text-transform: uppercase; transition: fill var(--duration) var(--ease-out); }
+.rose__waypoint-label { fill: rgba(255, 255, 255, 0.62); font-size: 15px; font-weight: var(--fw-medium); letter-spacing: 0.06em; text-transform: uppercase; transition: fill var(--duration) var(--ease-out); }
 .rose__waypoint:hover .rose__marker, .rose__waypoint.is-active .rose__marker, .rose__waypoint:focus-visible .rose__marker { fill: var(--color-glow); stroke: var(--vv-white); transform: scale(1.45); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--color-glow) 90%, transparent)); }
 .rose__waypoint:hover .rose__waypoint-label, .rose__waypoint.is-active .rose__waypoint-label, .rose__waypoint:focus-visible .rose__waypoint-label { fill: var(--color-glow); }
 .rose__waypoint:focus-visible .rose__waypoint-label { text-decoration: underline; }
@@ -721,9 +720,9 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
   background: var(--vv-navy);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
   color: var(--color-readout);
-  font-family: var(--font-mono);
   font-size: 0.82rem;
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
   letter-spacing: 0.08em;
   line-height: 1.5;
 }
@@ -931,6 +930,7 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .badge--new { background: var(--badge-new-bg); color: var(--badge-new-ink); }
 .badge--demo { background: var(--badge-demo-bg); color: var(--badge-demo-ink); }
 .badge--mine { background: var(--highlight-bg); color: var(--highlight-ink); }
+.badge--warning { background: var(--color-warning-fill); color: var(--color-warning); }
 /* Tip van de week en op slot (na .badge, anders wint die) */
 .badge--week { background: var(--accent-wash); color: var(--accent-ink); }
 .badge--lock { background: var(--color-inverse); color: var(--color-on-inverse); }
@@ -1107,7 +1107,7 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
   pointer-events: none;
 }
 
-.toggle__step { font-family: var(--font-mono); font-size: 0.78em; font-weight: var(--fw-medium); letter-spacing: 0.06em; opacity: 0.7; }
+.toggle__step { font-size: 0.78em; font-weight: var(--fw-medium); letter-spacing: 0.06em; opacity: 0.7; }
 
 .results-count { margin-left: auto; color: var(--color-text-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 
@@ -1347,8 +1347,8 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   border-radius: var(--radius);
   background: var(--prompt-bg);
   color: var(--color-text);
-  font-family: var(--font-mono);
-  font-size: 0.86rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -1404,7 +1404,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .fill__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: var(--space-3); }
 .fill__field { display: grid; gap: var(--space-1); }
 .fill__field--wide { grid-column: 1 / -1; }
-.fill__label { color: var(--highlight-ink); font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: var(--fw-medium); overflow-wrap: anywhere; }
+.fill__label { color: var(--highlight-ink); font-size: var(--fs-xs); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
 .fill__clear { justify-self: start; }
 
 /* Lijst in de promptdatabase */
@@ -1468,8 +1468,8 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .fav[aria-pressed='true'] { color: var(--color-signal); border-color: var(--vv-teal); background: var(--badge-free-bg); }
 .fav:active { transform: scale(0.9); }
 
-/* Gemiddelde beoordeling op een kaart: ★ 4,6 (5); dezelfde zachte amber als 'Met licentie' */
-.chip--rating { gap: 0.3em; background: var(--badge-license-bg); color: var(--badge-license-ink); font-variant-numeric: tabular-nums; }
+/* Gemiddelde beoordeling op een kaart: ★ 4,6 (5), op een zacht Donkerblauw vlak */
+.chip--rating { gap: 0.3em; background: var(--accent-navy-wash, var(--accent-navy-tint)); color: var(--accent-navy-ink); font-variant-numeric: tabular-nums; }
 .chip--rating .icon { color: var(--star-color); }
 .chip--rating__count { opacity: 0.75; font-weight: var(--fw-regular); }
 
@@ -1563,7 +1563,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .chapters__jump > .icon { margin-left: auto; color: var(--accent-ink); opacity: 0; transition: opacity var(--duration-fast) var(--ease-out); }
 .chapters__jump:hover > .icon, .chapters__jump:focus-visible > .icon { opacity: 1; }
 .chapters__jump:hover .chapters__title { text-decoration: underline; }
-.chapters__time { flex: none; min-width: 3.5rem; color: var(--accent-ink); font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: var(--fw-medium); }
+.chapters__time { flex: none; min-width: 3.5rem; color: var(--accent-ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
 .chapters__title { color: var(--color-text); }
 
 /* ---- Naslagwerk: slides ---- */
@@ -1955,7 +1955,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .field__input[aria-invalid='true'] { border-color: var(--color-danger); }
 .field__textarea { min-height: 9rem; resize: vertical; line-height: var(--lh-normal); }
 .field__input--sm { width: auto; min-height: 2.125rem; padding: 0.15rem 0.7rem; border-width: 1px; font-size: 0.84rem; }
-.fill__input--long { min-height: 6rem; resize: vertical; font-family: var(--font-mono); font-size: 0.82rem; }
+.fill__input--long { min-height: 6rem; resize: vertical; font-size: 0.9rem; }
 
 .check { display: flex; align-items: flex-start; gap: var(--space-3); color: var(--color-text-body); font-size: var(--fs-sm); cursor: pointer; }
 .check input { flex: none; width: 1.25rem; height: 1.25rem; margin-top: 0.1rem; accent-color: var(--color-selected); }
@@ -2236,7 +2236,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 
 .fatal { position: fixed; inset: 0; z-index: var(--z-fatal); display: grid; place-items: center; padding: var(--space-5); background: var(--color-scrim-strong); }
 .fatal__panel { max-width: 30rem; padding: var(--space-7); border-radius: var(--radius-lg); background: var(--color-surface); text-align: center; display: grid; gap: var(--space-3); }
-.fatal__detail { color: var(--color-text-muted); font-family: var(--font-mono); font-size: var(--fs-xs); }
+.fatal__detail { color: var(--color-text-muted); font-family: var(--font-code); font-size: var(--fs-xs); }
 
 .copy-buffer { position: fixed; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; }
 .sprite { display: none; }
