@@ -18,6 +18,11 @@
                                     frequency: { wekelijks, regelmatig, soms, nooit } } },
        weekly, channels, top10Share }
    Een ander soort export? Voeg een lezer toe aan FORMATS; de rest blijft gelijk.
+
+   Een bestand met een tabblad per discipline (ieder tabblad met alle tabellen,
+   bijv. 'Audit', 'Accountants', 'Belastingadviseurs'): ieder tabblad wordt apart
+   gelezen en bij de discipline met die naam opgeslagen (disciplineOf), allemaal
+   met één klik. Je ziet vooraf de cijfers van de discipline waarin je zit.
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -137,14 +142,62 @@
     };
   }
 
-  /** Een gekozen bestand lezen en samenvatten; een fout als geen lezer het bestand herkent. */
-  async function readExport(file) {
-    const book = await sheets.read(file);
+  /** Eerste lezer die (dit deel van) het boek herkent: { format, input } of null. */
+  function recognize(book) {
     for (const format of FORMATS) {
       const input = format.read(book);
-      if (input) return summarize(input, format.id);
+      if (input) return { format, input };
     }
-    throw new Error('dit bestand herken ik niet. Verwacht: ' + FORMATS.map((format) => format.expects).join('; of ') + '.');
+    return null;
+  }
+
+  /* Een tabblad per discipline: de naam van het tabblad wijst de discipline aan. Lukt dat niet op
+     naam of id (de eerste letters, zodat 'Accountants' bij Accountancy en 'Belastingadviseurs' bij
+     Belastingadvies hoort), dan op een gangbare andere naam. */
+  const ALIASES = { fiscaal: 'belastingadvies', fiscale: 'belastingadvies', fiscalisten: 'belastingadvies', payroll: 'salarisadministratie', salaris: 'salarisadministratie' };
+  const letters = (value) => String(value == null ? '' : value).toLowerCase().normalize('NFD').replace(/[^a-z]/g, '');
+
+  /** Bij welke discipline (uit registry: [{ id, name }]) hoort dit tabblad? Het id, of null als het niet (eenduidig) te zeggen is. */
+  function disciplineOf(sheetName, registry) {
+    const key = letters(sheetName);
+    if (!key) return null;
+    const matches = registry.filter((discipline) => [discipline.name, discipline.id].some((name) => {
+      const other = letters(name);
+      const length = Math.min(6, other.length, key.length);
+      return length >= 4 && key.slice(0, length) === other.slice(0, length);
+    }));
+    if (matches.length === 1) return matches[0].id;
+    const alias = Object.keys(ALIASES).find((word) => key.startsWith(word));
+    return alias && registry.some((discipline) => discipline.id === ALIASES[alias]) ? ALIASES[alias] : null;
+  }
+
+  /**
+   * Een gekozen bestand lezen en samenvatten. Geeft { parts: [{ sheet, discipline, summary }] }:
+   * - een bestand met een tabblad per discipline (ieder tabblad heeft alle tabellen): een deel per
+   *   tabblad, met de discipline (id) die bij de naam van het tabblad hoort, of null;
+   * - anders één deel uit het hele boek (de tabellen mogen dan over tabbladen verdeeld zijn), zonder
+   *   sheet en discipline: dat hoort bij de discipline waarin je zit.
+   * Een fout als geen lezer het bestand herkent, of als twee tabbladen bij dezelfde discipline horen.
+   * registry: de disciplines ([{ id, name }]), standaard die van de cockpit.
+   */
+  async function readExport(file, registry) {
+    const disciplines = registry || ns.cockpit.registry();
+    const book = await sheets.read(file);
+    const perSheet = book.sheets
+      .map((sheet) => ({ sheet, found: recognize(Object.assign({}, book, { sheets: [sheet] })) }))
+      .filter((item) => item.found);
+    if (perSheet.length > 1) {
+      const parts = perSheet.map(({ sheet, found }) => ({ sheet: sheet.name, discipline: disciplineOf(sheet.name, disciplines), summary: summarize(found.input, found.format.id) }));
+      const seen = new Map();
+      parts.filter((part) => part.discipline).forEach((part) => {
+        if (seen.has(part.discipline)) throw new Error(`de tabbladen '${seen.get(part.discipline)}' en '${part.sheet}' horen allebei bij ${disciplines.find((d) => d.id === part.discipline).name}`);
+        seen.set(part.discipline, part.sheet);
+      });
+      return { parts };
+    }
+    const found = recognize(book);
+    if (!found) throw new Error('dit bestand herken ik niet. Verwacht: ' + FORMATS.map((format) => format.expects).join('; of ') + '.');
+    return { parts: [{ sheet: null, discipline: null, summary: summarize(found.input, found.format.id) }] };
   }
 
   /** Is dit een opgeslagen samenvatting die deze versie kan tonen? */
@@ -347,8 +400,13 @@
     const body = el('div', { className: 'copilot__body' });
     let saved = [];   // rijen uit de database, oudste eerst
     let missing = false;
-    let pending = null; // ingelezen, nog niet opgeslagen
+    let pending = null; // ingelezen voor deze discipline, nog niet opgeslagen
     let pendingName = '';
+    let pendingParts = []; // een tabblad per discipline: alle tabbladen uit het bestand (anders leeg)
+    let storedParts = [];  // daarvan al opgeslagen (als opslaan halverwege mislukte)
+    const here = () => ns.cockpit.activeId();
+    const nameOf = (id) => (ns.cockpit.find(id) || { name: id }).name;
+    const names = (parts) => parts.map((part) => nameOf(part.discipline)).join(', ');
 
     const byEnd = (a, b) => (a.periodEnd < b.periodEnd ? -1 : 1);
     const fromRow = (row) => Object.assign({}, row.summary, { periodStart: row.period_start, periodEnd: row.period_end, id: row.id, importedAt: row.imported_at, importedBy: row.imported_by });
@@ -366,7 +424,12 @@
       if (!chosen) return;
       const done = kit.busy(choose, 'Inlezen…');
       try {
-        pending = await readExport(chosen);
+        const { parts } = await readExport(chosen);
+        const multi = parts.length > 1;
+        const mine = multi ? parts.find((part) => part.discipline === here()) : parts[0];
+        pending = mine ? mine.summary : null;
+        pendingParts = multi ? parts : [];
+        storedParts = [];
         pendingName = chosen.name;
         update();
         const save = status.querySelector('.btn--primary');
@@ -378,37 +441,84 @@
       }
     });
 
+    const factsOf = (summary) => {
+      const facts = [`${summary.weeks} weken`, `${NUMBER.format(summary.people)} personen`];
+      if (summary.skipped) facts.push(`${NUMBER.format(summary.skipped)} ${summary.skipped === 1 ? 'rij' : 'rijen'} zonder licentie overgeslagen`);
+      return facts;
+    };
+
     function pendingNotice() {
-      const replaces = saved.some((row) => row.period_end === pending.periodEnd);
-      const save = el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'button', disabled: missing } }, [icon('check'), el('span', { text: replaces ? 'Opslaan en vervangen' : 'Opslaan' })]);
+      const multi = pendingParts.length > 1;
+      // Wat er bij Opslaan naar de database gaat: per discipline de totalen (een tabblad zonder discipline niet)
+      const savable = multi ? pendingParts.filter((part) => part.discipline) : [{ discipline: here(), summary: pending }];
+      const replaces = Boolean(pending) && saved.some((row) => row.period_end === pending.periodEnd);
+      let label = replaces ? 'Opslaan en vervangen' : 'Opslaan';
+      if (multi) label = `Opslaan voor ${savable.length === 1 ? nameOf(savable[0].discipline) : `${storedParts.length ? 'de overige' : 'alle'} ${savable.length} disciplines`}`;
+      const save = el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'button', disabled: missing || !savable.length } }, [icon('check'), el('span', { text: label })]);
       const discard = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('close'), el('span', { text: 'Niet opslaan' })]);
+      const clear = () => {
+        pending = null;
+        pendingParts = [];
+        storedParts = [];
+      };
       save.addEventListener('click', async () => {
         const done = kit.busy([save, discard], 'Opslaan…');
+        const stored = [];
         try {
-          const row = await ns.central.saveCopilotUsage(pending);
-          saved = saved.filter((other) => other.period_end !== row.period_end).concat(row).sort((a, b) => (a.period_end < b.period_end ? -1 : 1));
-          toast('Opgeslagen: ' + period(pending), { tone: 'success' });
-          pending = null;
+          for (const part of savable) {
+            const row = await ns.central.saveCopilotUsage(part.summary, multi ? ns.cockpit.namespace(part.discipline) : undefined);
+            stored.push(part);
+            if (part.discipline === here()) saved = saved.filter((other) => other.period_end !== row.period_end).concat(row).sort((a, b) => (a.period_end < b.period_end ? -1 : 1));
+          }
+          toast(multi ? `Opgeslagen voor ${names(stored)}` : 'Opgeslagen: ' + period(pending), { tone: 'success' });
+          clear();
           update();
           choose.focus(); // de knop waarmee je was begonnen (de melding met Opslaan is weg)
         } catch (error) {
           done();
-          kit.failed('Opslaan', error, 8000);
+          if (stored.length) {
+            // Wat al is opgeslagen niet nog eens aanbieden
+            pendingParts = pendingParts.filter((part) => !stored.includes(part));
+            storedParts = storedParts.concat(stored);
+            if (stored.some((part) => part.discipline === here())) pending = null;
+            update();
+          }
+          kit.failed(stored.length ? `Opslaan (wel gelukt: ${names(stored)})` : 'Opslaan', error, 10000);
         }
       });
       discard.addEventListener('click', () => {
-        pending = null;
+        clear();
         update();
         choose.focus();
       });
-      const facts = [`${pending.weeks} weken`, `${NUMBER.format(pending.people)} personen`];
-      if (pending.skipped) facts.push(`${NUMBER.format(pending.skipped)} ${pending.skipped === 1 ? 'rij' : 'rijen'} zonder licentie overgeslagen`);
+      const action = el('div', { className: 'copilot__actions' }, [save, discard]);
+
+      if (!multi) {
+        return notice({
+          icon: 'table',
+          className: 'copilot__pending',
+          title: `Ingelezen uit ${pendingName}: ${period(pending)}`,
+          text: `${factsOf(pending).join(' · ')}. Nog niet opgeslagen: hieronder zie je hoe het eruitziet. Bij opslaan gaan alleen de totalen naar de database${replaces ? '; de import met dezelfde einddatum wordt vervangen' : ''}.`,
+          action
+        });
+      }
+      const sheetList = el('ul', { className: 'copilot__sheets' }, pendingParts.map((part) => el('li', {}, [
+        el('strong', { text: part.discipline ? nameOf(part.discipline) : 'Niet opgeslagen' }),
+        ` · tabblad '${part.sheet}' · ${period(part.summary)} · ${factsOf(part.summary).join(' · ')}`,
+        part.discipline ? null : el('span', { className: 'copilot__note', text: 'Bij geen enkele discipline te plaatsen: geef het tabblad de naam van een discipline.' })
+      ])));
+      const hereStored = storedParts.some((part) => part.discipline === here());
+      let shown = `Er is geen tabblad voor ${nameOf(here())}, dus hier verandert niets.`;
+      if (pending) shown = `Hieronder zie je hoe het eruitziet voor ${nameOf(here())}; de andere disciplines zie je daar na het opslaan.`;
+      if (hereStored) shown = '';
+      if (storedParts.length) shown = `${shown} Al opgeslagen: ${names(storedParts)}.`.trim();
       return notice({
         icon: 'table',
         className: 'copilot__pending',
-        title: `Ingelezen uit ${pendingName}: ${period(pending)}`,
-        text: `${facts.join(' · ')}. Nog niet opgeslagen: hieronder zie je hoe het eruitziet. Bij opslaan gaan alleen de totalen naar de database${replaces ? '; de import met dezelfde einddatum wordt vervangen' : ''}.`,
-        action: el('div', { className: 'copilot__actions' }, [save, discard])
+        title: `Ingelezen uit ${pendingName}: een tabblad per discipline`,
+        text: `${storedParts.length ? 'Nog niet alles opgeslagen.' : 'Nog niet opgeslagen.'} ${shown} Bij opslaan gaan per discipline alleen de totalen naar de database; een import met dezelfde einddatum wordt vervangen.`,
+        more: [sheetList],
+        action
       });
     }
 
@@ -485,7 +595,7 @@
     function update() {
       status.replaceChildren(...[
         missing ? notice({ tone: 'warning', title: 'Nog niet ingericht', text: 'De tabel voor het Copilot-gebruik ontbreekt: voer setup/supabase-audit-copilot.sql (stap 9) uit in Supabase. Een bestand inlezen en bekijken kan al wel, opslaan nog niet.' }) : null,
-        pending ? pendingNotice() : null
+        pending || pendingParts.length ? pendingNotice() : null
       ].filter(Boolean));
       const list = snapshots();
       body.replaceChildren(list.length ? dashboard(list) : notice({
@@ -520,5 +630,5 @@
     return { node };
   }
 
-  ns.adminCopilot = { render, readExport, summarize, measures, timeline, change, period, FORMATS, LICENCES };
+  ns.adminCopilot = { render, readExport, disciplineOf, summarize, measures, timeline, change, period, FORMATS, LICENCES };
 })(window.AIAudit);

@@ -430,6 +430,15 @@ weken`; per week `Week`, `Actieve gebruikers Basic`, `Actieve gebruikers Premium
 maakt niet uit, een andere kolomnaam wel. Voor een ander soort export (bijvoorbeeld rechtstreeks uit Copilot) komt er
 een lezer bij in `FORMATS` in `js/admin-copilot.js`; de rest blijft gelijk.
 
+**Meerdere disciplines in één bestand** (bijvoorbeeld tabbladen `Audit`, `Accountants` en `Belastingadviseurs`): staan
+alle tabellen van een discipline op één tabblad, dan leest de pagina ieder tabblad apart en hoort het tabblad bij de
+discipline met die naam. De eerste letters tellen, dus `Accountants` → Accountancy en `Belastingadviseurs` →
+Belastingadvies; `Fiscaal` → Belastingadvies mag ook. Je ziet vooraf de cijfers van de discipline waarin je zit en een
+lijst van alle tabbladen; **Opslaan voor alle … disciplines** slaat ze in één keer op, ieder bij de eigen discipline. Een
+tabblad zonder herkenbare naam wordt niet opgeslagen (geef het de naam van de discipline), en twee tabbladen voor
+dezelfde discipline geven een foutmelding. Mislukt het opslaan halverwege, dan zie je wat al wel is opgeslagen en
+probeer je de rest opnieuw.
+
 Privacy: het bestand wordt in de browser gelezen en nergens heen gestuurd. Alleen totalen per periode gaan naar de
 database (`audit_copilot_usage`): aantallen personen en actieve gebruikers per licentie, volume per week en per kanaal,
 hoe vaak mensen actief zijn en het aandeel van de tien meest actieve personen samen. Geen PersonId's, geen cijfers per

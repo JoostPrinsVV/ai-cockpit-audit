@@ -571,12 +571,15 @@
     return response.json();
   }
 
-  /** Totalen van één periode opslaan; een periode met dezelfde einddatum wordt vervangen. Geeft de rij. */
-  async function saveCopilotUsage(snapshot) {
+  /**
+   * Totalen van één periode opslaan; een periode met dezelfde einddatum wordt vervangen. Geeft de rij.
+   * namespace: standaard die van de discipline (een bestand met een tabblad per discipline slaat ze allemaal op).
+   */
+  async function saveCopilotUsage(snapshot, namespace) {
     const response = await request(tablePath(TABLES.copilot, { on_conflict: 'namespace,period_end', select: COPILOT_COLUMNS }), {
       method: 'POST',
       headers: await adminHeaders({ Prefer: 'resolution=merge-duplicates,return=representation' }),
-      body: JSON.stringify({ namespace: config.namespace, period_start: snapshot.periodStart, period_end: snapshot.periodEnd, source: snapshot.source, summary: snapshot })
+      body: JSON.stringify({ namespace: namespace || config.namespace, period_start: snapshot.periodStart, period_end: snapshot.periodEnd, source: snapshot.source, summary: snapshot })
     });
     if (await isMissingTable(response)) throw new Error('de tabel ontbreekt nog: voer setup/supabase-audit-copilot.sql (stap 9) uit');
     if (!response.ok) throw await failure(response, 'opslaan');

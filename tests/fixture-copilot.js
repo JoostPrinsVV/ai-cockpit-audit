@@ -7,6 +7,8 @@
    als Excel-getal. Alle cijfers en id's zijn verzonnen.
      AIAuditTest.zip({ naam: tekst }, { deflate: true })      → Uint8Array
      AIAuditTest.copilotWorkbook({ people, weekly, channels }) → Uint8Array
+     AIAuditTest.copilotDisciplineWorkbook({ tabblad: { people, weekly, channels } })
+       → Uint8Array, een tabblad per discipline (zoals Audit/Accountants/Belastingadviseurs)
      AIAuditTest.copilotSample({ weeks, basic, premium, start, seed })
        → { people, weekly, channels } met realistische, vaste toevalscijfers
    Ook te gebruiken in de site zelf (Beheer → Copilot-gebruik uitproberen
@@ -148,6 +150,50 @@
     }, { deflate: true });
   }
 
+  /**
+   * Een tabblad per discipline ({ 'Audit': cijfers, 'Accountants': cijfers, … }), zoals het bestand met
+   * Audit, Accountants en Belastingadviseurs: per tabblad bovenaan een titel, rechts de weken (vanaf
+   * kolom N) en de kanalen (vanaf kolom W), en vanaf rij 50 de tabel per persoon.
+   */
+  function copilotDisciplineWorkbook(perSheet) {
+    const strings = new Map();
+    const names = Object.keys(perSheet);
+    const sheets = names.map((name) => {
+      // null: een tabblad zonder tabellen (bijvoorbeeld een toelichting)
+      if (!perSheet[name]) return sheetXml([['Toelichting bij dit bestand (verzonnen)']], strings);
+      const { people, weekly, channels } = perSheet[name];
+      const rows = [];
+      const put = (r, c, value) => {
+        rows[r] = rows[r] || [];
+        rows[r][c] = value;
+      };
+      put(0, 0, 'COPILOT-GEBRUIK BINNEN ' + name.toUpperCase() + ' (VERZONNEN)');
+      ['Week', 'Actieve gebruikers Basic', 'Actieve gebruikers Premium', 'Basic-prompts', 'Premium-acties'].forEach((header, c) => put(0, 13 + c, header));
+      ['Basic-kanaal', 'Prompts laatste 4 weken'].forEach((header, c) => put(0, 22 + c, header));
+      weekly.forEach((week, w) => [serial(week.week), week.active.basic, week.active.premium, week.volume.basic, week.volume.premium].forEach((value, c) => put(w + 1, 13 + c, value)));
+      channels.forEach((channel, i) => {
+        put(i + 1, 22, channel.name);
+        put(i + 1, 23, channel.volume);
+      });
+      ['PersonId', 'Huidige licentie', 'Basic-prompts totaal', 'Premium-acties totaal', 'Totaal volume', 'Volume laatste 4 weken', 'Actieve weken'].forEach((header, c) => put(49, c, header));
+      people.forEach((p, i) => [p.id, p.licence, p.basicTotal, p.premiumTotal, p.total, p.recent, p.activeWeeks].forEach((value, c) => put(50 + i, c, value)));
+      for (let r = 0; r < rows.length; r += 1) rows[r] = rows[r] || [];
+      return sheetXml(rows, strings);
+    });
+    const sst = Array.from(strings.keys()).map((text) => `<si><t>${escape(text)}</t></si>`).join('');
+    const files = {
+      '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>',
+      '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${PACKAGE}"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+      'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${MAIN}" xmlns:r="${REL}"><workbookPr/><sheets>${names.map((name, i) => `<sheet name="${escape(name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>`,
+      'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${PACKAGE}">${names.map((name, i) => `<Relationship Id="rId${i + 1}" Type="${REL}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${names.length + 1}" Type="${REL}/sharedStrings" Target="sharedStrings.xml"/></Relationships>`,
+      'xl/sharedStrings.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="${MAIN}" count="${strings.size}" uniqueCount="${strings.size}">${sst}</sst>`
+    };
+    sheets.forEach((xml, i) => {
+      files[`xl/worksheets/sheet${i + 1}.xml`] = xml;
+    });
+    return zip(files, { deflate: true });
+  }
+
   /** Verzonnen cijfers die er echt uitzien: groepen, een zomerdip en wat groei. Zelfde seed, zelfde cijfers. */
   function copilotSample(options) {
     const { weeks = 27, basic = 80, premium = 24, start = '2026-03-08', seed = 1 } = options || {};
@@ -186,5 +232,5 @@
     return { people, weekly, channels };
   }
 
-  window.AIAuditTest = Object.assign(window.AIAuditTest || {}, { zip, copilotWorkbook, copilotSample });
+  window.AIAuditTest = Object.assign(window.AIAuditTest || {}, { zip, copilotWorkbook, copilotDisciplineWorkbook, copilotSample });
 })();

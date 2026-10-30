@@ -538,6 +538,9 @@
 .copilot__pending { align-items: center; flex-wrap: wrap; }
 .copilot__pending > div { flex: 1 1 22rem; }
 .copilot__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* Een tabblad per discipline: welk tabblad bij welke discipline hoort */
+.copilot__sheets { display: grid; gap: var(--space-1); margin: var(--space-2) 0 0; padding-left: 1.2rem; font-size: var(--fs-sm); }
+.copilot__sheets .copilot__note { display: block; }
 .copilot__head { display: grid; gap: var(--space-1); }
 .copilot__meta { color: var(--color-text-muted); font-size: var(--fs-sm); }
 .copilot__kpis { grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); }

@@ -326,8 +326,14 @@
     describe('Copilot-gebruik (js/admin-copilot.js)');
     const copilot = ns.adminCopilot;
     let snapshot = null;
+    const REGISTRY = [{ id: 'audit', name: 'Audit' }, { id: 'accountancy', name: 'Accountancy' }, { id: 'belastingadvies', name: 'Belastingadvies' }, { id: 'salarisadministratie', name: 'Salarisadministratie' }];
+    const readOne = async (bytes) => {
+      const { parts } = await copilot.readExport(fileOf(bytes), REGISTRY);
+      equal([parts.length, parts[0].sheet, parts[0].discipline], [1, null, null], 'één deel, voor de discipline waarin je zit');
+      return parts[0].summary;
+    };
     await test('readExport: totalen per licentie en week; rij zonder licentie overgeslagen', async () => {
-      snapshot = await copilot.readExport(fileOf(await fixture.copilotWorkbook(small)));
+      snapshot = await readOne(await fixture.copilotWorkbook(small));
       equal([snapshot.periodStart, snapshot.periodEnd, snapshot.weeks, snapshot.people, snapshot.skipped], ['2026-01-04', '2026-02-22', 8, 5, 1]);
       equal(snapshot.licences.basic, { people: 3, active4w: 1, volume4w: 10, volumeTotal: 150, frequency: { wekelijks: 0, regelmatig: 1, soms: 1, nooit: 1 } });
       equal(snapshot.licences.premium, { people: 2, active4w: 2, volume4w: 60, volumeTotal: 500, frequency: { wekelijks: 1, regelmatig: 1, soms: 0, nooit: 0 } });
@@ -349,7 +355,7 @@
       const wrong = { people: [{ id: 'x', licence: 'Gratis', basicTotal: 1, premiumTotal: 0, total: 1, recent: 1, activeWeeks: 1 }], weekly: small.weekly, channels: [] };
       const message = async (file) => {
         try {
-          await copilot.readExport(file);
+          await copilot.readExport(file, REGISTRY);
           return '';
         } catch (error) {
           return error.message;
@@ -371,8 +377,37 @@
     await test('verzonnen voorbeeld: altijd dezelfde cijfers, en goed te lezen', async () => {
       const sample = fixture.copilotSample({ seed: 3 });
       equal(sample, fixture.copilotSample({ seed: 3 }), 'zelfde seed');
-      const read = await copilot.readExport(fileOf(await fixture.copilotWorkbook(sample)));
+      const read = await readOne(await fixture.copilotWorkbook(sample));
       equal([read.weeks, read.people, read.licences.premium.people], [27, 104, 24]);
+    });
+    await test('disciplineOf: tabblad op naam of id, ook met een andere uitgang; anders null', () => {
+      const of = (name) => copilot.disciplineOf(name, REGISTRY);
+      equal(['Audit', 'Accountants', 'Belastingadviseurs', 'Fiscaal', 'salarisadministratie 2026', 'Overzicht', 'Analyse', ''].map(of),
+        ['audit', 'accountancy', 'belastingadvies', 'belastingadvies', 'salarisadministratie', null, null, null]);
+    });
+    await test('readExport: een tabblad per discipline wordt per tabblad gelezen, met de discipline erbij', async () => {
+      const bytes = await fixture.copilotDisciplineWorkbook({
+        Audit: fixture.copilotSample({ seed: 1, basic: 70, premium: 30 }),
+        Accountants: fixture.copilotSample({ seed: 2, basic: 120, premium: 50 }),
+        Belastingadviseurs: fixture.copilotSample({ seed: 3, basic: 60, premium: 20 }),
+        Toelichting: null
+      });
+      const { parts } = await copilot.readExport(fileOf(bytes), REGISTRY);
+      equal(parts.map((part) => [part.sheet, part.discipline, part.summary.people, part.summary.licences.premium.people, part.summary.weeks]),
+        [['Audit', 'audit', 100, 30, 27], ['Accountants', 'accountancy', 170, 50, 27], ['Belastingadviseurs', 'belastingadvies', 80, 20, 27]], 'ieder tabblad eigen cijfers; tabblad zonder tabellen overgeslagen');
+      ok(!/PersonId|00000000-0000/.test(JSON.stringify(parts)), 'niets per persoon');
+    });
+    await test('readExport: een tabblad zonder herkenbare discipline krijgt null; twee tabbladen voor één discipline geeft een fout', async () => {
+      const sample = fixture.copilotSample({ seed: 4, basic: 10, premium: 5, weeks: 8 });
+      const { parts } = await copilot.readExport(fileOf(await fixture.copilotDisciplineWorkbook({ Audit: sample, Blad2: sample })), REGISTRY);
+      equal(parts.map((part) => part.discipline), ['audit', null]);
+      let message = '';
+      try {
+        await copilot.readExport(fileOf(await fixture.copilotDisciplineWorkbook({ Audit: sample, 'Audit oud': sample })), REGISTRY);
+      } catch (error) {
+        message = error.message;
+      }
+      ok(message.includes("'Audit' en 'Audit oud'"), message || 'geen fout');
     });
 
     /* ---- portfolio ---- */
@@ -512,6 +547,15 @@
           equal(net.calls[0].init.headers.Authorization, 'Bearer test-token');
           const body = JSON.parse(net.calls[0].init.body);
           equal([body.namespace, body.period_start, body.period_end, body.source], ['ai-test', '2026-01-04', '2026-02-22', 'analyse']);
+        } finally {
+          net.restore();
+        }
+      });
+      await test('opslaan voor een andere discipline (een tabblad per discipline): die naamruimte', async () => {
+        const net = fakeFetch([[201, [{ id: 8, period_end: '2026-02-22' }]]]);
+        try {
+          await ns.central.saveCopilotUsage(snapshot, 'ai-accountancy');
+          equal(JSON.parse(net.calls[0].init.body).namespace, 'ai-accountancy');
         } finally {
           net.restore();
         }
