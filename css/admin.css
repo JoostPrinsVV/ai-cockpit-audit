@@ -564,6 +564,20 @@
 .copilot__definitions dd { margin: 0; color: var(--color-text-body); }
 
 .copilot__charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: var(--space-5); }
+
+/* Momenten (Copilot-gebruik): lijst en een formulier op één regel (op een smal scherm onder elkaar) */
+.moments { display: grid; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.moments__list { display: grid; margin: 0; padding: 0; list-style: none; }
+.moments__item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); }
+.moments__date { min-width: 7.5rem; color: var(--color-text-muted); font-size: var(--fs-sm); font-variant-numeric: tabular-nums; }
+.moments__title { flex: 1; min-width: min(100%, 12rem); color: var(--color-text); font-weight: var(--fw-semibold); }
+.moments__form { display: grid; grid-template-columns: minmax(10rem, 12rem) minmax(0, 1fr) auto auto; align-items: end; gap: var(--space-3); }
+.moments__general { min-height: 3rem; }
+.moments__form .btn { min-height: 3rem; }
+.moments__form .field__error { grid-column: 1 / -1; }
+@media (max-width: 720px) {
+  .moments__form { grid-template-columns: minmax(0, 1fr); }
+}
 .chart { display: grid; align-content: start; gap: var(--space-2); min-width: 0; padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
 .chart__title { font-size: var(--fs-md); }
 .chart__sub { color: var(--color-text-muted); font-size: var(--fs-sm); }
@@ -609,6 +623,15 @@
 .chart__readout-row { display: flex; align-items: center; gap: var(--space-2); }
 .chart__readout-row strong { color: var(--color-text); font-variant-numeric: tabular-nums; }
 .chart__readout-row span:last-child { color: var(--color-text-muted); }
+.chart__readout-moment { margin-top: 2px; padding-top: 4px; border-top: 1px solid var(--color-border); }
+.chart__readout-moment span:last-child { color: var(--color-text); }
+/* Momenten: stippellijn met een genummerd rondje (niet in de kleur van een reeks), uitleg onder de grafiek */
+.chart__marker { stroke: var(--color-text-muted); stroke-width: 1.5; stroke-dasharray: 3 4; }
+.chart__marker-dot { fill: var(--color-inverse); stroke: var(--color-surface); stroke-width: 2; }
+.chart__marker-number { fill: var(--color-on-inverse); font-size: 11px; font-weight: var(--fw-bold); pointer-events: none; }
+.chart__moments { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; color: var(--color-text-body); font-size: var(--fs-sm); list-style: none; }
+.chart__moments li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.chart__moment-n { display: inline-grid; flex: none; place-items: center; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: var(--color-inverse); color: var(--color-on-inverse); font-size: 0.7rem; font-weight: var(--fw-bold); line-height: 1; }
 .chart__table summary { color: var(--color-link); font-size: var(--fs-sm); font-weight: var(--fw-semibold); cursor: pointer; }
 .chart__table-scroll { max-height: 20rem; margin-top: var(--space-2); overflow: auto; }
 

@@ -496,6 +496,28 @@
       equal(ns.content.issues.filter((issue) => !/tip/i.test(issue)), []);
     });
 
+    /* ---- momenten bij het Copilot-gebruik ---- */
+    describe('Momenten bij het Copilot-gebruik (js/admin-copilot.js, js/admin-chart.js)');
+    const momentWeeks = ['2026-09-07', '2026-09-14', '2026-09-21', '2026-09-28', '2026-10-05', '2026-10-12', '2026-10-19', '2026-10-26', '2026-11-02', '2026-11-09']
+      .map((week, i) => ({ week, active: i < 7 ? { basic: 10, premium: 2 } : { basic: 4, premium: 20 }, volume: i < 7 ? { basic: 100, premium: 50 } : { basic: 40, premium: 400 } }));
+    await test('voor en na: de laatste 4 volle weken ervoor en de weken erna; de week van het moment telt niet mee', () => {
+      const { before, after } = ns.adminCopilot.aroundMoment(momentWeeks, '2026-10-28');
+      equal([before.weeks, after.weeks, before.active.total, after.active.total, after.active.premium], [4, 2, 12, 24, 20]);
+      const text = ns.adminCopilot.momentInsight(momentWeeks, { date: '2026-10-28', title: 'Iedereen een licentie' });
+      ok(/tegen 12 in de 4 weken ervoor/.test(text) && /\+100\s?%/.test(text) && /Premium 2 → 20/.test(text), text);
+      ok(/nog geen weken/.test(ns.adminCopilot.momentInsight(momentWeeks.slice(0, 8), { date: '2026-10-28', title: 'x' })), 'nog geen weken erna');
+      ok(/te weinig weken/.test(ns.adminCopilot.momentInsight(momentWeeks, { date: '2026-09-08', title: 'x' })), 'te weinig weken ervoor');
+    });
+    await test('grafiek: alleen momenten binnen de weken, op datum genummerd, ook in de tabel', () => {
+      const chart = ns.adminChart.lineChart({
+        title: 'Test', series: [{ id: 'a', label: 'A' }],
+        points: momentWeeks.map((week) => ({ week: week.week, values: { a: week.active.basic } })),
+        markers: [{ date: '2026-10-28', label: 'Licentie' }, { date: '2025-01-01', label: 'Buiten' }, { date: '2026-09-10', label: 'Training' }]
+      });
+      equal([...chart.querySelectorAll('.chart__moments li')].map((li) => li.textContent.replace(/^\d/, (n) => n + ' ')), ['1 10 sep. 2026: Training', '2 28 okt. 2026: Licentie']);
+      equal(chart.querySelectorAll('tbody tr')[7].lastElementChild.textContent, '28 okt. 2026: Licentie');
+    });
+
     /* ---- slot met pincode ---- */
     describe('Slot met pincode (js/lock.js)');
     await test('de vingerafdruk in de config hoort bij de pincode van de snackbar; spaties tellen niet', async () => {

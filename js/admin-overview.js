@@ -84,7 +84,8 @@
   /** Per discipline de laatste en de vorige import van het Copilot-gebruik, met de kengetallen. */
   function copilotPerNamespace(rows) {
     const per = new Map();
-    rows.forEach((row) => {
+    // Alleen de imports (de tabel heeft per discipline ook een rij met momenten)
+    rows.filter((row) => ns.adminCopilot.isUsage(row.summary)).forEach((row) => {
       if (!per.has(row.namespace)) per.set(row.namespace, []);
       per.get(row.namespace).push(row);
     });
@@ -175,6 +176,14 @@
       const usage = events.status === 'fulfilled' ? countEvents(events.value, now) : null;
       const ideaList = ideas.status === 'fulfilled' ? ideas.value : null;
       const copilotList = copilot.status === 'fulfilled' && copilot.value ? copilotPerNamespace(copilot.value) : null;
+      // Momenten van alle disciplines (Copilot-gebruik → Momenten), met de discipline erbij
+      const markers = copilot.status === 'fulfilled' && copilot.value
+        ? copilot.value.filter((row) => row.source === 'momenten' && row.summary && Array.isArray(row.summary.moments))
+          .flatMap((row) => row.summary.moments.map((moment) => ({
+            date: moment.date,
+            label: row.namespace === ns.cockpit.GENERAL_NAMESPACE ? moment.title : `${moment.title} (${nameOf(row.namespace)})`
+          })))
+        : [];
       const sum = (field) => (contentCounts ? Array.from(contentCounts.values()).reduce((total, counts) => total + counts[field], 0) : null);
 
       // ---- Kerncijfers
@@ -212,7 +221,8 @@
             title: 'Gebruik van de cockpit per week',
             sub: `De laatste ${WEEKS} volle weken, alle disciplines. Anoniem: er wordt niet bijgehouden wie iets bekijkt of kopieert.`,
             series: [{ id: 'viewed', label: 'Bekeken' }, { id: 'copied', label: 'Gekopieerd' }],
-            points: usage.weeks
+            points: usage.weeks,
+            markers
           })
           : section('Gebruik van de cockpit per week', null, el('p', { className: 'section__lead', text: 'Nog geen gebruik geteld in de laatste weken.' })))
         : section('Gebruik van de cockpit per week', null, unreadable('Het gebruik', events.reason.message));

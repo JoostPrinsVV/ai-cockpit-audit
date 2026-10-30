@@ -439,6 +439,15 @@ tabblad zonder herkenbare naam wordt niet opgeslagen (geef het de naam van de di
 dezelfde discipline geven een foutmelding. Mislukt het opslaan halverwege, dan zie je wat al wel is opgeslagen en
 probeer je de rest opnieuw.
 
+**Momenten** (onder de grafieken): belangrijke data zoals een Boost & Learn of de dag dat iedereen een licentie kreeg.
+Vul de datum in en wat er gebeurde; vink *Voor alle disciplines* aan als het overal geldt. Een moment staat als
+genummerde stippellijn in de grafieken (met uitleg eronder, in het uitleesvak en als kolom in de tabel), ook in de
+grafiek van het cockpitgebruik bij Overzicht. Bij **Wat valt op** zie je per moment het gemiddelde per week in de 4
+volle weken ervoor en de (eerste 4) weken erna: actieve gebruikers per licentie en het volume; de week waarin het moment
+valt telt niet mee. Pas met 2 weken erna in de gegevens komt er een vergelijking. Het laat zien wát er veranderde, niet
+waardoor. Opslag: in dezelfde tabel als de imports (dus geen nieuwe SQL), als één rij per discipline met de datum
+1900-01-01; de gedeelde basis (`ai-algemeen`) is voor alle disciplines.
+
 Privacy: het bestand wordt in de browser gelezen en nergens heen gestuurd. Alleen totalen per periode gaan naar de
 database (`audit_copilot_usage`): aantallen personen en actieve gebruikers per licentie, volume per week en per kanaal,
 hoe vaak mensen actief zijn en het aandeel van de tien meest actieve personen samen. Geen PersonId's, geen cijfers per

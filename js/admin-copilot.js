@@ -294,6 +294,48 @@
     return items;
   }
 
+  /* ---- Momenten -------------------------------------------------------------------------- */
+  // Belangrijke data (een Boost & Learn, iedereen een licentie): een lijn in de grafieken, en bij
+  // 'Wat valt op' het gemiddelde per week ervoor en erna. Opslag: central.listMoments/saveMoments.
+  const MOMENT_WEEKS = 4; // zoveel volle weken ervoor en erna
+  const DAY = 86400000;
+  const dayOf = (value) => Date.parse(value + 'T00:00:00Z');
+
+  /**
+   * Gemiddeld per week, ervoor (de laatste 4 weken die vóór het moment eindigen) en erna (de eerste 4
+   * die op of na het moment beginnen); de week waarin het moment valt telt dus niet mee.
+   * @returns {{ before, after }} elk { weeks, active: { basic, premium, total }, volume: { … } }
+   */
+  function aroundMoment(weeks, date) {
+    const at = dayOf(date);
+    const side = (list) => {
+      const average = (field) => {
+        const of = (id) => (list.length ? list.reduce((total, week) => total + week[field][id], 0) / list.length : null);
+        const basic = of('basic');
+        const premium = of('premium');
+        return { basic, premium, total: basic == null ? null : basic + premium };
+      };
+      return { weeks: list.length, active: average('active'), volume: average('volume') };
+    };
+    return {
+      before: side(weeks.filter((week) => dayOf(week.week) + 7 * DAY <= at).slice(-MOMENT_WEEKS)),
+      after: side(weeks.filter((week) => dayOf(week.week) >= at).slice(0, MOMENT_WEEKS))
+    };
+  }
+
+  /** De zin bij 'Wat valt op' voor één moment, of null als het ver buiten de weken in de gegevens valt. */
+  function momentInsight(weeks, moment) {
+    const { before, after } = aroundMoment(weeks, moment.date);
+    const name = `'${moment.title}' (${shortDate(moment.date)})`;
+    if (before.weeks < 2 && after.weeks < 2) return null;
+    if (after.weeks < 2) return `Na ${name} ${after.weeks ? 'staat pas 1 week' : 'staan nog geen weken'} in de gegevens: na de volgende import zie je hier wat er veranderde.`;
+    if (before.weeks < 2) return `Vóór ${name} staan te weinig weken in de gegevens om mee te vergelijken.`;
+    const active = change('relative', after.active.total, before.active.total);
+    const volume = change('relative', after.volume.total, before.volume.total);
+    const perLicence = LICENCES.map(({ id, label }) => `${label} ${DECIMAL.format(before.active[id])} → ${DECIMAL.format(after.active[id])}`).join(', ');
+    return `Rond ${name}: gemiddeld ${DECIMAL.format(after.active.total)} actieve gebruikers per week in de ${after.weeks} weken erna, tegen ${DECIMAL.format(before.active.total)} in de ${before.weeks} weken ervoor${active ? ` (${active.text})` : ''}; ${perLicence}.${volume ? ` Volume per week ${volume.text}.` : ''}`;
+  }
+
   /* ---- Onderdelen van de pagina -------------------------------------------------------- */
   /** Verschil met de vorige import, onder een tegel: pijltje en tekst (groen omhoog, rood omlaag). */
   function deltaNode(measure, now, then, previous) {
@@ -404,9 +446,91 @@
     let pendingName = '';
     let pendingParts = []; // een tabblad per discipline: alle tabbladen uit het bestand (anders leeg)
     let storedParts = [];  // daarvan al opgeslagen (als opslaan halverwege mislukte)
+    let momentRows = [];   // momenten per discipline (en de gedeelde basis), uit de database
     const here = () => ns.cockpit.activeId();
     const nameOf = (id) => (ns.cockpit.find(id) || { name: id }).name;
     const names = (parts) => parts.map((part) => nameOf(part.discipline)).join(', ');
+
+    // Momenten van deze discipline en die voor alle disciplines (de gedeelde basis), op datum
+    const ownNamespace = () => ns.cockpit.namespace(here());
+    const byDate = (a, b) => (a.date < b.date ? -1 : 1);
+    const momentsOf = (namespace) => (momentRows.find((row) => row.namespace === namespace) || { moments: [] }).moments;
+    const momentsHere = () => momentsOf(ownNamespace()).map((moment) => Object.assign({ general: false }, moment))
+      .concat(momentsOf(ns.cockpit.GENERAL_NAMESPACE).map((moment) => Object.assign({ general: true }, moment)))
+      .sort(byDate);
+    const markers = () => momentsHere().map((moment) => ({ date: moment.date, label: moment.title }));
+
+    /** Nieuwe lijst momenten opslaan voor één naamruimte en de pagina opnieuw opbouwen. */
+    async function storeMoments(namespace, list) {
+      await ns.central.saveMoments(list, namespace);
+      momentRows = momentRows.filter((row) => row.namespace !== namespace).concat({ namespace, moments: list });
+      update();
+    }
+
+    function momentsBlock() {
+      const date = el('input', { className: 'field__input', attrs: { id: 'moment-date', type: 'date', required: true } });
+      const title = el('input', { className: 'field__input', attrs: { id: 'moment-title', type: 'text', maxlength: '80', required: true, placeholder: 'Bijv. Boost & Learn met de AI Snackbar' } });
+      const general = el('input', { attrs: { id: 'moment-general', type: 'checkbox' } });
+      const error = el('p', { className: 'field__error', attrs: { id: 'moment-error', role: 'alert' } });
+      const add = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'submit' } }, [icon('plus'), el('span', { text: 'Moment toevoegen' })]);
+      const form = el('form', { className: 'moments__form', attrs: { novalidate: true, 'aria-describedby': 'moment-error' } }, [
+        el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: 'moment-date' }, text: 'Datum' }), date]),
+        el('div', { className: 'field moments__what' }, [el('label', { className: 'field__label', attrs: { for: 'moment-title' }, text: 'Wat gebeurde er?' }), title]),
+        el('label', { className: 'check moments__general', attrs: { for: 'moment-general' } }, [general, el('span', { text: 'Voor alle disciplines' })]),
+        add,
+        error
+      ]);
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const text = title.value.trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date.value) || !text) {
+          error.textContent = !text ? 'Vul in wat er gebeurde.' : 'Kies een datum.';
+          (text ? date : title).focus();
+          return;
+        }
+        error.textContent = '';
+        const namespace = general.checked ? ns.cockpit.GENERAL_NAMESPACE : ownNamespace();
+        const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const done = kit.busy(add, 'Opslaan…');
+        try {
+          await storeMoments(namespace, momentsOf(namespace).concat({ id, date: date.value, title: text.slice(0, 80) }).sort(byDate));
+          toast('Moment toegevoegd', { tone: 'success' });
+          const again = body.querySelector('#moment-date');
+          if (again) again.focus();
+        } catch (failure) {
+          done();
+          kit.failed('Opslaan', failure);
+        }
+      });
+
+      const list = momentsHere();
+      return el('section', { className: 'moments' }, [
+        el('h3', { className: 'usage-table__title', text: 'Momenten' }),
+        el('p', { className: 'field__hint', text: 'Belangrijke data, zoals een Boost & Learn of de dag dat iedereen een licentie kreeg. Ze staan als genummerde lijn in de grafieken, en bij Wat valt op zie je het gemiddelde per week ervoor en erna. Dat laat zien wát er veranderde, niet waardoor: ook vakanties en drukte spelen mee.' }),
+        list.length ? el('ul', { className: 'moments__list' }, list.map((moment) => {
+          const namespace = moment.general ? ns.cockpit.GENERAL_NAMESPACE : ownNamespace();
+          const remove = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button', 'aria-label': `Moment '${moment.title}' verwijderen` } }, [icon('trash'), el('span', { text: 'Verwijderen' })]);
+          remove.addEventListener('click', async () => {
+            if (!(await ns.ui.confirmDialog(`'${moment.title}' (${formatDate(moment.date)}) verdwijnt uit de grafieken${moment.general ? ' van alle disciplines' : ''}.`, { title: 'Moment verwijderen?', confirmLabel: 'Verwijderen', danger: true }))) return;
+            remove.disabled = true;
+            try {
+              await storeMoments(namespace, momentsOf(namespace).filter((other) => other.id !== moment.id));
+              toast('Verwijderd');
+            } catch (failure) {
+              remove.disabled = false;
+              kit.failed('Verwijderen', failure);
+            }
+          });
+          return el('li', { className: 'moments__item' }, [
+            el('span', { className: 'moments__date', text: formatDate(moment.date) }),
+            el('span', { className: 'moments__title', text: moment.title }),
+            el('span', { className: 'badge', text: moment.general ? 'Alle disciplines' : nameOf(here()) }),
+            remove
+          ]);
+        })) : null,
+        form
+      ]);
+    }
 
     const byEnd = (a, b) => (a.periodEnd < b.periodEnd ? -1 : 1);
     const fromRow = (row) => Object.assign({}, row.summary, { periodStart: row.period_start, periodEnd: row.period_end, id: row.id, importedAt: row.imported_at, importedBy: row.imported_by });
@@ -570,7 +694,7 @@
       const facts = [`${latest.weeks} weken`, `${NUMBER.format(latest.people)} personen`];
       facts.push(previous ? `vergeleken met de import t/m ${formatDate(previous.periodEnd)}` : 'de eerste import: bij de volgende zie je hier het verschil');
       if (latest.pending) facts.push('nog niet opgeslagen');
-      const notes = insights(latest, now, then, previous);
+      const notes = insights(latest, now, then, previous).concat(momentsHere().map((moment) => momentInsight(weeks, moment)).filter(Boolean));
       return el('div', { className: 'copilot__dashboard' }, [
         el('div', { className: 'copilot__head' }, [
           el('h2', { className: 'section__title', text: 'Periode ' + period(latest) }),
@@ -583,9 +707,10 @@
         ]) : null,
         licenceTable(now, then, previous),
         el('div', { className: 'copilot__charts' }, [
-          lineChart({ title: 'Actieve gebruikers per week', sub: weeks.length > latest.weeks ? 'Alle weken uit alle imports.' : null, series: LICENCES, points: weeks.map((week) => ({ week: week.week, values: week.active })) }),
-          lineChart({ title: 'Volume per week', sub: 'Basic: prompts in Copilot Chat. Premium: alle Copilot-acties.', series: LICENCES, points: weeks.map((week) => ({ week: week.week, values: week.volume })) })
+          lineChart({ title: 'Actieve gebruikers per week', sub: weeks.length > latest.weeks ? 'Alle weken uit alle imports.' : null, series: LICENCES, markers: markers(), points: weeks.map((week) => ({ week: week.week, values: week.active })) }),
+          lineChart({ title: 'Volume per week', sub: 'Basic: prompts in Copilot Chat. Premium: alle Copilot-acties.', series: LICENCES, markers: markers(), points: weeks.map((week) => ({ week: week.week, values: week.volume })) })
         ]),
+        missing ? null : momentsBlock(),
         el('div', { className: 'usage-grid' }, [channelsBlock(latest), frequencyBlock(latest)]),
         historyBlock(list),
         definitions()
@@ -598,19 +723,21 @@
         pending || pendingParts.length ? pendingNotice() : null
       ].filter(Boolean));
       const list = snapshots();
-      body.replaceChildren(list.length ? dashboard(list) : notice({
+      body.replaceChildren(...(list.length ? [dashboard(list)] : [notice({
         icon: 'chart',
         title: 'Nog geen imports',
         text: 'Kies Export inlezen en selecteer het Excel-bestand met het Copilot-gebruik. Je ziet eerst wat er is gelezen; pas bij Opslaan gaan de totalen naar de database.'
-      }));
+      }), missing ? null : momentsBlock()]).filter(Boolean));
     }
 
     async function load() {
       body.replaceChildren(el('p', { className: 'loading', text: 'Copilot-gebruik laden…' }));
       try {
-        const rows = await ns.central.listCopilotUsage();
+        // Momenten niet lezen lukt: dan alleen geen lijnen in de grafieken
+        const [rows, moments] = await Promise.all([ns.central.listCopilotUsage(), ns.central.listMoments().catch(() => [])]);
         missing = rows === null;
         saved = (rows || []).filter((row) => usable(row.summary));
+        momentRows = moments || [];
         update();
       } catch (error) {
         body.replaceChildren(notice({ tone: 'warning', title: 'Laden mislukt', text: error.message }));
@@ -630,5 +757,5 @@
     return { node };
   }
 
-  ns.adminCopilot = { render, readExport, disciplineOf, summarize, measures, timeline, change, period, FORMATS, LICENCES };
+  ns.adminCopilot = { render, readExport, disciplineOf, summarize, measures, timeline, change, period, aroundMoment, momentInsight, isUsage: usable, FORMATS, LICENCES };
 })(window.AIAudit);

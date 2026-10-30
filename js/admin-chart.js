@@ -7,7 +7,9 @@
    grafiek focus heeft) en dezelfde cijfers als tabel. Een gat van meer dan een
    week breekt de lijn. Kleuren: --series-1 en --series-2 (css/variables.css),
    getoetst op kleurenblindheid en contrast in beide thema's; tekst krijgt
-   nooit de kleur van een reeks.
+   nooit de kleur van een reeks. Momenten (optioneel, bijv. een training of
+   'iedereen een licentie'): een stippellijn met een genummerd rondje, de
+   uitleg onder de grafiek, in het uitleesvak en als kolom in de tabel.
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -42,16 +44,27 @@
     return `${start.slice(0, 4) === end.slice(0, 4) ? first.replace(/ \d{4}$/, '') : first} t/m ${formatDate(end)}`;
   }
 
+  const shortDate = (value) => formatDate(value).replace(/ \d{4}$/, '');
+
   /** Kort lijnstuk in de kleur van reeks n (1 of 2), voor legenda en uitleesvak. */
   const key = (n) => el('span', { className: 'chart__key chart__key--' + n });
 
   /**
    * points: [{ week: 'JJJJ-MM-DD', values: { <id>: getal } }], series: [{ id, label }] (één of twee),
-   * title, sub (optioneel), pointLabel (kop van de eerste kolom en het uitleesvak, standaard 'Week van').
+   * title, sub (optioneel), pointLabel (kop van de eerste kolom en het uitleesvak, standaard 'Week van'),
+   * markers (optioneel): [{ date: 'JJJJ-MM-DD', label }]; alleen die binnen de weken van de grafiek.
    */
-  function lineChart({ title, sub, points, series, pointLabel }) {
+  function lineChart({ title, sub, points, series, pointLabel, markers }) {
     const HEIGHT = 250;
     const label = pointLabel || 'Week van';
+    // Momenten binnen de grafiek (tot het eind van de laatste week), op datum en genummerd
+    const lastEnd = time(points[points.length - 1].week) + 7 * DAY;
+    const marks = (markers || [])
+      .filter((m) => /^\d{4}-\d{2}-\d{2}$/.test(m.date) && time(m.date) >= time(points[0].week) && time(m.date) < lastEnd)
+      .sort((a, b) => (a.date < b.date ? -1 : 1))
+      .map((m, index) => ({ date: m.date, label: m.label, n: index + 1 }));
+    const marksIn = (week) => marks.filter((m) => time(m.date) >= time(week) && time(m.date) < time(week) + 7 * DAY);
+    const badge = (m) => el('span', { className: 'chart__moment-n', text: String(m.n), attrs: { 'aria-hidden': 'true' } });
     // Rechts ruimte voor de laatste waarden ('1.081 Premium': ongeveer 7,4px per teken bij 13px)
     const latest = points[points.length - 1].values;
     const endWidth = Math.max(...series.map((s) => `${NUMBER.format(latest[s.id])} ${s.label}`.length));
@@ -66,14 +79,18 @@
       series.length > 1 ? el('ul', { className: 'chart__legend', attrs: { role: 'list' } }, series.map((s, n) =>
         el('li', {}, [key(n + 1), el('span', { text: s.label })]))) : null,
       plot,
+      marks.length ? el('ol', { className: 'chart__moments', attrs: { role: 'list', 'aria-label': 'Momenten in de grafiek' } }, marks.map((m) =>
+        el('li', {}, [badge(m), el('span', { text: `${formatDate(m.date)}: ${m.label}` })]))) : null,
       el('details', { className: 'chart__table' }, [
         el('summary', { text: 'Als tabel' }),
         el('div', { className: 'chart__table-scroll' }, [
           el('table', { className: 'table' }, [
-            el('thead', {}, [el('tr', {}, [label, ...series.map((s) => s.label)].map((column, index) => el('th', { text: column, attrs: { scope: 'col', class: index ? 'num' : null } })))]),
+            el('thead', {}, [el('tr', {}, [label, ...series.map((s) => s.label)].map((column, index) => el('th', { text: column, attrs: { scope: 'col', class: index ? 'num' : null } }))
+              .concat(marks.length ? el('th', { text: 'Moment', attrs: { scope: 'col' } }) : []))]),
             el('tbody', {}, points.map((point) => el('tr', {}, [
               el('th', { attrs: { scope: 'row' }, text: formatDate(point.week) }),
-              ...series.map((s) => el('td', { className: 'num', text: NUMBER.format(point.values[s.id]) }))
+              ...series.map((s) => el('td', { className: 'num', text: NUMBER.format(point.values[s.id]) })),
+              marks.length ? el('td', { text: marksIn(point.week).map((m) => `${formatDate(m.date)}: ${m.label}`).join('; ') }) : null
             ])))
           ])
         ])
@@ -96,7 +113,7 @@
       const y = (value) => M.top + innerH - (value / top) * innerH;
       const root = svg('svg', {
         class: 'chart__svg', width, height: HEIGHT, viewBox: `0 0 ${width} ${HEIGHT}`, tabindex: '0', role: 'img', focusable: 'true',
-        'aria-label': `${title}, ${period(points[0].week, points[points.length - 1].week)}. Laatste week: ${summary}. Met de pijltjestoetsen per week; alle cijfers staan ook in de tabel eronder.`
+        'aria-label': `${title}, ${period(points[0].week, points[points.length - 1].week)}. Laatste week: ${summary}.${marks.length ? ' Momenten: ' + marks.map((m) => `${formatDate(m.date)} ${m.label}`).join('; ') + '.' : ''} Met de pijltjestoetsen per week; alle cijfers staan ook in de tabel eronder.`
       });
 
       // Raster en assen: dunne, rustige lijnen
@@ -119,6 +136,10 @@
         grid.append(svg('text', { x, y: HEIGHT - 8, 'text-anchor': 'middle' }, text));
       });
       root.append(grid);
+
+      // Momenten: een stippellijn onder de lijnen, het genummerde rondje erboven (verderop)
+      const markX = (m) => M.left + (last === first ? innerW / 2 : Math.min(1, (time(m.date) - first) / (last - first)) * innerW);
+      marks.forEach((m) => root.append(svg('line', { x1: markX(m), x2: markX(m), y1: M.top + 8, y2: M.top + innerH, class: 'chart__marker' })));
 
       // Lijnen (nieuw stuk na een gat), het punt aan het eind en de laatste waarde
       const ends = [];
@@ -147,6 +168,10 @@
         const text = svg('text', { x: endX + 14, y: labelY + 4, class: 'chart__end' });
         text.append(svg('tspan', { class: 'chart__end-value' }, NUMBER.format(end.value)), svg('tspan', { dx: 4 }, end.label));
         root.append(text);
+      });
+      marks.forEach((m) => {
+        root.append(svg('circle', { cx: markX(m), cy: M.top + 8, r: 8, class: 'chart__marker-dot' }));
+        root.append(svg('text', { x: markX(m), y: M.top + 12, 'text-anchor': 'middle', class: 'chart__marker-number' }, String(m.n)));
       });
 
       // Draadkruis en punten bij aanwijzen (verborgen tot je aanwijst)
@@ -185,7 +210,8 @@
           key(n + 1),
           el('strong', { text: NUMBER.format(point.values[s.id]) }),
           el('span', { text: s.label })
-        ]))
+        ])),
+        ...marksIn(point.week).map((m) => el('p', { className: 'chart__readout-row chart__readout-moment' }, [badge(m), el('span', { text: `${shortDate(m.date)}: ${m.label}` })]))
       );
       readout.hidden = false;
       // Rechts van het draadkruis, of links als het daar niet past

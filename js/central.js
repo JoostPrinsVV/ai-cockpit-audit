@@ -10,7 +10,8 @@
      audit_reviews      sterren en toelichting bij usecases en prompts (één per apparaat per item)
      audit_events       anonieme tellers: bekeken, afgespeeld, gekopieerd
      audit_copilot_usage totalen van het Copilot-gebruik per periode (stap 9,
-                        setup/supabase-audit-copilot.sql; alleen hoofdbeheerders)
+                        setup/supabase-audit-copilot.sql; alleen hoofdbeheerders),
+                        en per discipline één rij met de momenten (datum 1900-01-01)
 
    Rechten (Row Level Security):
    - Iedereen mag gepubliceerde inhoud lezen.
@@ -590,6 +591,34 @@
     return changeOne(tablePath(TABLES.copilot, { id: 'eq.' + id, select: 'id' }));
   }
 
+  /* ---- Beheer: momenten bij het Copilot-gebruik ---------------------------------------- */
+  // Belangrijke data (een Boost & Learn, iedereen een licentie) als lijnen in de grafieken. Ze staan in
+  // dezelfde tabel als de imports (dus ook alleen voor hoofdbeheerders, geen nieuwe SQL nodig), als één
+  // rij per discipline met een vaste datum die nooit bij een import hoort. In de gedeelde basis
+  // ('ai-algemeen') gelden ze voor alle disciplines. Een import is te herkennen aan summary.version 1.
+  const MOMENTS_DAY = '1900-01-01';
+  const MOMENTS_SOURCE = 'momenten';
+
+  /** Momenten van alle disciplines: [{ namespace, moments: [{ id, date, title }] }]; null zolang stap 9 niet is uitgevoerd. */
+  async function listMoments() {
+    const params = { select: 'namespace,summary', source: 'eq.' + MOMENTS_SOURCE, period_end: 'eq.' + MOMENTS_DAY, namespace: 'like.ai-*', limit: 100 };
+    const response = await request(tablePath(TABLES.copilot, params), { headers: await adminHeaders() });
+    if (await isMissingTable(response)) return null;
+    if (!response.ok) throw await failure(response, 'Momenten lezen');
+    return (await response.json()).map((row) => ({ namespace: row.namespace, moments: Array.isArray(row.summary && row.summary.moments) ? row.summary.moments : [] }));
+  }
+
+  /** De momenten van één discipline (of de gedeelde basis) opslaan: de lijst vervangt de vorige. */
+  async function saveMoments(moments, namespace) {
+    const response = await request(tablePath(TABLES.copilot, { on_conflict: 'namespace,period_end', select: 'namespace' }), {
+      method: 'POST',
+      headers: await adminHeaders({ Prefer: 'resolution=merge-duplicates,return=representation' }),
+      body: JSON.stringify({ namespace, period_start: MOMENTS_DAY, period_end: MOMENTS_DAY, source: MOMENTS_SOURCE, summary: { version: MOMENTS_SOURCE, moments } })
+    });
+    if (await isMissingTable(response)) throw new Error('de tabel ontbreekt nog: voer setup/supabase-audit-copilot.sql (stap 9) uit');
+    if (!response.ok) throw await failure(response, 'opslaan');
+  }
+
   /* ---- Beheer: werkversies, publiceren, logboek, beheerders, media (stap 7) ------------------ */
   /** Staan de werkversies in de database (stap 7 uitgevoerd)? null = nog onbekend. */
   const draftingAvailable = () => drafting;
@@ -737,6 +766,8 @@
     contentOverview,
     listCopilotUsage,
     saveCopilotUsage,
-    deleteCopilotUsage
+    deleteCopilotUsage,
+    listMoments,
+    saveMoments
   };
 })(window.AIAudit);
