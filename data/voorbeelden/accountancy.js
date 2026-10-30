@@ -1864,11 +1864,12 @@ Aantekeningen:
 
   /* ---- Trainingen ------------------------------------------------------------------- */
   // Het naslagwerk van de ochtendsessie van de Boost & Learn (26 oktober 2026). Het volledige
-  // naslagwerk (met de video, alle slides, de Mentimeter-uitkomsten en de 21 groepsideeën) is
-  // alleen voor intern gebruik en staat versleuteld op de snackbar; deze site is openbaar. Hier
-  // dus alleen wat voor iedereen mag: 19 van de 27 slides (zonder het programma, de
-  // Mentimeter-codes, de opdrachtinstructie en het scherm van het ideeënloket), en de inbreng
-  // van collega's in algemene vorm. De video kan als link naar Stream of SharePoint (veld link).
+  // naslagwerk (alle slides, de Mentimeter-uitkomsten en de 21 groepsideeën) is alleen voor
+  // intern gebruik en staat versleuteld op de snackbar; deze site is openbaar. Hier dus alleen
+  // wat voor iedereen mag: 19 van de 27 slides (zonder het programma, de Mentimeter-codes, de
+  // opdrachtinstructie en het scherm van het ideeënloket), en de inbreng van collega's in
+  // algemene vorm. De videosamenvatting (5 minuten) staat er wel: bewust gekozen, achter het
+  // slot met de pincode (js/lock.js). Wie het adres van het bestand kent, kan hem openen.
   trainings: [
     {
       id: 'van-ai-hype-naar-toepassing',
@@ -1879,8 +1880,18 @@ Aantekeningen:
       level: 'Starter',
       license: false,
       description: 'Wat betekent AI voor ons vak, onze dienstverlening en onze ontwikkeling? Bekijk de slides terug en lees wat je meeneemt: kalibreren, wat wel en niet mag met gegevens, de beste ideeën uit de praktijksessie en hoe je morgen verder kunt.',
+      video: 'assets/trainingen/van-ai-hype-naar-toepassing/sessie-in-5-minuten.mp4',
+      poster: 'assets/trainingen/van-ai-hype-naar-toepassing/sessie-in-5-minuten.jpg',
+      chapters: [
+        { time: '0:00', title: 'Opening' },
+        { time: '0:57', title: 'Buitenwereld' },
+        { time: '2:05', title: 'Organisatiekoers' },
+        { time: '3:41', title: 'Praktijkervaring' },
+        { time: '3:55', title: 'Disciplinestrategie' },
+        { time: '4:27', title: 'Leerlijn' }
+      ],
       materials: [
-        { label: 'Het volledige naslagwerk, met de video en alle ideeën (open de link uit het Teams-bericht)', href: 'https://joostprinsvv.github.io/AI-snackbar-platform/boost-learn-ai.html' }
+        { label: 'Het volledige naslagwerk, met alle ideeën (open de link uit het Teams-bericht)', href: 'https://joostprinsvv.github.io/AI-snackbar-platform/boost-learn-ai.html' }
       ],
       usecases: ['weekplanning', 'icbo-jaarrekening', 'klantoverleg', 'klantpresentatie', 'klantgesprek-voorbereiden', 'contract-vertalen'],
       tips: ['schildje', 'controleren'],

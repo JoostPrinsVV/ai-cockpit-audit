@@ -449,6 +449,7 @@
       ns.content.load({ phase: example.phases, usecase: example.usecases, prompt: example.prompts, tip: example.tips, training: example.trainings || [], agent: [], setting: {} });
       const training = ns.content.trainingById.get('van-ai-hype-naar-toepassing');
       equal([training.slides.length, training.takeaways.length, training.actions.length, training.actions.filter((a) => a.slide).length, training.hasNaslag], [19, 5, 6, 5, true], 'naslagwerk');
+      equal([training.hasRecording, training.chapters.length, training.chapters[5].seconds], [true, 6, 267], 'videosamenvatting met hoofdstukken');
       ok(training.usecases.every((id) => ns.content.usecaseById.has(id)), 'de snacks bij de training bestaan');
       const usecases = ns.content.usecases;
       equal(usecases.length, 6, 'usecases');
@@ -457,6 +458,14 @@
       equal([standalone.length, standalone.filter((p) => p.promptBasic).length, standalone.filter((p) => p.followUps.length).length], [35, 17, 5]);
       // Alleen de gedeelde tips ontbreken hier (die komen uit de basis)
       equal(ns.content.issues.filter((issue) => !/tip/i.test(issue)), []);
+    });
+
+    /* ---- slot met pincode ---- */
+    describe('Slot met pincode (js/lock.js)');
+    await test('de vingerafdruk in de config hoort bij de pincode van de snackbar; spaties tellen niet', async () => {
+      equal(await ns.lock.hash('26102026'), ns.config.lockPinHash, 'pincode');
+      equal(await ns.lock.hash(' 26102026 '), ns.config.lockPinHash, 'met spaties');
+      ok((await ns.lock.hash('12345678')) !== ns.config.lockPinHash, 'andere pincode');
     });
 
     /* ---- route van een idee ---- */

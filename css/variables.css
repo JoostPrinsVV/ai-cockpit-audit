@@ -74,6 +74,7 @@
   --color-on-dark-muted: #c9cede;          /* 10:1 op navy */
   --color-on-dark-subtle: #aab2c8;         /* kleine lettertjes in de voet: 8:1 */
   --color-highlight-on-dark: var(--vv-teal); /* 6,1:1 op navy */
+  --color-danger-on-dark: #ff8fa9;         /* foutmelding op navy (slot met pincode) */
   --on-dark-line: rgba(255, 255, 255, 0.26);
   --on-dark-line-strong: rgba(255, 255, 255, 0.52);
   --on-dark-fill: rgba(255, 255, 255, 0.07);

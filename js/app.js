@@ -588,6 +588,8 @@
       ns.central.init({ config: baseConfig });
       // Welke discipline: bepaalt de naamruimte van de inhoud, inzendingen en tellers (central leest die per verzoek)
       baseConfig.namespace = ns.cockpit.init({ admin: Boolean(ns.central.signedIn()) && ns.central.isAdmin() });
+      // Slot met pincode over de hele cockpit (de rest laadt eronder alvast door)
+      ns.lock.init({ config: baseConfig, admin: Boolean(ns.central.signedIn()) && ns.central.isAdmin() });
       config = Object.assign({}, baseConfig);
       initTheme();
       fillChrome();

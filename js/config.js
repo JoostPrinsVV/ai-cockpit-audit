@@ -28,6 +28,13 @@ window.AIAudit.config = {
   launchDate: '2026-10-19',             // Inhoud van vóór of op deze datum krijgt geen label 'Nieuw' (anders staat bij de start alles op 'Nieuw')
   theme: 'licht',                       // Standaardthema: 'licht' of 'donker' (iedere collega kan zelf wisselen)
 
+  /* ---- Slot met pincode (js/lock.js) ------------------------------------- */
+  // Vingerafdruk van de pincode (dezelfde als bij de snackbar), niet de pincode zelf. Na één keer
+  // invullen blijft de cockpit op dat apparaat open. Nieuwe pincode: typ in de console van de
+  // cockpit  await AIAudit.lock.hash('nieuwe pincode')  en zet de uitkomst hier. Leeg = geen slot.
+  // Een drempel tegen doorsturen, geen beveiliging: de bestanden blijven openbaar op te vragen.
+  lockPinHash: '5f653a94cdf1072581a9c971ee99f97abdc5117be998d0242e5099f1e48ca002',
+
   /* ---- Gouden regels (onderaan iedere pagina) -------------------------- */
   rules: [
     'Werk alleen in Copilot met je zakelijke account (het schildje), nooit in een gratis of privé-AI-tool.',

@@ -42,7 +42,7 @@ assets/branding/      Logo: logo-dark.svg (zonder vierkant, voor de donkere kopb
                       logo.svg en favicon.svg (wit afgerond vierkant, los en als tabbladicoon)
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
-assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …)
+assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …), soms met video
 setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), stap 9 (Copilot-gebruik) en 10 (portfolio)
 ```
 
@@ -89,9 +89,10 @@ De cockpit is er per discipline (Audit, Accountancy, Belastingadvies, Salarisadm
   cockpit* (eerst de fasen toevoegen) of *Voorbeeldinhoud overnemen*. Voor Accountancy (`data/voorbeelden/accountancy.js`)
   is dat de AI Snackbar van de Boost & Learn: de zes snacks als usecases met hun demo, en de dertig bijgerechten als
   losse prompts (met de versie zonder licentie en de vervolgstappen), en de training *Van AI-hype naar toepassing* met
-  het naslagwerk van de ochtendsessie (19 slides in `assets/trainingen/van-ai-hype-naar-toepassing/`). Het volledige
-  naslagwerk is alleen voor intern gebruik en staat versleuteld op de snackbar: in de cockpit staat wat openbaar mag,
-  met een link ernaartoe; de video kan als link naar Stream of SharePoint (Beheer → Trainingen → Link). De pro-versie van
+  het naslagwerk van de ochtendsessie (19 slides en de videosamenvatting van 5 minuten met zes hoofdstukken in
+  `assets/trainingen/van-ai-hype-naar-toepassing/`). Het volledige naslagwerk is alleen voor intern gebruik en staat
+  versleuteld op de snackbar: in de cockpit staat de rest, met een link ernaartoe. De video staat er bewust wel, achter
+  het slot met de pincode (zie *Slot met pincode*); wie het adres van het bestand kent, kan hem openen. De pro-versie van
   snack 4 (met Claude) staat er bewust niet in: in de cockpit werk je alleen met Copilot. Is Accountancy al ingericht,
   dan biedt Beheer dit niet meer aan.
 - **Teksten per discipline:** Beheer → Inhoud → Teksten in een discipline gaat voor de teksten in de gedeelde basis, en
@@ -522,6 +523,12 @@ Bewust zo gelaten: de inhoud van een discipline die op slot staat, is technisch 
 - De tellers in Beheer zijn anoniem (welke usecase, demo, prompt, tip, training of agent), zonder apparaat- of
   persoonsgegevens. Heb je het SQL-bestand al eens uitgevoerd vóór de trainingen of agents er waren? Voer het dan nog
   een keer uit, zodat ook die inhoud en tellers worden geaccepteerd (bestaande gegevens blijven staan).
+- **Slot met pincode** (`js/lock.js`): wie de cockpit opent, vult eerst de pincode in (dezelfde als bij de snackbar).
+  Daarna blijft hij op dat apparaat open (`ai-snackbar-audit:slot`), tot de pincode verandert. Een ingelogde beheerder en
+  een lokale kopie zien geen slot; lokaal toon je het met `?slot` vóór de #. In `js/config.js` staat alleen een
+  vingerafdruk (`lockPinHash`); een nieuwe pincode: typ in de console `await AIAudit.lock.hash('nieuwe pincode')` en zet
+  de uitkomst daar. Leeg = geen slot. Het is een drempel tegen doorsturen, geen beveiliging: de losse bestanden (ook de
+  video bij de training) blijven op te vragen voor wie het adres kent, en de repository is openbaar.
 - De ideeënhub waarschuwt als een tekst op een BSN of IBAN lijkt.
 - Demo's draaien in een afgeschermd iframe (sandbox); de pagina staat alleen verbinding met ons eigen Supabase-project
   toe (CSP).

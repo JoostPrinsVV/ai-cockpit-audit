@@ -17,6 +17,16 @@
     /* geen opslag: het standaardthema */
   }
 
+  // Slot met pincode (js/lock.js): nog nooit geopend op dit apparaat? Dan de cockpit pas tonen als
+  // het slot heeft beslist (geen flits van de inhoud). Een lokale kopie blijft open, behalve met ?slot.
+  try {
+    const local = window.location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+    const forced = new URLSearchParams(window.location.search).has('slot');
+    if (forced || (!local && !window.localStorage.getItem('ai-snackbar-audit:slot'))) document.documentElement.dataset.slot = 'dicht';
+  } catch (error) {
+    /* geen opslag: het slot beslist straks */
+  }
+
   function fatal(message) {
     if (document.documentElement.dataset.gestart === 'ja') return;
     const box = document.getElementById('fatal');
