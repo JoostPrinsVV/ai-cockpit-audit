@@ -1882,6 +1882,9 @@ Aantekeningen:
       description: 'Wat betekent AI voor ons vak, onze dienstverlening en onze ontwikkeling? Bekijk de slides terug en lees wat je meeneemt: kalibreren, wat wel en niet mag met gegevens, de beste ideeën uit de praktijksessie en hoe je morgen verder kunt.',
       video: 'assets/trainingen/van-ai-hype-naar-toepassing/sessie-in-5-minuten.mp4',
       poster: 'assets/trainingen/van-ai-hype-naar-toepassing/sessie-in-5-minuten.jpg',
+      videoTitle: 'De sessie in 5 minuten',
+      videoIntro: 'Een korte animatie van de ochtend: van de buitenwereld en onze koers tot de praktijk en hoe we verder leren. Kies een hoofdstuk om er direct naartoe te gaan.',
+      slidesFirst: true,
       chapters: [
         { time: '0:00', title: 'Opening' },
         { time: '0:57', title: 'Buitenwereld' },

@@ -450,6 +450,7 @@
       const training = ns.content.trainingById.get('van-ai-hype-naar-toepassing');
       equal([training.slides.length, training.takeaways.length, training.actions.length, training.actions.filter((a) => a.slide).length, training.hasNaslag], [19, 5, 6, 5, true], 'naslagwerk');
       equal([training.hasRecording, training.chapters.length, training.chapters[5].seconds], [true, 6, 267], 'videosamenvatting met hoofdstukken');
+      equal([training.videoTitle, training.slidesFirst], ['De sessie in 5 minuten', true], 'koptekst en volgorde');
       ok(training.usecases.every((id) => ns.content.usecaseById.has(id)), 'de snacks bij de training bestaan');
       const usecases = ns.content.usecases;
       equal(usecases.length, 6, 'usecases');

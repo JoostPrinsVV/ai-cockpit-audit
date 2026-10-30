@@ -448,6 +448,9 @@
         link: HTTPS_URL.test(link) ? link : '',
         video: localPath(item.video, `Training '${id}' (video)`),
         poster: localPath(item.poster, `Training '${id}' (poster)`),
+        videoTitle: text(item.videoTitle),
+        videoIntro: text(item.videoIntro),
+        slidesFirst: item.slidesFirst === true,
         chapters: (Array.isArray(item.chapters) ? item.chapters : [])
           .map((chapter) => ({ time: text(chapter && chapter.time), title: text(chapter && chapter.title) }))
           .filter((chapter) => chapter.title && TIME.test(chapter.time))

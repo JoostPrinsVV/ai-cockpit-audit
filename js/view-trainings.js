@@ -473,6 +473,14 @@
     const training = ns.content.trainingById.get(id);
     if (!training) return null;
     const recording = recordingBlock(training);
+    // Optioneel een koptekst en korte uitleg boven de opname
+    const recordingNode = recording.node && (training.videoTitle || training.videoIntro)
+      ? el('section', { className: 'block', attrs: training.videoTitle ? { 'aria-labelledby': 'tr-video-title' } : { 'aria-label': 'Opname' } }, [
+        training.videoTitle ? el('h2', { className: 'block__title', text: training.videoTitle, attrs: { id: 'tr-video-title' } }) : null,
+        training.videoIntro ? el('p', { className: 'block__intro', text: training.videoIntro }) : null,
+        recording.node
+      ])
+      : recording.node;
     const viewer = training.slides.length ? slideViewer(training) : null;
     const slides = viewer ? slidesBlock(training, viewer, Boolean(recording.node)) : null;
     const naslag = naslagBlock(training, viewer, slides);
@@ -519,12 +527,11 @@
         ]
       }),
       el('div', { className: 'detail__layout' }, [
-        el('div', { className: 'detail__main' }, [
-          recording.node,
-          slides ? slides.node : null,
-          training.description ? el('p', { className: 'detail__intro', text: training.description }) : null,
-          chapters
-        ]),
+        // De hoofdstukken direct onder de opname; de slides ervoor of erna (slidesFirst)
+        el('div', { className: 'detail__main' }, (training.slidesFirst
+          ? [slides ? slides.node : null, recordingNode, chapters]
+          : [recordingNode, chapters, slides ? slides.node : null]
+        ).concat(training.description ? el('p', { className: 'detail__intro', text: training.description }) : null)),
         aside
       ]),
       naslag ? naslag.node : null,

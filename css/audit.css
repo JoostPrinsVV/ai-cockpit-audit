@@ -1140,6 +1140,8 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .detail--narrow > .detail__header + * { margin-top: 0; }
 
 .block__title { margin-bottom: var(--space-4); font-size: var(--fs-xl); }
+.block__intro { max-width: 70ch; margin-bottom: var(--space-4); color: var(--color-text-muted); }
+.block__title:has(+ .block__intro) { margin-bottom: var(--space-2); }
 
 /* Genummerde stappen */
 .steps { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }

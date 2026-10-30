@@ -157,6 +157,9 @@
         { key: 'link', label: 'Link naar de opname (Stream/SharePoint/Teams)', type: 'url', hint: 'Aanbevolen. Begint met https://. Opent in een nieuw tabblad; Microsoft 365 regelt wie hem mag zien.' },
         { key: 'video', label: 'Of: korte MP4 op de site', type: 'path', hint: 'Alleen openbaar materiaal; de site is openbaar bereikbaar.' },
         { key: 'poster', label: 'Afbeelding vóór het afspelen', type: 'path' },
+        { key: 'videoTitle', label: 'Koptekst boven de video', type: 'text', placeholder: 'De sessie in 5 minuten', hint: 'Optioneel. Leeg = geen koptekst.' },
+        { key: 'videoIntro', label: 'Korte uitleg onder de koptekst', type: 'textarea', hint: 'Optioneel, één of twee zinnen.' },
+        { key: 'slidesFirst', label: 'Eerst de slides, dan de video', type: 'bool', hint: 'Uit = eerst de video (met de hoofdstukken), dan de slides.' },
         { key: 'chapters', label: 'Hoofdstukken', type: 'group', itemLabel: 'Hoofdstuk', fields: [
           { key: 'time', label: 'Tijd', type: 'text', placeholder: '12:30', half: true },
           { key: 'title', label: 'Titel', type: 'text', half: true }

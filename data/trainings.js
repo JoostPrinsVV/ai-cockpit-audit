@@ -45,8 +45,11 @@
      video        Of: pad naar een korte MP4, bijv. 'assets/videos/training-01.mp4'.
      poster       Optioneel: afbeelding vóór het afspelen (bij 'video'), en op de kaart
                   in het overzicht. Leeg = de eerste slide (als die er is).
-     chapters     Optioneel: hoofdstukken [{ time: '12:30', title: '...' }].
-                  Bij een MP4 kun je erop klikken om naar dat moment te springen.
+     videoTitle   Optioneel: koptekst boven de opname, bijv. 'De sessie in 5 minuten'.
+     videoIntro   Optioneel: één of twee zinnen onder die koptekst.
+     slidesFirst  true = eerst de slides, dan de opname. Weglaten = eerst de opname.
+     chapters     Optioneel: hoofdstukken [{ time: '12:30', title: '...' }], direct onder de
+                  opname. Bij een MP4 kun je erop klikken om naar dat moment te springen.
      materials    Optioneel: bijlagen [{ label: 'Slides (PDF)', href: '...' }].
                   Een link naar SharePoint of een bestand in assets/downloads/.
      usecases     Optioneel: id's uit data/usecases.js die in de training aan bod komen.
