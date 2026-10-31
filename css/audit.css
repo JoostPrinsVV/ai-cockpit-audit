@@ -611,8 +611,24 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .radar-strip__more { padding: 0 var(--space-3); text-decoration: underline; text-underline-offset: 3px; }
 .radar-strip__close { display: grid; place-items: center; width: 2.25rem; margin-left: auto; color: var(--color-on-dark-muted); }
 .radar-strip__close:hover { background: var(--on-dark-fill-strong); color: var(--color-on-dark); }
+/* Radartje in de strook: alleen op een smal scherm, waar de kompasroos niet staat (zelfde breekpunt) */
+.radar-mini { display: none; flex: none; width: 2.1rem; height: 2.1rem; overflow: visible; }
+.radar-mini__ring { fill: none; stroke: rgba(255, 255, 255, 0.3); stroke-width: 1; }
+.radar-mini__sweep { transform-box: view-box; transform-origin: 0 0; animation: radar-mini-sweep 2.4s linear infinite; } /* (0, 0) = het midden */
+.radar-mini__fill { fill: color-mix(in srgb, var(--vv-crimson) 32%, transparent); }
+.radar-mini__edge { stroke: var(--vv-crimson); stroke-width: 1.3; stroke-linecap: round; }
+.radar-mini__blip { fill: var(--vv-crimson); filter: drop-shadow(0 0 1.5px color-mix(in srgb, var(--vv-crimson) 90%, transparent)); animation: radar-mini-blip 2.4s linear var(--delay, 0s) infinite both; }
+.radar-mini__hub { fill: var(--vv-white); }
+@keyframes radar-mini-sweep { to { transform: rotate(360deg); } }
+@keyframes radar-mini-blip { 0% { opacity: 1; } 65%, 100% { opacity: 0.3; } }
+@media (max-width: 1239px) {
+  .radar-strip .radar-mini { display: block; }
+  .radar-strip .radar-strip__lamp { display: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .radar-strip__lamp { animation: none; }
+  .radar-mini__sweep, .radar-mini__blip { animation: none; }
 }
 
 /* Alleen als er naast de tekst ruimte is */
