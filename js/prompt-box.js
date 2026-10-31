@@ -4,7 +4,9 @@
    [PLAATSHOUDERS] worden gemarkeerd. Met 'Invullen' krijgt iedere
    plaatshouder een eigen veld; de kopie bevat dan de ingevulde tekst.
    Wat je invult wordt nergens bewaard (het kan om klantgegevens gaan):
-   weg zodra je de pagina verlaat.
+   weg zodra je de pagina verlaat. Je naam, functie en boekjaar uit Mijn
+   gegevens (js/profile.js) staan er al in; die kun je hier per prompt
+   overschrijven.
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -20,19 +22,23 @@
    *   copyLabel   Tekst op de kopieerknop
    *   onCopy      Wordt aangeroepen na kopiëren
    *   collapsed   true = lange prompt eerst ingeklapt
+   *   improve     Waar de prompt staat ({ type, id, namespace, field, index, title, label, phase }):
+   *               dan staat eronder 'Stel een verbetering voor' (js/improve.js)
    */
   function create(options) {
     const opts = options || {};
     const id = 'pb-' + (++counter);
     const text = opts.text || '';
     const fields = parsePlaceholders(text);
-    const values = {};
+    // Uit Mijn gegevens (naam, functie, boekjaar, …): al ingevuld, per prompt te overschrijven
+    const mine = ns.profile.values(text);
+    const values = Object.assign({}, mine);
 
     // Te scrollen met het toetsenbord (tabindex), en daarom een benoemd gebied: een schermlezer
     // zegt dan waar je bent ('Prompt: Stap 1 …'), ook als de tekst lang is
     const pre = el('pre', { className: 'prompt-box__text', attrs: { id: id + '-text', tabindex: '0', role: 'region', 'aria-label': opts.label ? 'Prompt: ' + opts.label : 'Prompt' } });
     function renderText() {
-      pre.replaceChildren(...promptNodes(text, values));
+      pre.replaceChildren(...promptNodes(text, values, Object.keys(mine).filter((key) => values[key] === mine[key])));
     }
     renderText();
 
@@ -49,6 +55,15 @@
         icon('shield'),
         el('span', { text: 'Vul in wat je weet; de rest blijft als [PLAATSHOUDER] staan. Wat je hier invult wordt niet bewaard.' })
       ]);
+      // Wat uit Mijn gegevens komt, of de tip om dat één keer in te vullen
+      const fromProfile = Object.keys(mine).length;
+      const profileNote = fromProfile || ns.profile.canFill(text)
+        ? el('p', { className: 'fill__mine' }, [
+          icon('user'),
+          el('span', { text: fromProfile ? 'Je gegevens staan er al in (groen). Aanpassen voor alle prompts: ' : 'Tip: vul je naam, functie en boekjaar één keer in, dan staan ze hier voortaan al. ' }),
+          el('a', { attrs: { href: '#/mijn' }, text: 'Mijn gegevens' })
+        ])
+        : null;
       const grid = el('div', { className: 'fill__grid' });
       fields.forEach((field, index) => {
         const inputId = `${id}-f${index}`;
@@ -63,24 +78,31 @@
             grid.append(el('datalist', { attrs: { id: listId } }, field.options.map((option) => el('option', { attrs: { value: option } }))));
           }
         }
+        if (mine[field.key]) control.value = mine[field.key];
         control.addEventListener('input', () => {
           values[field.key] = control.value;
           renderText();
         });
         grid.append(el('div', { className: 'fill__field' + (field.long ? ' fill__field--wide' : '') }, [
-          el('label', { className: 'fill__label', text: field.label, attrs: { for: inputId } }),
+          el('label', { className: 'fill__label', attrs: { for: inputId } }, [
+            field.label,
+            mine[field.key] ? el('span', { className: 'fill__tag', text: 'Mijn gegevens' }) : null
+          ]),
           control
         ]));
       });
+      // Wissen: terug naar de stand bij het openen (je eigen gegevens blijven staan)
       const clear = el('button', { className: 'btn btn--quiet btn--sm fill__clear', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Wis invulling' })]);
       clear.addEventListener('click', () => {
         Object.keys(values).forEach((keyName) => delete values[keyName]);
-        fillPanel.querySelectorAll('.fill__input').forEach((input) => {
-          input.value = '';
+        Object.assign(values, mine);
+        fields.forEach((field, index) => {
+          const input = fillPanel.querySelector('#' + id + '-f' + index);
+          if (input) input.value = mine[field.key] || '';
         });
         renderText();
       });
-      fillPanel.append(intro, grid, clear);
+      fillPanel.append(intro, profileNote, grid, clear);
 
       fillToggle = el('button', { className: 'btn btn--secondary btn--sm prompt-box__fill', attrs: { type: 'button', 'aria-expanded': 'false', 'aria-controls': id + '-fill' } }, [
         icon('pencil-line'),
@@ -121,7 +143,8 @@
         el('div', { className: 'prompt-box__actions' }, [fillToggle, open, copy])
       ]),
       fillPanel,
-      body
+      body,
+      opts.improve ? ns.improve.button(text, opts.improve) : null
     ]);
     return node;
   }

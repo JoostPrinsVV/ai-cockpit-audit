@@ -29,9 +29,15 @@ js/rights.js          Rollen: wat de ingelogde beheerder mag (zelfde regels als 
 js/editor.js          Werkversies, bewerkbalk, opslaan, publiceren (ook gepland), logboek, ongedaan maken
 js/editmode.js        Bewerken op de pagina zelf: teksten, verslepen, toevoegen, verwijderen, zijpaneel
 js/motion.js          Beweging: paginaovergangen, opstarten van de instrumenten, soepel filteren, thema-overgang
+js/profile.js         Mijn gegevens: naam, functie, boekjaar … die de cockpit in prompts invult (alleen in je browser)
+js/compass.js         Seizoenskompas op de startpagina (seizoenen uit Beheer of data/seizoenen.js)
+js/radar.js           Radar: wat nieuw is sinds je vorige bezoek, op de kompasroos en onder het zoekvak
+js/palette.js         Zoekvenster: Ctrl+K, / of de zoekknop, met acties en prompt meteen kopiëren
+js/improve.js         'Stel een verbetering voor' onder een prompt (stap 11); js/admin-improve.js beoordeelt het in Beheer
 css/motion.css        Beweging in CSS: overgangen, uitklappers, panelen, scrolleffecten (uit bij 'minder beweging')
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
+data/seizoenen.js     De seizoenen van het seizoenskompas per discipline (startstand; daarna Beheer → Inhoud → Teksten)
 data/*.js             Startinhoud van Audit en terugval als de database niet bereikbaar is (alleen dan geladen)
 tools/versie.ps1      Nieuwe versie van de site: ?v=… in index.html ophogen (zie 'Snel laden')
 tests/                Tests van de kern, in de browser (zie 'Tests')
@@ -43,7 +49,8 @@ assets/branding/      Logo: logo-dark.svg (zonder vierkant, voor de donkere kopb
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …), soms met video
-setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), stap 9 (Copilot-gebruik) en 10 (portfolio)
+setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), stap 9 (Copilot-gebruik), 10 (portfolio)
+                      en 11 (verbetervoorstellen bij prompts)
 ```
 
 Alle paden zijn relatief binnen deze repository (geen `../`). De pagina zelf linkt niet naar andere sites; links naar
@@ -53,14 +60,16 @@ buiten staan alleen in de inhoud (bijv. de opname van een training of een agent)
 
 | Adres | Wat |
 | --- | --- |
-| `#/` | Startpagina: zoeken, de onderdelen, uitgelichte usecases en tips, nieuw toegevoegd |
+| `#/` | Startpagina: zoeken, de radar (nieuw sinds je vorige bezoek), de onderdelen, het seizoenskompas, uitgelichte usecases en tips, nieuw toegevoegd |
 | `#/usecases`, `#/usecase/<id>` | Praktische usecases per fase van de controle, elk met demo, stappen, prompts, aandachtspunten en reviews |
 | `#/prompts`, `#/prompt/<id>` | Promptdatabase: zoeken, filteren, favorieten, plaatshouders invullen, kopiëren en beoordelen |
 | `#/tips`, `#/tip/<id>` | Tips & tricks, o.a. eigen instructies, Facilitator en geplande prompts |
 | `#/trainingen`, `#/training/<id>` | Opnames van trainingen en sessies om terug te kijken, met hoofdstukken en materiaal, en per training een naslagwerk: slides, wat je meeneemt, acties om af te vinken, uit de zaal en het vervolg |
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
 | `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; de route van een idee tot toepassing; gepubliceerde inzendingen met antwoord en 'Ik ook' |
-| `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk |
+| `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk (snel: Ctrl+K op iedere pagina) |
+| `#/promptbouwer` | Zelf een prompt bouwen in zes stappen, met een meter en wat er nog beter kan |
+| `#/mijn` | Mijn gegevens: naam, functie, vestiging, team en boekjaar, voortaan ingevuld in iedere prompt |
 | `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, ideeën in het portfolio zetten (AI Value Matrix), de nieuwsbrief maken, gebruik bekijken, het Copilot-gebruik per periode volgen, en het overzicht voor het bestuur |
 
 Ieder adres is deelbaar, bijvoorbeeld in Teams: `https://joostprinsvv.github.io/ai-cockpit-audit/#/tip/facilitator`.
@@ -395,6 +404,48 @@ openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromp
 - Beide staan **alleen in je eigen browser** (`ai-snackbar-audit:favorites` en `ai-snackbar-audit:viewed`): niemand
   anders ziet ze en er gaat niets naar de database. De oude favorieten (alleen prompts) tellen gewoon mee als bewaard.
 
+## Persoonlijk en slim
+
+- **Mijn gegevens** (`#/mijn`, de knop met je initialen rechtsboven): je naam, functie, vestiging, team, soort klanten
+  en het boekjaar waar je mee bezig bent (niet invullen, automatisch of een vast jaar; automatisch = tot en met juni
+  het vorige jaar). Plaatshouders met precies die naam (`[NAAM]`, `[FUNCTIE]`, `[VESTIGING]`, `[TEAM]`, `[JAAR]`,
+  `[VORIG JAAR]`, …) staan daarmee al ingevuld: in het promptblok (groen, per prompt te overschrijven), bij Kopieer en
+  Copilot op de kaarten, in de promptbouwer en het zoekvenster. `[NAAM AFZENDER]` of `[NAAM EN FUNCTIE]` is iemand
+  anders: die blijven open. Je naam staat ook al bij een inzending, en de startpagina begroet je. Alleen in je browser
+  (`ai-snackbar-audit:profiel`), nooit verstuurd; geen klantgegevens.
+- **Seizoenskompas** op de startpagina: wat er nu speelt in het jaar (een wijzerplaat met de seizoenen en een naald op
+  vandaag), wat er ook speelt, wat hierna komt en de usecases, prompts en tips die nu het handigst zijn (eerst wat de
+  zoekwoorden van een seizoen vinden, dan uit de fasen). De seizoenen staan per discipline in `data/seizoenen.js`
+  (Audit: planning en jaarovergang jul–sep, planning en interimcontroles sep–dec, voorraadinventarisaties dec,
+  risico-inschatting, controle en afronding jan–jun; Accountancy: een voorstel). Aanpassen in Beheer → Inhoud →
+  Teksten → Seizoenskompas (*Standaard overnemen om aan te passen*); dan is dat leidend.
+- **Radar**: wat er nieuw is sinds je vorige bezoek, als rode stipjes op de kompasroos (een veeg 'vindt' ze bij het
+  openen) en als strook onder het zoekvak. Wat je opent of met het kruisje wegklikt, verdwijnt. Wat je kent, onthoudt
+  je browser per discipline (`ai-snackbar-audit:radar:<discipline>`, alleen adressen); bij je allereerste bezoek staat
+  er wat recent is toegevoegd.
+- **Zoekvenster** (Ctrl+K, / buiten een tekstveld, of de zoekknop): zoek en kies met de pijltjes een usecase, prompt,
+  tip, training, agent of actie (promptbouwer, Mijn gegevens, een vraag stellen, het thema). Enter opent, Ctrl+Enter
+  kopieert een prompt meteen (met je gegevens erin).
+- **Promptbouwer** (`#/promptbouwer`, ook vanaf de promptdatabase): rol, doel, context, bron, verwachting en extra
+  zekerheid; rechts groeit de prompt mee met een meter (0–100) en wat er nog mist. Drie voorbeelden om mee te
+  beginnen, 'Over mij invoegen' uit Mijn gegevens, een waarschuwing bij iets dat op een BSN of IBAN lijkt, en
+  *Deel in de ideeënhub* (de prompt staat dan al in het formulier). Wat je typt wordt niet bewaard.
+- **Een kopie op je eigen computer** (localhost of een bestand) telt niet mee in de anonieme tellers.
+
+## Verbetervoorstellen bij prompts (stap 11)
+
+Onder iedere prompt (bij de prompt zelf en bij een usecase) staat **Beter idee? Stel een verbetering voor**. Een
+collega past de tekst aan, zegt wat er beter is en verstuurt het; het wordt een inzending van de soort *Verbetering*
+(niet in de hub gepubliceerd). In **Beheer → Inzendingen** zie je bij zo'n inzending bij welke prompt hij hoort, de
+toelichting en per woord wat er verandert. Klik op een wijziging om hem wel of niet over te nemen (of *Alles* /
+*Niets*), pas het resultaat eventueel met de hand aan, en kies **Overnemen in de cockpit**: dat zet het klaar als
+niet-opgeslagen wijziging (bekijk het op de pagina, en sla op en publiceer met de bewerkbalk) en zet de inzending op
+Gerealiseerd. Is de prompt sinds het voorstel aangepast, dan staat dat erbij.
+
+Eenmalig: voer `setup/supabase-audit-verbeteringen.sql` uit (stap 11, na stap 1; overnemen gebruikt de werkversies
+van stap 7). Die voegt de soort *verbetering* toe en één kolom `target` (bij welke prompt). Tot dan lukt versturen
+niet en biedt het venster aan je versie te kopiëren; de andere inzendingen werken gewoon.
+
 ## Nieuwsbrief (Beheer → Nieuwsbrief)
 
 Een weekupdate of maandnieuwsbrief, vanzelf samengesteld uit wat er in die periode nieuw was in de cockpit van de
@@ -519,8 +570,9 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
 2. Supabase → SQL Editor → New query → plak het hele bestand → Run. Doe daarna hetzelfde met
    `setup/supabase-audit-bewerken.sql` (stap 7) en `setup/supabase-audit-beveiligen.sql` (stap 8), in die volgorde.
    Stap 1 en 8 opnieuw uitvoeren kan geen kwaad; stap 7 weigert na stap 8 (zie hierboven). Voor Beheer →
-   Copilot-gebruik ook `setup/supabase-audit-copilot.sql` (stap 9), en voor Beheer → Portfolio
-   `setup/supabase-audit-portfolio.sql` (stap 10); beide mogen op ieder moment na stap 1 en opnieuw.
+   Copilot-gebruik ook `setup/supabase-audit-copilot.sql` (stap 9), voor Beheer → Portfolio
+   `setup/supabase-audit-portfolio.sql` (stap 10) en voor de verbetervoorstellen bij prompts
+   `setup/supabase-audit-verbeteringen.sql` (stap 11); alle drie mogen op ieder moment na stap 1 en opnieuw.
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').
@@ -544,8 +596,8 @@ Bewust zo gelaten: de inhoud van een discipline die op slot staat, is technisch 
 - Geen klantgegevens op het platform: alle demo's zijn fictief, en wat je in 'Invullen' typt wordt nergens bewaard.
 - In de browser bewaren we alleen wat je bewaard en recent bekeken hebt, het thema, een willekeurige stem-code, de titels
   van je eigen inzendingen, welke usecases en prompts je hebt beoordeeld, de gekozen discipline, de scrollpositie per
-  pagina (alleen in dit tabblad), de afgevinkte acties uit een naslagwerk en de laatst bekende inhoud (zodat de site
-  snel opent). Beheerders: ook niet-opgeslagen wijzigingen (`bewerken:<e-mailadres>`), ook na uitloggen, tot je ze
+  pagina (alleen in dit tabblad), de afgevinkte acties uit een naslagwerk, de laatst bekende inhoud (zodat de site
+  snel opent), Mijn gegevens (als je die invult) en welke items je al kent (de radar). Beheerders: ook niet-opgeslagen wijzigingen (`bewerken:<e-mailadres>`), ook na uitloggen, tot je ze
   opslaat; ouder dan 30 dagen wordt niet meer teruggehaald.
 - De site en de repository zijn openbaar bereikbaar. Alles op het platform is informatie voor gebruikers; zet er nooit
   configuratie, systeemprompts, goedkeuringsdocumenten, interne opnames of klantinformatie op.

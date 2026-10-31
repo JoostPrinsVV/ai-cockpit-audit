@@ -533,14 +533,19 @@
     });
   }
 
-  /** Prompttekst als nodes, met plaatshouders gemarkeerd (ingevuld = andere stijl). */
-  function promptNodes(text, values) {
+  /**
+   * Prompttekst als nodes, met plaatshouders gemarkeerd (ingevuld = andere stijl).
+   * mine: de plaatshouders die uit Mijn gegevens komen (js/profile.js), met een eigen titel.
+   */
+  function promptNodes(text, values, mine) {
     const nodes = [];
+    const fromProfile = new Set(mine || []);
     let last = 0;
     String(text).replace(PLACEHOLDER, (match, inner, offset) => {
       if (offset > last) nodes.push(document.createTextNode(text.slice(last, offset)));
       const value = values && values[inner] && values[inner].trim();
-      nodes.push(el('mark', { className: 'ph' + (value ? ' ph--filled' : ''), text: value || match }));
+      const own = Boolean(value) && fromProfile.has(inner);
+      nodes.push(el('mark', { className: 'ph' + (value ? ' ph--filled' : '') + (own ? ' ph--mine' : ''), text: value || match, attrs: { title: own ? 'Uit Mijn gegevens' : null } }));
       last = offset + match.length;
       return match;
     });
@@ -688,6 +693,7 @@
     normalize,
     matches,
     formatDate,
+    isNew,
     parsePlaceholders,
     fillPlaceholders,
     promptNodes,

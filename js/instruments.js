@@ -139,8 +139,11 @@
    * naar die koers, het punt licht op en de koersband stuurt mee. Klikken: erheen.
    * Voor de muis: dezelfde zes onderdelen staan als tegels onder de hero, en daar komen
    * toetsenbord en schermlezer langs (geen zes extra tabstops, niets dubbel voorgelezen).
+   * options.blips: wat nieuw is (js/radar.js), als stipjes bij hun onderdeel; die staan ook als
+   * lijstje onder het zoekvak.
    */
-  function rose() {
+  function rose(options) {
+    const opts = options || {};
     const root = svg('svg', { class: 'hero__rose', viewBox: '-280 -280 560 560', 'aria-hidden': 'true', focusable: 'false' });
     root.append(once('rose', drawRoseDecor));
 
@@ -185,7 +188,44 @@
       points.append(link);
     });
     root.append(points, needle);
+    if (opts.blips && opts.blips.length) root.insertBefore(radar(opts.blips), points);
     return root;
+  }
+
+  const SWEEP_START = 0.35; // seconden
+  const SWEEP_TIME = 2.6;
+
+  /**
+   * De radar: één veeg rond bij het openen, en de stipjes lichten op als de veeg ze passeert.
+   * Aanwijzen toont de titel; klikken opent het item.
+   */
+  function radar(blips) {
+    const layer = svg('g', { class: 'rose__radar' });
+    // De veeg: een taartpunt van 40 graden die achter zijn voorrand aan vervaagt
+    const [x1, y1] = [0, -250];
+    const back = point(-40, 250);
+    const sweep = svg('g', { class: 'rose__sweep' });
+    sweep.append(svg('path', { class: 'rose__sweep-fill', d: `M 0 0 L ${back.x.toFixed(1)} ${back.y.toFixed(1)} A 250 250 0 0 1 ${x1} ${y1} Z` }));
+    sweep.append(svg('line', { class: 'rose__sweep-edge', x1: 0, y1: 0, x2: x1, y2: y1 }));
+    layer.append(sweep);
+    blips.forEach((blip) => {
+      const at = point(blip.heading, blip.radius);
+      const link = svg('a', { class: 'rose__blip', href: blip.href, tabindex: '-1' });
+      link.style.setProperty('--delay', (SWEEP_START + SWEEP_TIME * (((blip.heading % 360) + 360) % 360) / 360).toFixed(2) + 's');
+      const title = svg('title', {});
+      title.textContent = `Nieuw: ${blip.label} (${blip.kind})`;
+      link.append(title);
+      link.append(svg('circle', { class: 'rose__hit', cx: at.x.toFixed(1), cy: at.y.toFixed(1), r: 16 }));
+      link.append(svg('circle', { class: 'rose__blip-ping', cx: at.x.toFixed(1), cy: at.y.toFixed(1), r: 7 }));
+      link.append(svg('circle', { class: 'rose__blip-dot', cx: at.x.toFixed(1), cy: at.y.toFixed(1), r: 6 }));
+      // Titel naast het stipje (verschijnt bij aanwijzen), naar het midden toe: de roos staat tegen de rand
+      const right = at.x >= 0;
+      const label = svg('text', { class: 'rose__blip-label', x: (at.x + (right ? -14 : 14)).toFixed(1), y: (at.y + 5).toFixed(1), 'text-anchor': right ? 'end' : 'start' });
+      label.textContent = blip.label.length > 30 ? blip.label.slice(0, 29).trim() + '…' : blip.label;
+      link.append(label);
+      layer.append(link);
+    });
+    return layer;
   }
 
   /** Ringen, kruis, streepjes en cijfers van de roos (versiering). */

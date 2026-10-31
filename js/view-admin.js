@@ -209,7 +209,8 @@
           el('div', {}, [el('dt', { text: 'E-mail' }), el('dd', {}, [item.email ? (PLAIN_EMAIL.test(item.email) ? el('a', { attrs: { href: 'mailto:' + item.email }, text: item.email }) : item.email) : '–'])]),
           el('div', {}, [el('dt', { text: 'Publiceren' }), el('dd', { text: item.allow_public ? 'Mag (zonder naam)' : 'Liever niet' })])
         ]),
-        el('p', { className: 'admin-item__text', text: item.body }),
+        // Een verbetervoorstel: wat er verandert, kiezen wat je overneemt en klaarzetten (js/admin-improve.js)
+        item.kind === 'verbetering' && item.target ? ns.adminImprove.review(item, onChanged) : el('p', { className: 'admin-item__text', text: item.body }),
         // Ideeën en verzoeken (of wat al beoordeeld is): de AI Value Matrix, zie js/admin-portfolio.js
         ns.adminPortfolio.isCandidate(item) || item.assessment ? ns.adminPortfolio.summaryRow(item, onChanged) : null,
         el('div', { className: 'admin-item__form' }, [
@@ -235,7 +236,7 @@
     statusFilter.value = view.status;
     const kindFilter = el('select', { className: 'field__input field__input--sm', attrs: { id: 'adm-kind' } }, [
       el('option', { attrs: { value: 'all' }, text: 'Alle soorten' }),
-      ...ns.ideas.KINDS.map((kind) => el('option', { attrs: { value: kind.id }, text: kind.label }))
+      ...ns.ideas.ALL_KINDS.map((kind) => el('option', { attrs: { value: kind.id }, text: kind.label }))
     ]);
     kindFilter.value = view.kind;
 

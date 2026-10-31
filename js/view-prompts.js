@@ -18,6 +18,8 @@
   const showsBasic = (prompt) => Boolean(prompt.promptBasic) && (filters.license === 'no' || (filters.license === 'all' && basicChosen));
   /** De (eerste) prompt die je kopieert: de versie zonder licentie als die gekozen is. */
   const textOf = (prompt) => (showsBasic(prompt) ? prompt.promptBasic : prompt.prompt);
+  /** Zoals je hem kopieert: met je naam, functie en boekjaar uit Mijn gegevens erin. */
+  const filledOf = (prompt) => ns.profile.fill(textOf(prompt));
 
   /** withTask: false als de taak al bovenaan de kaart staat. */
   function chipsFor(prompt, withTask) {
@@ -53,7 +55,9 @@
       const open = preview.hidden;
       // Iedere keer opnieuw: de getoonde versie (met of zonder licentie) kan intussen anders zijn
       if (open) {
-        preview.replaceChildren(el('pre', { className: 'prompt-box__text prompt-box__text--plain', attrs: { tabindex: '0', role: 'region', 'aria-label': 'Prompt: ' + prompt.title } }, ns.ui.promptNodes(textOf(prompt))));
+        const text = textOf(prompt);
+        const mine = ns.profile.values(text);
+        preview.replaceChildren(el('pre', { className: 'prompt-box__text prompt-box__text--plain', attrs: { tabindex: '0', role: 'region', 'aria-label': 'Prompt: ' + prompt.title } }, ns.ui.promptNodes(text, mine, Object.keys(mine))));
       }
       preview.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));
@@ -70,8 +74,8 @@
       el('div', { className: 'chips' }, chipsFor(prompt, !grouped)),
       el('div', { className: 'p-card__actions' }, [
         // Bij meer stappen kopieer je hier de eerste; de rest staat bij de prompt zelf
-        copyButton(() => textOf(prompt), { label: prompt.followUps.length ? 'Kopieer stap 1' : 'Kopieer', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
-        copilotButton(() => textOf(prompt), { label: 'Copilot', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
+        copyButton(() => filledOf(prompt), { label: prompt.followUps.length ? 'Kopieer stap 1' : 'Kopieer', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
+        copilotButton(() => filledOf(prompt), { label: 'Copilot', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
         toggle,
         el('a', { className: 'btn btn--quiet btn--sm', attrs: { href: '#/prompt/' + prompt.id, 'aria-label': 'Invullen en details: ' + prompt.title } }, [icon('pencil-line'), el('span', { text: 'Invullen' })])
       ]),
@@ -170,6 +174,11 @@
         title: 'Prompts die je direct kunt gebruiken',
         lead: 'Kopieer een prompt, plak hem in Copilot en vul de [PLAATSHOUDERS] in. Of vul ze hier alvast in via "Invullen". Prompts met een demo horen bij een usecase.'
       }),
+      el('div', { className: 'builder-cta' }, [
+        el('span', { className: 'builder-cta__icon', attrs: { 'aria-hidden': 'true' } }, [icon('blocks')]),
+        el('p', { className: 'builder-cta__text' }, [el('strong', { text: 'Staat jouw taak er niet bij? ' }), 'Bouw zelf een prompt in zes stappen, met een meter die laat zien wat er nog beter kan.']),
+        B.linkButton('#/promptbouwer', 'arrow-right', 'Naar de promptbouwer', 'btn--secondary btn--sm')
+      ]),
       el('div', { className: 'filters' }, [
         search,
         B.filterRow('Fase', B.phaseFilter(all, filters, update)),
@@ -201,11 +210,17 @@
     const onCopy = () => ns.central.track('copy_prompt', prompt.id);
     let basic = showsBasic(prompt);
 
+    // Waar de tekst staat, voor 'Stel een verbetering voor': een prompt uit een usecase hoort bij die usecase
+    const place = (field, index, label) => (prompt.usecase
+      ? ns.improve.target('usecase', prompt.usecase, { field: 'prompts', index: prompt.step - 1, label: prompt.title })
+      : ns.improve.target('prompt', prompt, { field, index, label }));
+
     function fill() {
       const many = prompt.followUps.length > 0;
+      const firstLabel = many ? prompt.promptLabel : 'De prompt';
       boxes.replaceChildren(
-        ns.promptBox.create({ text: basic ? prompt.promptBasic : prompt.prompt, label: many ? prompt.promptLabel : 'De prompt', headingTag: 'h2', onCopy }),
-        ...prompt.followUps.map((step) => ns.promptBox.create({ text: step.text, label: step.label, headingTag: 'h2', onCopy })),
+        ns.promptBox.create({ text: basic ? prompt.promptBasic : prompt.prompt, label: firstLabel, headingTag: 'h2', onCopy, improve: place(basic ? 'promptBasic' : 'prompt', null, basic ? 'Versie zonder licentie' : firstLabel) }),
+        ...prompt.followUps.map((step, index) => ns.promptBox.create({ text: step.text, label: step.label, headingTag: 'h2', onCopy, improve: place('followUps', index, step.label) })),
         infoNote(basic && prompt.noteBasic ? prompt.noteBasic : prompt.note)
       );
     }

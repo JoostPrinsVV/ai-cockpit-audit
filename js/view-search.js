@@ -70,7 +70,7 @@
     });
 
     const node = el('div', { className: 'page container' }, [
-      pageHeader({ eyebrow: 'Zoeken', title: 'Zoek op het hele platform' }),
+      pageHeader({ eyebrow: 'Zoeken', title: 'Zoek op het hele platform', lead: 'Tip: met Ctrl+K (of /) zoek je vanaf iedere pagina, en kopieer je een prompt zonder hem te openen.' }),
       form,
       count,
       results

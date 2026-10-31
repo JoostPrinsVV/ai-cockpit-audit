@@ -219,7 +219,7 @@
    * (alleen titel, soort en referentie, voor 'Jouw inzendingen').
    */
   function submitIdea(idea) {
-    return add(TABLES.ideas, {
+    const row = {
       namespace: config.namespace,
       ref: idea.ref,
       kind: idea.kind,
@@ -229,7 +229,10 @@
       name: idea.name || null,
       email: idea.email || null,
       allow_public: idea.allowPublic !== false
-    }, 'Inzending versturen');
+    };
+    // Een verbetervoorstel: bij welke prompt (stap 11). Alleen dan meesturen: zonder stap 11 bestaat de kolom nog niet.
+    if (idea.target) row.target = idea.target;
+    return add(TABLES.ideas, row, 'Inzending versturen');
   }
 
   /** Gepubliceerde inzendingen (voor iedereen zichtbaar). */
@@ -269,9 +272,12 @@
   }
 
   /* ---- Anonieme tellers ----------------------------------------------------------- */
+  // Een kopie op je eigen computer (testen, voorbereiden) telt niet mee
+  const LOCAL = window.location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
+
   /** kind: 'view_usecase' | 'play_demo' | 'copy_prompt' | 'view_tip' | 'copy_tip' | 'view_training' | 'play_training' | 'view_agent' | 'open_agent'. Geen persoonsgegevens. */
   function track(kind, itemId) {
-    if (!enabled || trackingOff || !config.enableUsageStats || signedIn()) return; // beheerders tellen niet mee
+    if (!enabled || trackingOff || LOCAL || !config.enableUsageStats || signedIn()) return; // beheerders tellen niet mee
     add(TABLES.events, { namespace: config.namespace, kind, item_id: String(itemId || '').slice(0, 80) }, 'Tellen').then((result) => {
       if (result === 'missing') trackingOff = true; // geen tabel: niet bij elke klik opnieuw proberen
     });

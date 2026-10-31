@@ -61,7 +61,13 @@
     const own = ctx.where.kind === 'basis' ? null : routes[ctx.where.id || (match ? match.id : '')];
     return ((own && own[key]) || (routes.standaard || {})[key] || []).map((item) => Object.assign({}, item));
   };
-  const PUBLIC_WARNING = 'De site is openbaar bereikbaar: zet hier alleen informatie voor gebruikers. Geen configuratie, systeemprompts, technische instellingen of goedkeuringsdocumenten; voor de formele registratie link je naar het AI-register.';
+  // De standaardseizoenen van het seizoenskompas voor de discipline waarin je werkt (data/seizoenen.js)
+  const seasonDefaults = (ctx) => {
+    const match = ns.cockpit.registry().find((discipline) => ns.cockpit.namespace(discipline.id) === ctx.where.namespace);
+    const own = (ns.seasons || {})[ctx.where.id || (match ? match.id : '')] || [];
+    return own.map((season) => JSON.parse(JSON.stringify(season)));
+  };
+  const PUBLIC_WARNING ='De site is openbaar bereikbaar: zet hier alleen informatie voor gebruikers. Geen configuratie, systeemprompts, technische instellingen of goedkeuringsdocumenten; voor de formele registratie link je naar het AI-register.';
 
   /* ---- Velden per soort ---------------------------------------------------------- */
   const SCHEMAS = {
@@ -267,7 +273,16 @@
           { key: 'name', label: 'Rol of team', type: 'text', required: true, half: true },
           { key: 'text', label: 'Wat ze doen', type: 'text', half: true }
         ] },
-        { key: 'routeLink', label: 'Link naar het organogram (Serviceplein)', type: 'url', hint: 'Optioneel. Daar staan de namen; de cockpit toont alleen de link.' }
+        { key: 'routeLink', label: 'Link naar het organogram (Serviceplein)', type: 'url', hint: 'Optioneel. Daar staan de namen; de cockpit toont alleen de link.' },
+        { key: '_seasons', label: 'Seizoenskompas (startpagina)', type: 'heading', scope: 'discipline', hint: 'Wat er per periode van het jaar speelt. De startpagina toont wat nu op koers ligt, met de usecases, prompts en tips die daar het handigst zijn. Leeg = de standaard voor deze discipline (data/seizoenen.js). Seizoenen mogen overlappen; dan staan ze allebei op koers.' },
+        { key: 'seasons', label: 'Seizoenen', type: 'group', scope: 'discipline', itemLabel: 'Seizoen', defaults: seasonDefaults, fields: [
+          { key: 'title', label: 'Wat speelt er', type: 'text', required: true, placeholder: 'bijv. Planning en interimcontroles' },
+          { key: 'months', label: 'Maanden', type: 'months', required: true },
+          { key: 'text', label: 'Waar draait het om', type: 'textarea', hint: 'Eén of twee zinnen.' },
+          { key: 'phases', label: 'Fasen waaruit de cockpit usecases en prompts kiest', type: 'refs', ref: 'phase' },
+          { key: 'keywords', label: 'Zoekwoorden', type: 'list', hint: 'Eén per regel, bijv. voorraad. Wat de cockpit hiermee vindt, komt eerst.' },
+          { key: 'accent', label: 'Kleur', type: 'select', options: kit.accentOptions, hint: 'Leeg = de kleur van de eerste fase.' }
+        ] }
       ]
     }
   };
@@ -488,6 +503,27 @@
         input.addEventListener('change', () => ns.ui.setIcon(preview.querySelector('svg'), input.value || 'bulb'));
         return { node: wrap(el('div', { className: 'icon-select' }, [preview, input])), get: () => input.value || undefined, validate: () => null };
       }
+      case 'months': {
+        // Twaalf maanden om aan te vinken (seizoenskompas); bewaard als [1, …, 12]
+        const chosen = new Set(Array.isArray(value) ? value.map(Number) : []);
+        const boxes = ns.compass.MONTHS.map((name, index) => {
+          const boxId = nextId();
+          return el('label', { className: 'month-pick', attrs: { for: boxId } }, [
+            el('input', { attrs: { id: boxId, type: 'checkbox', value: String(index + 1), checked: chosen.has(index + 1) } }),
+            el('span', { text: ns.compass.SHORT[index], attrs: { title: name } })
+          ]);
+        });
+        const group = el('fieldset', { className: 'field field--wide' }, [el('legend', { className: 'field__label', text: field.label }), el('div', { className: 'month-picks' }, boxes), hint, error]);
+        const picked = () => Array.from(group.querySelectorAll('input:checked')).map((box) => Number(box.value));
+        return {
+          node: group,
+          get: () => (picked().length ? picked() : undefined),
+          validate: () => {
+            error.textContent = field.required && !picked().length ? 'Kies minstens één maand.' : '';
+            return error.textContent || null;
+          }
+        };
+      }
       case 'refs': {
         const items = ns.content[REF_LISTS[field.ref]] || [];
         const selected = new Set(Array.isArray(value) ? value : []);
@@ -663,11 +699,13 @@
   function schemaForm(o) {
     const schema = SCHEMAS[o.type];
     const ctx = { where: o.where, idTaken: (value) => idTaken(o.type, o.where.namespace, o.ownId, value) };
-    const controls = schema.fields.map((field) => ({ field, ctl: control(field, o.data[field.key], ctx) }));
+    // Een veld met 'scope' alleen in die omgeving (bijv. het seizoenskompas: per discipline, niet in de basis)
+    const fields = schema.fields.filter((field) => !field.scope || field.scope === o.where.kind);
+    const controls = fields.map((field) => ({ field, ctl: control(field, o.data[field.key], ctx) }));
     const byKey = (key) => (controls.find((c) => c.field.key === key) || {}).ctl;
     const idCtl = byKey('id');
     if (idCtl && o.isNew) {
-      const titleCtl = byKey(schema.fields.find((f) => f.key === 'id').titleKey || 'title');
+      const titleCtl = byKey(fields.find((f) => f.key === 'id').titleKey || 'title');
       let touched = false;
       idCtl.input.addEventListener('input', () => {
         touched = true;

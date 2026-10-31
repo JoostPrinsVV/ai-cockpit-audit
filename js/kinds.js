@@ -38,6 +38,8 @@
 
   const own = (table, key) => (Object.prototype.hasOwnProperty.call(table, key) ? table[key] : null);
   const byList = Object.fromEntries(Object.values(PAGES).map((kind) => [kind.list, kind]));
+  // Pagina's zonder soort met een eigen plek in het menu (of de kopbalk); de promptbouwer hoort bij Prompts
+  const OTHER_NAV = { ideeen: 'ideeen', mijn: 'mijn', promptbouwer: 'prompts' };
 
   ns.kinds = {
     /** De soorten met een eigen pagina, in de volgorde van het menu. */
@@ -51,7 +53,7 @@
     /** Het menu-item bij een adres: het overzicht zelf of de soort van een detailpagina ('ideeen' heeft geen soort). */
     navFor(name) {
       const kind = own(PAGES, name) || own(byList, name);
-      return kind ? kind.list : name === 'ideeen' ? 'ideeen' : '';
+      return kind ? kind.list : own(OTHER_NAV, name) || '';
     },
     /** Het item zelf (uit js/content.js), of null. */
     item(type, id) {

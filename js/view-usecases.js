@@ -115,7 +115,8 @@
         text: prompt.text,
         label: prompt.label,
         collapsed: true,
-        onCopy: () => ns.central.track('copy_prompt', usecase.promptIds[index] || usecase.id)
+        onCopy: () => ns.central.track('copy_prompt', usecase.promptIds[index] || usecase.id),
+        improve: ns.improve.target('usecase', usecase, { field: 'prompts', index, label: prompt.label })
       })
     );
 

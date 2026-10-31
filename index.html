@@ -21,42 +21,50 @@
 
   <!-- Huisstijl en lettertypes (overgenomen van de AI Snackbar), daarna de opmaak van dit platform.
        De opmaak van Beheer (css/admin.css) laadt js/app.js pas als iemand beheert. -->
-  <link rel="stylesheet" href="css/variables.css?v=202610311833">
-  <link rel="stylesheet" href="css/base.css?v=202610311833">
-  <link rel="stylesheet" href="css/audit.css?v=202610311833">
-  <link rel="stylesheet" href="css/motion.css?v=202610311833">
+  <link rel="stylesheet" href="css/variables.css?v=202610312227">
+  <link rel="stylesheet" href="css/base.css?v=202610312227">
+  <link rel="stylesheet" href="css/audit.css?v=202610312227">
+  <link rel="stylesheet" href="css/motion.css?v=202610312227">
 
   <!-- Vóór de eerste weergave: het gekozen thema (geen witte flits) en een vangnet bij fouten -->
-  <script src="js/vroeg.js?v=202610311833"></script>
+  <script src="js/vroeg.js?v=202610312227"></script>
 
   <!-- Instellingen en de lijst met disciplines (deze bestanden mag je aanpassen, zie README.md).
        De inhoud in data/ (usecases, prompts, …) laadt js/content.js alleen als de database die niet levert. -->
-  <script defer src="js/config.js?v=202610311833"></script>
-  <script defer src="data/disciplines.js?v=202610311833"></script>
+  <script defer src="js/config.js?v=202610312227"></script>
+  <script defer src="data/disciplines.js?v=202610312227"></script>
+  <script defer src="data/seizoenen.js?v=202610312227"></script>
 
   <!-- Applicatie (volgorde is belangrijk). De beheercode (js/rights.js, js/editor.js, js/admin-*.js,
        js/view-admin.js, js/editmode.js) laadt js/app.js pas bij inloggen of op #/beheer. -->
-  <script defer src="js/ui.js?v=202610311833"></script>
-  <script defer src="js/kinds.js?v=202610311833"></script>
-  <script defer src="js/blocks.js?v=202610311833"></script>
-  <script defer src="js/disciplines.js?v=202610311833"></script>
-  <script defer src="js/instruments.js?v=202610311833"></script>
-  <script defer src="js/content.js?v=202610311833"></script>
-  <script defer src="js/central.js?v=202610311833"></script>
-  <script defer src="js/lock.js?v=202610311833"></script>
-  <script defer src="js/prompt-box.js?v=202610311833"></script>
-  <script defer src="js/reviews.js?v=202610311833"></script>
-  <script defer src="js/player.js?v=202610311833"></script>
-  <script defer src="js/view-home.js?v=202610311833"></script>
-  <script defer src="js/view-usecases.js?v=202610311833"></script>
-  <script defer src="js/view-prompts.js?v=202610311833"></script>
-  <script defer src="js/view-tips.js?v=202610311833"></script>
-  <script defer src="js/view-trainings.js?v=202610311833"></script>
-  <script defer src="js/view-agents.js?v=202610311833"></script>
-  <script defer src="js/view-ideas.js?v=202610311833"></script>
-  <script defer src="js/view-search.js?v=202610311833"></script>
-  <script defer src="js/motion.js?v=202610311833"></script>
-  <script defer src="js/app.js?v=202610311833"></script>
+  <script defer src="js/ui.js?v=202610312227"></script>
+  <script defer src="js/profile.js?v=202610312227"></script>
+  <script defer src="js/kinds.js?v=202610312227"></script>
+  <script defer src="js/blocks.js?v=202610312227"></script>
+  <script defer src="js/disciplines.js?v=202610312227"></script>
+  <script defer src="js/instruments.js?v=202610312227"></script>
+  <script defer src="js/content.js?v=202610312227"></script>
+  <script defer src="js/central.js?v=202610312227"></script>
+  <script defer src="js/lock.js?v=202610312227"></script>
+  <script defer src="js/prompt-box.js?v=202610312227"></script>
+  <script defer src="js/improve.js?v=202610312227"></script>
+  <script defer src="js/compass.js?v=202610312227"></script>
+  <script defer src="js/radar.js?v=202610312227"></script>
+  <script defer src="js/reviews.js?v=202610312227"></script>
+  <script defer src="js/player.js?v=202610312227"></script>
+  <script defer src="js/view-home.js?v=202610312227"></script>
+  <script defer src="js/view-usecases.js?v=202610312227"></script>
+  <script defer src="js/view-prompts.js?v=202610312227"></script>
+  <script defer src="js/view-tips.js?v=202610312227"></script>
+  <script defer src="js/view-trainings.js?v=202610312227"></script>
+  <script defer src="js/view-agents.js?v=202610312227"></script>
+  <script defer src="js/view-ideas.js?v=202610312227"></script>
+  <script defer src="js/view-search.js?v=202610312227"></script>
+  <script defer src="js/view-profile.js?v=202610312227"></script>
+  <script defer src="js/view-builder.js?v=202610312227"></script>
+  <script defer src="js/palette.js?v=202610312227"></script>
+  <script defer src="js/motion.js?v=202610312227"></script>
+  <script defer src="js/app.js?v=202610312227"></script>
 </head>
 <body data-view="home">
   <a class="skip-link" href="#main" id="skip-link">Direct naar de inhoud</a>
@@ -105,6 +113,11 @@
       <div class="topbar__actions">
         <a class="btn btn--ghost-dark btn--icon" href="#/zoeken" id="search-button" aria-label="Zoeken">
           <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-search"></use></svg>
+        </a>
+        <!-- Mijn gegevens: je initialen zodra je naam is ingevuld (js/profile.js) -->
+        <a class="btn btn--ghost-dark btn--icon topbar__me" href="#/mijn" id="me-button" data-nav="mijn" aria-label="Mijn gegevens" title="Mijn gegevens">
+          <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-user"></use></svg>
+          <span class="topbar__initials" aria-hidden="true" hidden></span>
         </a>
         <button class="btn btn--ghost-dark btn--icon" type="button" id="theme-button" aria-label="Donker thema" title="Donker thema" aria-pressed="false">
           <svg class="icon" aria-hidden="true" focusable="false"><use href="#i-moon"></use></svg>
@@ -218,6 +231,11 @@
     <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
     <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
     <symbol id="i-calendar-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20.5H6a2.5 2.5 0 0 1-2.5-2.5V7.5A2.5 2.5 0 0 1 6 5h12a2.5 2.5 0 0 1 2.5 2.5V10M3.5 10h17M8 3v4M16 3v4"/><circle cx="17" cy="17" r="4"/><path d="M17 15.2V17l1.2.9"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+    <symbol id="i-radar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12A8.5 8.5 0 1 1 12 3.5"/><path d="M16.5 12A4.5 4.5 0 1 1 12 7.5"/><path d="M12 12l6-6"/><circle cx="17.5" cy="15.5" r="1.3" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-blocks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="13" width="7" height="7" rx="1.5"/><rect x="13.5" y="13" width="7" height="7" rx="1.5"/><rect x="8.5" y="4" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-command" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6.5A2.5 2.5 0 1 0 6.5 9H17.5A2.5 2.5 0 1 0 15 6.5v11a2.5 2.5 0 1 0 2.5-2.5h-11A2.5 2.5 0 1 0 9 17.5z"/></symbol>
     <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M15.5 5.8a3 3 0 0 1 0 5.4M17.5 14.2a5.5 5.5 0 0 1 3 4.8"/></symbol>
     <symbol id="i-document" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h7l4.5 4.5v11a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M13.5 3.5V8H18M8.5 12.5h7M8.5 16h5"/></symbol>
     <symbol id="i-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 9.5v10"/></symbol>

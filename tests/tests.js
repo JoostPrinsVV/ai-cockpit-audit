@@ -3,7 +3,8 @@
    inhoud laden, rechten, het soortenregister, de verzoeken naar Supabase
    (fetch nagebootst), de werkversies, het gereedschap van Beheer en het
    inlezen van het Copilot-gebruik (met een verzonnen bestand uit
-   fixture-copilot.js) en de route van een idee per discipline.
+   fixture-copilot.js), de route van een idee per discipline, Mijn gegevens,
+   het seizoenskompas, de promptbouwer en het verbetervoorstel bij een prompt.
    Draait in de browser (tests/index.html), zonder build of npm.
    ========================================================================== */
 (function (ns) {
@@ -158,6 +159,100 @@
       equal(ns.kinds.href('agent', 'copilot-chat'), '#/agent/copilot-chat');
       equal(ns.kinds.byRoute('training').type, 'training');
       equal([ns.kinds.navFor('usecase'), ns.kinds.navFor('prompts'), ns.kinds.navFor('ideeen'), ns.kinds.navFor('beheer')], ['usecases', 'prompts', 'ideeen', '']);
+      equal([ns.kinds.navFor('mijn'), ns.kinds.navFor('promptbouwer'), ns.kinds.navFor('constructor')], ['mijn', 'prompts', ''], 'mijn gegevens, promptbouwer');
+    });
+
+    /* ---- mijn gegevens ---- */
+    describe('Mijn gegevens (js/profile.js, opslag nagebootst)');
+    // Niets in de echte opslag van deze browser: get/set even in het geheugen
+    const realGet = ns.ui.storage.get;
+    const realSet = ns.ui.storage.set;
+    const realRemove = ns.ui.storage.remove;
+    const memory = {};
+    Object.assign(ns.ui.storage, {
+      get: (key, fallback) => (key in memory ? JSON.parse(memory[key]) : fallback),
+      set: (key, value) => { memory[key] = JSON.stringify(value); return true; },
+      remove: (key) => { delete memory[key]; }
+    });
+    try {
+      await test('vult precies die plaatshouders: [NAAM] en [FUNCTIE] wel, [NAAM AFZENDER] en [NAAM EN FUNCTIE] niet', () => {
+        ns.profile.set({ naam: ' Sanne de Vries ', functie: 'Senior auditor', boekjaar: '' });
+        equal(['NAAM', 'FUNCTIE, bijv. senior auditor', 'naam', 'NAAM AFZENDER', 'NAAM EN FUNCTIE', 'KLANTNAAM'].map((key) => ns.profile.valueFor(key)), ['Sanne de Vries', 'Senior auditor', 'Sanne de Vries', '', '', '']);
+        equal([ns.profile.firstName(), ns.profile.initials()], ['Sanne', 'SV']);
+      });
+      await test('boekjaar: alleen als je dat wilt; automatisch tot en met juni het vorige jaar; [VORIG JAAR] één eerder', () => {
+        equal(ns.profile.valueFor('JAAR'), '', 'niet invullen');
+        ns.profile.set({ boekjaar: 'auto' });
+        equal([ns.profile.valueFor('JAAR', '2026-03-15'), ns.profile.valueFor('VORIG JAAR', '2026-03-15'), ns.profile.valueFor('JAAR', '2026-10-31')], ['2025', '2024', '2026']);
+        ns.profile.set({ boekjaar: '2027' });
+        equal(ns.profile.valueFor('BOEKJAAR'), '2027', 'vast jaar');
+      });
+      await test('fill: je gegevens erin, klantgegevens blijven [PLAATSHOUDER]; canFill zegt of er iets te halen is', () => {
+        const text = 'Mail aan [KLANTNAAM] over [JAAR]. Onderteken met [NAAM], [FUNCTIE].';
+        equal(ns.profile.fill(text), 'Mail aan [KLANTNAAM] over 2027. Onderteken met Sanne de Vries, Senior auditor.');
+        ok(ns.profile.canFill('Groet, [NAAM]') && !ns.profile.canFill('Voor [KLANTNAAM]'), 'canFill');
+      });
+      await test('wissen: niets meer bewaard, prompts tonen weer de plaatshouders', () => {
+        ns.profile.clear();
+        equal([Object.keys(memory).length, ns.profile.fill('Groet, [NAAM]'), ns.profile.filled()], [0, 'Groet, [NAAM]', false]);
+      });
+    } finally {
+      ns.profile.clear(); // nog in het geheugen: je echte gegevens in deze browser blijven staan
+      Object.assign(ns.ui.storage, { get: realGet, set: realSet, remove: realRemove });
+    }
+
+    /* ---- seizoenskompas ---- */
+    describe('Seizoenskompas (js/compass.js, data/seizoenen.js)');
+    const auditSeasons = ns.compass.seasons({}, 'audit');
+    await test('zonder seizoenen in Beheer: de startwaarden van de discipline; onzin valt weg', () => {
+      equal(auditSeasons.length, 4, 'audit');
+      equal(ns.compass.seasons({ seasons: [{ title: 'Eigen', months: [13, 0, 3, '4'] }, { title: '', months: [1] }, { months: [2] }] }, 'audit').map((s) => [s.title, s.months]), [['Eigen', [3, 4]]]);
+      equal(ns.compass.seasons({}, 'bestaat-niet'), [], 'geen kompas');
+    });
+    await test('wat nu speelt: het langst lopende seizoen eerst (december: interim, dan de voorraad)', () => {
+      equal(ns.compass.active(auditSeasons, '2026-12-05').map((s) => s.title), ['Planning en interimcontroles', 'Voorraadinventarisaties']);
+      equal(ns.compass.active(auditSeasons, '2027-03-01').map((s) => s.title), ['Risico-inschatting, controle en afronding']);
+    });
+    await test('wat hierna komt: een seizoen dat nog niet speelt, met de maand waarin het begint', () => {
+      const coming = ns.compass.next(auditSeasons, '2026-11-10');
+      equal([coming.season.title, coming.month], ['Voorraadinventarisaties', 12]);
+      equal(ns.compass.next(auditSeasons, '2026-06-20').season.title, 'Planning en jaarovergang dossier');
+    });
+    await test('maanden als tekst: aaneengesloten als bereik, ook over de jaarwisseling', () => {
+      equal([ns.compass.monthsText([11, 12, 1]), ns.compass.monthsText([1, 4, 7, 10]), ns.compass.monthsText([7, 8, 9]), ns.compass.monthsText([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])], ['nov – jan', 'jan, apr, jul, okt', 'jul – sep', 'het hele jaar']);
+    });
+
+    /* ---- promptbouwer ---- */
+    describe('Promptbouwer (js/view-builder.js)');
+    await test('opbouw: rol, doel, context, bron en verwachting, lege stappen vallen weg', () => {
+      const text = ns.views.builder.compose({ role: 'Je bent een ervaren auditor', goal: 'Vat de notulen samen', source: 'het bijgevoegde document', onlySource: true, formats: ['een tabel', 'maximaal 200 woorden'], extras: ['Stel me eerst vragen als iets onduidelijk is.'] });
+      equal(text, 'Je bent een ervaren auditor.\n\nVat de notulen samen.\n\nGebruik het bijgevoegde document. Gebruik alleen deze bron; staat iets er niet in, zeg dat dan.\n\nLever het op als een tabel en maximaal 200 woorden.\n\nStel me eerst vragen als iets onduidelijk is.');
+    });
+    await test('meter: leeg 0, alles ingevuld 100, een kort doel of korte context telt half', () => {
+      const full = { role: 'Je bent een auditor', goal: 'Vat de notulen samen in besluiten, acties en open punten', context: 'Het overleg ging over de planning van de controle bij een klant', source: 'de Teams-vergadering', formats: ['een tabel'], extras: ['x'] };
+      equal([ns.views.builder.score({}).score, ns.views.builder.score(full).score], [0, 100]);
+      equal(ns.views.builder.score({ goal: 'Vat samen', context: 'Voor het team' }).score, 30);
+    });
+
+    /* ---- verbetervoorstel ---- */
+    describe('Verbetervoorstel bij een prompt (js/improve.js)');
+    const oldText = 'Schrijf een korte mail. Maximaal 150 woorden. Onderteken met [NAAM].';
+    const newText = 'Schrijf een vriendelijke mail. Hooguit 150 woorden. Onderteken met [NAAM].\nSluit af met een vervolgstap.';
+    await test('verschil per woord: alles overnemen geeft het voorstel, niets overnemen de oude tekst', () => {
+      const parts = ns.improve.diff(oldText, newText);
+      equal(parts.filter((p) => p.type === 'change').length, 3, 'drie wijzigingen');
+      equal(ns.improve.merge(parts), newText, 'alles');
+      parts.forEach((p) => { p.accepted = false; });
+      equal(ns.improve.merge(parts), oldText, 'niets');
+    });
+    await test('deels overnemen: alleen de gekozen wijziging', () => {
+      const parts = ns.improve.diff(oldText, newText);
+      parts.filter((p) => p.type === 'change').forEach((p, i) => { p.accepted = i === 0; });
+      equal(ns.improve.merge(parts), 'Schrijf een vriendelijke mail. Maximaal 150 woorden. Onderteken met [NAAM].');
+    });
+    await test('vingerafdruk: dezelfde tekst dezelfde, een andere tekst een andere', () => {
+      equal(ns.improve.fingerprint(oldText), ns.improve.fingerprint(String(oldText)));
+      ok(ns.improve.fingerprint(oldText) !== ns.improve.fingerprint(newText) && /^[0-9a-f]{8}$/.test(ns.improve.fingerprint(newText)), 'anders');
     });
 
     /* ---- rights ---- */
@@ -224,6 +319,19 @@
         equal(await ns.central.vote(5, 'apparaat'), 'ok');
         equal(await ns.central.vote(5, 'apparaat'), 'duplicate');
         equal(JSON.parse(net.calls[0].init.body), [{ idea_id: 5, voter: 'apparaat' }]);
+      } finally {
+        net.restore();
+      }
+    });
+    await test('inzending: "target" alleen bij een verbetervoorstel (zonder stap 11 bestaat die kolom niet)', async () => {
+      const net = fakeFetch([[201], [201]]);
+      try {
+        await ns.central.submitIdea({ ref: 'r1', kind: 'idee', title: 'Een idee', body: 'Toelichting bij het idee' });
+        await ns.central.submitIdea({ ref: 'r2', kind: 'verbetering', title: 'Verbetering: x', body: 'Nieuwe tekst', allowPublic: false, target: { type: 'prompt', id: 'x', field: 'prompt', base: 'abc' } });
+        const [first] = JSON.parse(net.calls[0].init.body);
+        const [second] = JSON.parse(net.calls[1].init.body);
+        ok(!('target' in first), 'gewone inzending zonder target');
+        equal([second.kind, second.allow_public, second.target.id], ['verbetering', false, 'x']);
       } finally {
         net.restore();
       }

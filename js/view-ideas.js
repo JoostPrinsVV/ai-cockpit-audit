@@ -38,7 +38,10 @@
       bodyHint: 'Plak de prompt en vertel kort waarvoor je hem gebruikt. Vervang klantnamen door [KLANTNAAM].'
     }
   ];
-  const KIND_BY_ID = new Map(KINDS.map((kind) => [kind.id, kind]));
+  // Een verbetervoorstel bij een prompt (js/improve.js): niet in de keuze van het formulier hier
+  const IMPROVEMENT = { id: 'verbetering', label: 'Verbetering', icon: 'wand', accent: 'deepteal' };
+  const ALL_KINDS = KINDS.concat(IMPROVEMENT);
+  const KIND_BY_ID = new Map(ALL_KINDS.map((kind) => [kind.id, kind]));
 
   const STATUSES = {
     'nieuw': { label: 'Ontvangen', tone: 'neutral' },
@@ -123,7 +126,8 @@
       el('option', { attrs: { value: '' }, text: 'Geen specifieke fase' }),
       ...ns.content.phases.map((p) => el('option', { attrs: { value: p.id }, text: p.label }))
     ]);
-    const name = el('input', { className: 'field__input', attrs: { id: 'idea-name', name: 'name', type: 'text', maxlength: '100', autocomplete: 'name' } });
+    // Je naam uit Mijn gegevens staat er al (ook weer na versturen: de beginwaarde van het veld)
+    const name = el('input', { className: 'field__input', attrs: { id: 'idea-name', name: 'name', type: 'text', maxlength: '100', autocomplete: 'name', value: ns.profile ? ns.profile.get().naam || null : null } });
     const email = el('input', { className: 'field__input', attrs: { id: 'idea-email', name: 'email', type: 'email', maxlength: '254', autocomplete: 'email', inputmode: 'email', autocapitalize: 'off', spellcheck: 'false', 'aria-describedby': 'idea-email-hint idea-email-error' } });
     const emailError = el('p', { className: 'field__error', attrs: { id: 'idea-email-error' } });
     const allowPublic = el('input', { attrs: { id: 'idea-public', type: 'checkbox', checked: true } });
@@ -158,6 +162,15 @@
       body.placeholder = kind === 'prompt' ? 'Plak hier je prompt…' : '';
     }
     applyKind();
+
+    // Uit de promptbouwer (js/view-builder.js): de prompt staat al klaar, één keer
+    const draft = ns.ideaDraft;
+    if (draft && draft.kind === kind) {
+      title.value = String(draft.title || '').slice(0, 120);
+      body.value = String(draft.body || '').slice(0, maxBody);
+      counter.textContent = `${body.value.length}/${maxBody}`;
+      ns.ideaDraft = null;
+    }
 
     function setError(input, node, message) {
       node.textContent = message;
@@ -586,7 +599,7 @@
     return { node, title: 'Ideeënhub' };
   }
 
-  ns.ideas = { KINDS, STATUSES, statusBadge, kindChip, routeOf };
+  ns.ideas = { KINDS, ALL_KINDS, STATUSES, statusBadge, kindChip, routeOf, rememberSubmission, SENSITIVE };
   ns.views = ns.views || {};
   ns.views.ideas = { render };
 })(window.AIAudit);

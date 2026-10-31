@@ -6,7 +6,8 @@
 
   const { el, icon, chip } = ns.ui;
 
-  function hero(config) {
+  /** radar: wat nieuw is sinds je vorige bezoek (js/radar.js), op de roos en als strook onder het zoekvak. */
+  function hero(config, radar) {
     const input = el('input', {
       className: 'search__input',
       attrs: { id: 'home-search', type: 'search', name: 'q', placeholder: 'Zoek een usecase, prompt, tip, training of agent, bijv. "notulen"', autocomplete: 'off', enterkeyhint: 'search' }
@@ -23,17 +24,29 @@
       window.location.hash = '#/zoeken' + (query ? '/' + encodeURIComponent(query) : '');
     });
 
+    // Met je naam uit Mijn gegevens: eerst een begroeting
+    const first = ns.profile.firstName();
+    const hour = new Date().getHours();
+    const greeting = first ? `${hour < 12 ? 'Goedemorgen' : hour < 18 ? 'Goedemiddag' : 'Goedenavond'}, ${first} · ` : '';
+    const rose = ns.instruments.rose({ blips: ns.radar.blips(radar.list) });
+    // Gezien: de stipjes van de roos halen en de focus terug op het zoekvak (de knop is weg)
+    const strip = ns.radar.strip(radar, () => {
+      const layer = rose.querySelector('.rose__radar');
+      if (layer) layer.remove();
+      input.focus();
+    });
     return el('section', { className: 'hero on-dark', attrs: { 'aria-labelledby': 'home-title' } }, [
-      ns.instruments.rose(),
+      rose,
       el('div', { className: 'hero__inner container' }, [
-        el('p', { className: 'hero__eyebrow', text: `${config.organizationName} · ${ns.cockpit.active().eyebrow}` }),
+        el('p', { className: 'hero__eyebrow', text: `${greeting}${config.organizationName} · ${ns.cockpit.active().eyebrow}` }),
         el('h1', { className: 'hero__title', attrs: { id: 'home-title', tabindex: '-1' } }, [
           el('span', { text: config.applicationTitle + ' ' }),
           el('span', { className: 'hero__discipline', text: config.discipline })
         ]),
         config.tagline ? el('p', { className: 'hero__tagline', text: config.tagline }) : null,
         config.applicationSubtitle ? el('p', { className: 'hero__subtitle', text: config.applicationSubtitle }) : null,
-        form
+        form,
+        strip
       ]),
       ns.instruments.heroTape()
     ]);
@@ -212,7 +225,9 @@
       mine.replaceWith(next);
       mine = next;
     });
-    const node = el('div', { className: 'home' }, [hero(config), tiles(), mine, featuredUsecases(), colleagues(), featuredTips(), recent(), ideasCta()]);
+    // Seizoenskompas (js/compass.js): wat er nu speelt, met dezelfde regels als 'Recent toegevoegd'
+    const compass = ns.compass.section(config, itemRow);
+    const node = el('div', { className: 'home' }, [hero(config, ns.radar.fresh()), tiles(), compass, mine, featuredUsecases(), colleagues(), featuredTips(), recent(), ideasCta()]);
     return { node, title: '', destroy: stopSaved };
   }
 

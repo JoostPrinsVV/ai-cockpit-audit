@@ -10,6 +10,8 @@
      #/agents                agents & tools         #/agent/<id>     één agent of tool
      #/ideeen                ideeënhub              #/ideeen/vraag   met 'Vraag' alvast gekozen
      #/zoeken/<woorden>      zoeken
+     #/mijn                  mijn gegevens (naam, functie, boekjaar: alleen op dit apparaat)
+     #/promptbouwer          zelf een prompt bouwen, met een meter
      #/beheer                beheer (inloggen)      #/beheer/inhoud  inhoud aanpassen
    Andere discipline: ?d=<id> vóór de #, bijv. ?d=accountancy#/prompts (zie js/disciplines.js).
 
@@ -58,6 +60,8 @@
       agent: (params) => v.agents.renderDetail(params[0]),
       ideeen: (params) => v.ideas.render(params, config),
       zoeken: (params) => v.search.render(params),
+      mijn: () => v.profile.render(),
+      promptbouwer: () => v.builder.render(),
       beheer: (params) => v.admin.render(params)
     };
   }
@@ -387,7 +391,7 @@
      Bezoekers laden de beheercode niet (ruim een derde van alle JavaScript, plus css/admin.css).
      Wie ingelogd is of naar #/beheer gaat, krijgt hem erbij, met de bestanden in data/ (voor
      Overzetten en inrichten). De volgorde van de scripts is belangrijk. */
-  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/view-admin.js', 'js/editmode.js'];
+  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/admin-improve.js', 'js/view-admin.js', 'js/editmode.js'];
   let adminLoading = null;
 
   function loadAdmin() {
@@ -624,6 +628,8 @@
       ns.lock.init({ config: baseConfig, admin: Boolean(ns.central.signedIn()) && ns.central.isAdmin() });
       config = Object.assign({}, baseConfig);
       initTheme();
+      ns.profile.init(); // je initialen in de kopbalk
+      ns.palette.init(); // zoekvenster: Ctrl+K, / of de zoekknop
       fillChrome();
       ns.instruments.init();
       // Scrollen bij terug en vooruit doen we zelf (zie Scrollpositie)
