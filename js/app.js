@@ -249,23 +249,41 @@
     }
     if (!result) result = notFound();
 
+    // Binnen dezelfde omgeving (shell, bijv. Beheer met de zijbalk) naar een ander onderdeel: geen
+    // paginaovergang, de zijbalk blijft waar hij was en de pagina schuift rustig naar boven
+    const within = Boolean(!opts.keepScroll && current && result.shell && current.shell === result.shell);
     if (current && current.destroy) current.destroy();
     current = result;
     currentHash = window.location.hash || '#/';
     rendered = true;
     const seq = ++routeSeq;
 
-    // Nieuwe pagina tonen, met een overgang (js/motion.js); niet bij verversen van dezelfde pagina
-    const mode = opts.keepScroll ? 'refresh' : firstRoute ? 'first' : 'page';
-    ns.motion.swap(() => {
+    // Nieuwe pagina tonen, met een overgang (js/motion.js); niet bij verversen van dezelfde pagina.
+    // Binnen dezelfde omgeving en naar beneden gescrold: eerst rustig naar boven, dan het nieuwe onderdeel
+    // (anders springt de pagina eerst, omdat het nieuwe onderdeel meestal korter is)
+    // (Terug of vooruit in de geschiedenis: gewoon naar de bewaarde plek.)
+    const mode = opts.keepScroll || within ? 'refresh' : firstRoute ? 'first' : 'page';
+    const step = window.history.state && window.history.state.scroll;
+    const returning = Boolean(step && typeof scrollPositions[step] === 'number');
+    const show = (commit) => (within && !returning && window.scrollY > 2 && !ns.motion.calm() ? scrollTopThen(commit) : commit());
+    show(() => ns.motion.swap(() => {
       // Intussen al een nieuwere pagina (de overgang tekent een beeld later): deze niet meer tonen
       if (seq !== routeSeq) return;
       const viewNode = document.getElementById('view');
       const scrollY = window.scrollY;
       const focus = opts.keepScroll ? focusMark(viewNode) : null;
+      // De zijbalk kan zelf scrollen: die plek bewaren (opnieuw opgebouwd begint hij anders bovenaan)
+      const sideScroll = Array.from(viewNode.querySelectorAll('[data-keep-scroll]'), (box) => [box.dataset.keepScroll, box.scrollTop]);
       sharedNote(parsed, result.node);
       if (!opts.keepScroll) rememberViewed(parsed);
       viewNode.replaceChildren(...[ns.cockpit.lockBar(), result.node].filter(Boolean));
+      if (opts.keepScroll || within) {
+        sideScroll.forEach(([name, top]) => {
+          const box = viewNode.querySelector(`[data-keep-scroll="${name}"]`);
+          if (box) box.scrollTop = top;
+        });
+      }
+      if (within) result.node.classList.add('is-switching');
       document.documentElement.dataset.gestart = 'ja'; // het vangnet in js/vroeg.js hoeft niet meer
       // Beheerders (de beheercode is dan geladen): de bewerkbalk en de bewerkmodus
       if (ns.editor) ns.editor.setPageItem(pageItem(parsed));
@@ -308,7 +326,21 @@
         else if (!firstRoute && heading) heading.focus({ preventScroll: true });
       }
       firstRoute = false;
-    }, parsed, mode);
+    }, parsed, mode));
+  }
+
+  /** Rustig naar boven scrollen en dan pas verder (hooguit 0,8 seconde wachten). */
+  function scrollTopThen(next) {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener('scrollend', finish);
+      next();
+    };
+    window.addEventListener('scrollend', finish);
+    window.setTimeout(finish, 800);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   /* ---- Inhoud laden ------------------------------------------------------------------- */

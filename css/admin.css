@@ -51,10 +51,20 @@
 }
 
 .admin-main { display: grid; gap: var(--space-5); min-width: 0; }
+/* Naar een ander onderdeel (js/app.js zet is-switching): alleen de inhoud komt zacht in beeld */
+.admin-shell.is-switching .admin-main { animation: admin-switch var(--duration) var(--ease-out) both; }
+@keyframes admin-switch {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell.is-switching .admin-main { animation: none; }
+}
 .admin-head { display: grid; gap: var(--space-2); padding-bottom: var(--space-5); border-bottom: 1px solid var(--color-border); }
 .admin-head__scope { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--accent-teal-ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
 .admin-head__scope .icon { width: 1rem; height: 1rem; }
 .admin-head__title { font-size: clamp(1.75rem, 1.3rem + 1.3vw, 2.4rem); }
+.admin-head__title:focus { outline: none; }
 .admin-head__lead { max-width: 70ch; color: var(--color-text-muted); }
 
 /* Start: tegels naar wat je wilt doen (met de stand van nu), en hoe Beheer werkt */

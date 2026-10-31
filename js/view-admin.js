@@ -96,7 +96,8 @@
         ])))
       ]);
     });
-    return el('aside', { className: 'admin-nav' }, [
+    // data-keep-scroll: js/app.js bewaart hoe ver je in de zijbalk gescrold was
+    return el('aside', { className: 'admin-nav', dataset: { keepScroll: 'admin-nav' } }, [
       scope,
       el('nav', { className: 'admin-nav__menu', attrs: { 'aria-label': 'Onderdelen van Beheer' } }, groups),
       session
@@ -751,7 +752,7 @@
       : [icon(tab === 'start' ? 'lock' : 'globe'), el('span', { text: tab === 'start' ? 'Beheer' : 'Alle disciplines' })];
     const head = el('header', { className: 'admin-head' }, [
       el('p', { className: 'admin-head__scope' }, scope),
-      el('h1', { className: 'admin-head__title', text: tab === 'inhoud' ? `Inhoud ${disciplineName}` : def.label }),
+      el('h1', { className: 'admin-head__title', attrs: { tabindex: '-1' }, text: tab === 'inhoud' ? `Inhoud ${disciplineName}` : def.label }),
       el('p', { className: 'admin-head__lead', text: def.lead(disciplineName) })
     ]);
     const node = el('div', { className: 'page container admin-shell' }, [
@@ -777,7 +778,8 @@
       panel.append(result.node);
       canLeave = result.canLeave;
     }
-    return { node, title: 'Beheer', canLeave: () => !canLeave || canLeave() };
+    // shell: tussen onderdelen van Beheer geen paginaovergang (zie route in js/app.js)
+    return { node, title: 'Beheer', shell: 'admin', canLeave: () => !canLeave || canLeave() };
   }
 
   ns.views = ns.views || {};
