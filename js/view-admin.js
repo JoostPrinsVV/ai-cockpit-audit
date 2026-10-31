@@ -1,10 +1,13 @@
 /* ==========================================================================
-   Beheer (#/beheer/overzicht, /inhoud, /basis, /disciplines, /inzendingen, /portfolio, /gebruik, /copilot)
+   Beheer (#/beheer, /inhoud, /basis, /inzendingen, /reviews, /portfolio, /overzicht, /gebruik,
+   /copilot, /nieuwsbrief, /disciplines, /beheerders)
    --------------------------------------------------------------------------
    Voor het AI-team: inloggen met een Supabase-gebruiker van wie het
    e-mailadres in audit_admins staat (zie setup/supabase-audit.sql).
-   Bovenaan wissel je van discipline: Inhoud, Inzendingen, Portfolio, Gebruik
-   en Copilot-gebruik gaan over de discipline waarin je zit.
+   Links een zijbalk: bovenaan de discipline die je beheert, daaronder de
+   onderdelen per groep (TABS). Rechts het onderdeel, met bovenaan voor welke
+   discipline het is (of 'Alle disciplines'), de titel en één zin uitleg.
+   - Start: wat er te doen is (met de stand van nu) en hoe Beheer werkt.
    - Overzicht: de stand van zaken over alle disciplines, voor het bestuur
      (af te drukken als PDF; js/admin-overview.js).
    - Inhoud: usecases, prompts, tips, trainingen, agents & tools, fasen en
@@ -33,36 +36,70 @@
   const loadFailed = (error) => notice({ tone: 'warning', title: 'Laden mislukt', text: error.message });
   const view = { status: 'open', kind: 'all', days: 90, reviews: 'todo' };
   const PLAIN_EMAIL = /^[^\s@?&#%]+@[^\s@?&#%]+$/;
+  // De onderdelen, per groep in de zijbalk. perDiscipline: gaat over de discipline die bovenin de
+  // zijbalk gekozen is; de rest geldt voor alle disciplines. lead: de zin onder de titel.
+  const GROUPS = [
+    { id: 'start', label: '' },
+    { id: 'inhoud', label: 'Inhoud' },
+    { id: 'collegas', label: 'Inbreng van collega\'s' },
+    { id: 'cijfers', label: 'Cijfers' },
+    { id: 'communicatie', label: 'Communicatie' },
+    { id: 'instellingen', label: 'Instellingen' }
+  ];
   const TABS = [
-    { id: 'overzicht', label: 'Overzicht', icon: 'grid' },
-    { id: 'inhoud', label: 'Inhoud', icon: 'pencil-line', perDiscipline: true },
-    { id: 'basis', label: 'Gedeelde basis', icon: 'globe' },
-    { id: 'disciplines', label: 'Disciplines', icon: 'layers' },
-    { id: 'inzendingen', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true },
-    { id: 'portfolio', label: 'Portfolio', icon: 'flag', perDiscipline: true },
-    { id: 'reviews', label: 'Reviews', icon: 'star', perDiscipline: true },
-    { id: 'nieuwsbrief', label: 'Nieuwsbrief', icon: 'mail', perDiscipline: true },
-    { id: 'gebruik', label: 'Gebruik', icon: 'chart', perDiscipline: true },
-    { id: 'copilot', label: 'Copilot-gebruik', icon: 'sparkle', perDiscipline: true },
-    { id: 'beheerders', label: 'Beheerders', icon: 'users' }
+    { id: 'start', group: 'start', label: 'Start', icon: 'plane', lead: () => 'Wat er te doen is, en waar je alles vindt.' },
+    { id: 'inhoud', group: 'inhoud', label: 'Inhoud', icon: 'pencil-line', perDiscipline: true, lead: (name) => `Usecases, prompts, tips, trainingen, agents en teksten die alleen in de cockpit van ${name} staan.` },
+    { id: 'basis', group: 'inhoud', label: 'Gedeelde basis', icon: 'globe', lead: () => 'Wat in iedere cockpit staat: wat je hier aanpast, zien alle disciplines.' },
+    { id: 'inzendingen', group: 'collegas', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true, lead: (name) => `Ideeën, vragen en verzoeken uit de ideeënhub van ${name}: beantwoorden, publiceren en beoordelen.` },
+    { id: 'reviews', group: 'collegas', label: 'Reviews', icon: 'star', perDiscipline: true, lead: (name) => `Sterren en toelichtingen bij de usecases en prompts van ${name}. Een toelichting staat pas bij de usecase of prompt als jij hem publiceert.` },
+    { id: 'portfolio', group: 'collegas', label: 'Portfolio', icon: 'flag', perDiscipline: true, lead: (name) => `De beoordeelde ideeën van ${name} in de AI Value Matrix, met de registerregels.` },
+    { id: 'overzicht', group: 'cijfers', label: 'Overzicht', icon: 'grid', lead: () => 'De stand van zaken over alle disciplines, af te drukken als PDF voor het bestuur.' },
+    { id: 'gebruik', group: 'cijfers', label: 'Gebruik van de cockpit', icon: 'chart', perDiscipline: true, lead: (name) => `Hoe vaak usecases, demo's, prompts, tips, trainingen en agents in ${name} worden bekeken en gekopieerd. Anoniem.` },
+    { id: 'copilot', group: 'cijfers', label: 'Copilot-gebruik', icon: 'sparkle', perDiscipline: true, lead: (name) => `Het Copilot-gebruik van ${name} per import, met de belangrijke momenten erbij.` },
+    { id: 'nieuwsbrief', group: 'communicatie', label: 'Nieuwsbrief', icon: 'mail', perDiscipline: true, lead: (name) => `Een weekupdate of maandnieuwsbrief over ${name}, als PDF of als e-mail.` },
+    { id: 'disciplines', group: 'instellingen', label: 'Disciplines', icon: 'layers', lead: () => 'Welke disciplines er zijn, en welke open staan voor collega\'s of nog op slot.' },
+    { id: 'beheerders', group: 'instellingen', label: 'Beheerders', icon: 'users', lead: () => 'Wie mag beheren: in welke discipline, en welke onderdelen.' }
   ];
 
-  /** Wisselen van discipline in Beheer: naar hetzelfde onderdeel in de cockpit van die discipline. */
-  function disciplineChooser(tab) {
-    const target = TABS.find((t) => t.id === tab && t.perDiscipline) ? tab : 'inhoud';
+  /** De zijbalk: de discipline die je beheert (vast bovenaan), de onderdelen per groep en wie er is ingelogd. */
+  function sidebar(tab, allowed, session) {
     const activeId = ns.cockpit.activeId();
-    return el('div', { className: 'admin__scope' }, [
-      el('span', { className: 'admin__scope-label', text: 'Discipline' }),
-      el('nav', { className: 'toggles', attrs: { 'aria-label': 'Discipline om te beheren' } }, ns.cockpit.registry().map((discipline) =>
+    const current = TABS.find((t) => t.id === tab);
+    const scope = el('div', { className: 'admin-nav__scope' }, [
+      el('p', { className: 'admin-nav__label', attrs: { id: 'admin-scope-label' }, text: 'Je beheert' }),
+      // Een andere discipline: hetzelfde onderdeel in de cockpit van die discipline
+      el('ul', { className: 'admin-nav__disciplines', attrs: { role: 'list', 'aria-labelledby': 'admin-scope-label' } }, ns.cockpit.registry().map((discipline) => el('li', {}, [
         el('a', {
-          className: 'toggle',
+          className: 'admin-nav__discipline',
           attrs: {
-            href: ns.cockpit.href(discipline.id, '#/beheer/' + target),
-            'aria-current': discipline.id === activeId ? 'page' : null,
+            href: ns.cockpit.href(discipline.id, '#/beheer/' + tab),
+            'aria-current': discipline.id === activeId ? 'true' : null,
             title: discipline.status === 'open' ? 'Open voor iedereen' : 'Op slot: alleen beheerders'
           }
-        }, [discipline.status === 'open' ? null : icon('lock'), el('span', { text: discipline.name })])
-      ))
+        }, [
+          el('span', { className: 'admin-nav__dot', attrs: { 'aria-hidden': 'true' } }),
+          el('span', { text: discipline.name }),
+          discipline.status === 'open' ? null : icon('lock', { label: 'op slot' })
+        ])
+      ]))),
+      current && !current.perDiscipline && tab !== 'start' ? el('p', { className: 'admin-nav__note', text: 'Dit onderdeel geldt voor alle disciplines.' }) : null
+    ]);
+    const groups = GROUPS.map((group) => {
+      const items = allowed.filter((t) => t.group === group.id);
+      if (!items.length) return null;
+      const labelId = 'admin-group-' + group.id;
+      return el('div', { className: 'admin-nav__group' }, [
+        group.label ? el('p', { className: 'admin-nav__label', attrs: { id: labelId }, text: group.label }) : null,
+        el('ul', { className: 'admin-nav__list', attrs: { role: 'list', 'aria-labelledby': group.label ? labelId : null } }, items.map((t) => el('li', {}, [
+          // Inhoud heet naar de discipline (naast Gedeelde basis): dan zie je meteen waarvoor het is
+          el('a', { className: 'admin-nav__item', attrs: { href: '#/beheer/' + t.id, 'aria-current': t.id === tab ? 'page' : null } }, [icon(t.icon), el('span', { text: t.id === 'inhoud' ? ns.cockpit.active().name : t.label })])
+        ])))
+      ]);
+    });
+    return el('aside', { className: 'admin-nav' }, [
+      scope,
+      el('nav', { className: 'admin-nav__menu', attrs: { 'aria-label': 'Onderdelen van Beheer' } }, groups),
+      session
     ]);
   }
 
@@ -580,56 +617,124 @@
     load();
   }
 
+  /* ---- Start ------------------------------------------------------------------ */
+  /** De eerste pagina: wat er te doen is (met de stand van nu) en in drie zinnen hoe Beheer werkt. */
+  function startTab(container, allowed) {
+    const owner = ns.rights.isOwner();
+    const name = ns.cockpit.active().name;
+    const has = (id) => allowed.some((t) => t.id === id);
+    const tasks = [];
+    // Een tegel naar een onderdeel; de tweede regel kan later nog veranderen (de stand van nu)
+    const task = (id, title, text) => {
+      const status = el('span', { className: 'admin-task__status', text });
+      tasks.push(el('li', {}, [el('a', { className: 'admin-task', attrs: { href: '#/beheer/' + id } }, [
+        el('span', { className: 'admin-task__icon', attrs: { 'aria-hidden': 'true' } }, [icon(TABS.find((t) => t.id === id).icon)]),
+        el('span', { className: 'admin-task__body' }, [el('span', { className: 'admin-task__title', text: title }), status]),
+        icon('arrow-right', { className: 'admin-task__go' })
+      ])]));
+      return status;
+    };
+    const show = (status, text, due) => {
+      status.textContent = text;
+      status.classList.toggle('is-due', Boolean(due));
+    };
+    const unreadable = (status) => () => show(status, 'Niet te lezen, probeer het later opnieuw');
+    const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    const reminder = ns.adminNewsletter.reminder();
+
+    if (has('inzendingen')) {
+      const status = task('inzendingen', 'Inzendingen beantwoorden', 'Even kijken…');
+      ns.central.adminListIdeas().then((items) => {
+        const fresh = items.filter((item) => item.status === 'nieuw').length;
+        const busy = items.filter((item) => item.status === 'in-behandeling').length;
+        if (fresh) show(status, `${fresh} nieuw${busy ? `, ${busy} in behandeling` : ''}`, true);
+        else show(status, busy ? `${busy} in behandeling` : 'Niets openstaand');
+      }).catch(unreadable(status));
+    }
+    if (has('reviews')) {
+      const status = task('reviews', 'Reviews lezen', 'Even kijken…');
+      ns.central.adminListReviews().then((items) => {
+        const todo = items.filter((item) => item.comment && !item.is_public).length;
+        show(status, todo ? `${plural(todo, 'toelichting', 'toelichtingen')} nog niet gepubliceerd` : 'Alle toelichtingen gelezen', todo > 0);
+      }).catch(unreadable(status));
+    }
+    if (has('nieuwsbrief')) task('nieuwsbrief', 'Nieuwsbrief maken', reminder ? 'De maandnieuwsbrief staat klaar' : 'Weekupdate of maandnieuwsbrief, als PDF of e-mail');
+    if (has('inhoud')) task('inhoud', `Inhoud ${name} aanpassen`, 'Usecases, prompts, tips, trainingen en agents');
+    if (has('basis')) task('basis', 'Gedeelde basis aanpassen', 'Wat in iedere cockpit staat');
+    if (has('copilot')) {
+      const status = task('copilot', 'Copilot-gebruik bijhouden', 'Even kijken…');
+      ns.central.listCopilotUsage().then((rows) => {
+        const imports = (rows || []).filter((row) => ns.adminCopilot.isUsage(row.summary));
+        show(status, imports.length ? `Laatste import t/m ${formatDate(imports[imports.length - 1].period_end)}` : 'Nog geen import: lees de export in');
+      }).catch(unreadable(status));
+    }
+    if (has('overzicht')) task('overzicht', 'Stand van zaken voor het bestuur', 'Alle disciplines, af te drukken als PDF');
+    if (reminder) tasks.forEach((item) => {
+      const status = item.querySelector('[href="#/beheer/nieuwsbrief"] .admin-task__status');
+      if (status) status.classList.add('is-due');
+    });
+
+    const howto = owner
+      ? [
+        [`Links kies je de discipline (nu ${name}).`, ' Inhoud, inzendingen, reviews, portfolio, gebruik, Copilot-gebruik en de nieuwsbrief gaan over die discipline.'],
+        ['Gedeelde basis, Overzicht, Disciplines en Beheerders', ' gelden voor alle disciplines tegelijk.'],
+        ['Tekst aanpassen kan ook op de site zelf.', ' Zet Bewerken aan in de donkere balk bovenin, klik op wat je wilt veranderen, sla op en publiceer. Collega\'s zien een wijziging pas na Publiceren.']
+      ]
+      : [
+        ['Je beheert de inhoud waarvoor je een rol hebt.', ' Links staat welke onderdelen dat zijn; met een rol in meer disciplines kies je daar ook de discipline.'],
+        ['Tekst aanpassen kan ook op de site zelf.', ' Zet Bewerken aan in de donkere balk bovenin, klik op wat je wilt veranderen en sla op. Collega\'s zien een wijziging pas na Publiceren.']
+      ];
+    container.append(el('div', { className: 'admin-start' }, [
+      tasks.length
+        ? el('section', { className: 'admin-start__tasks', attrs: { 'aria-labelledby': 'admin-tasks-title' } }, [
+          el('h2', { className: 'admin-start__title', attrs: { id: 'admin-tasks-title' }, text: 'Wat wil je doen?' }),
+          el('ul', { className: 'admin-tasks', attrs: { role: 'list' } }, tasks)
+        ])
+        : notice({ tone: 'warning', icon: 'lock', text: `Je hebt geen rol in ${name}. Kies links een andere discipline, of vraag een hoofdbeheerder om rechten.` }),
+      el('section', { className: 'admin-howto', attrs: { 'aria-labelledby': 'admin-howto-title' } }, [
+        el('h2', { className: 'admin-start__title', attrs: { id: 'admin-howto-title' }, text: 'Zo werkt Beheer' }),
+        el('ol', { className: 'admin-howto__list' }, howto.map(([lead, rest]) => el('li', {}, [el('strong', { text: lead }), rest])))
+      ])
+    ]));
+  }
+
   /* ---- Pagina ------------------------------------------------------------------------ */
   /**
-   * Welke onderdelen zie je? Inhoud en Gedeelde basis met een rol voor die omgeving; de rest
-   * (overzicht, disciplines, inzendingen, portfolio, reviews, nieuwsbrief, gebruik, Copilot-gebruik, beheerders)
-   * alleen als hoofdbeheerder.
+   * Welke onderdelen zie je? Iedereen Start; Inhoud en Gedeelde basis met een rol voor die omgeving;
+   * de rest alleen als hoofdbeheerder.
    */
   function visibleTabs() {
     if (ns.rights.isOwner()) return TABS;
-    return TABS.filter((t) => (t.id === 'inhoud' && ns.rights.canEditSomething(ns.cockpit.namespace(ns.cockpit.activeId())))
+    return TABS.filter((t) => t.id === 'start'
+      || (t.id === 'inhoud' && ns.rights.canEditSomething(ns.cockpit.namespace(ns.cockpit.activeId())))
       || (t.id === 'basis' && ns.rights.canEditSomething(ns.cockpit.GENERAL_NAMESPACE)));
   }
 
   /** params: [onderdeel, ...] uit het adres, bijv. ['inhoud', 'tip', 'facilitator']. */
   function render(params) {
-    const allowedTabs = ns.central.signedIn() ? visibleTabs() : TABS;
-    const tab = allowedTabs.some((t) => t.id === params[0]) ? params[0] : (allowedTabs[0] || TABS[0]).id;
-    const content = el('div', { className: 'admin' });
-    // Rechtsboven, naast de titel: wie er is ingelogd en Uitloggen (leeg zolang je niet bent ingelogd)
-    const session = el('div', { className: 'admin__session' });
-    const node = el('div', { className: 'page container' }, [
-      el('div', { className: 'admin__top' }, [
-        pageHeader({ eyebrow: 'Beheer', title: 'Beheer van het platform', lead: 'Voor het AI-team: de inhoud per discipline en de gedeelde basis aanpassen, disciplines openzetten of op slot houden, inzendingen uit de ideeënhub beantwoorden en zien wat er gebruikt wordt.' }),
-        session
-      ]),
-      content
-    ]);
-    let canLeave = null;
-
-    if (!ns.central.isEnabled()) {
-      content.append(notice({ title: 'Geen centrale opslag ingesteld', text: 'Vul centralUrl en centralKey in in js/config.js en voer setup/supabase-audit.sql uit.' }));
-      return { node, title: 'Beheer' };
-    }
-    if (!ns.central.signedIn()) {
+    if (!ns.central.isEnabled() || !ns.central.signedIn()) {
+      const content = el('div', { className: 'admin admin--login' });
+      const node = el('div', { className: 'page container' }, [
+        pageHeader({ eyebrow: 'AI Cockpit', title: 'Beheer', lead: 'Voor het AI-team: inhoud aanpassen, inzendingen beantwoorden en zien wat er gebruikt wordt.' }),
+        content
+      ]);
+      if (!ns.central.isEnabled()) content.append(notice({ title: 'Geen centrale opslag ingesteld', text: 'Vul centralUrl en centralKey in in js/config.js en voer setup/supabase-audit.sql uit.' }));
       // Na inloggen: inhoud opnieuw ophalen (met concepten) en deze pagina opnieuw tonen
-      content.append(loginForm(() => ns.app.reloadContent()));
+      else content.append(loginForm(() => ns.app.reloadContent()));
       return { node, title: 'Beheer' };
     }
+
+    const allowedTabs = visibleTabs();
+    const tab = allowedTabs.some((t) => t.id === params[0]) ? params[0] : 'start';
+    const def = TABS.find((t) => t.id === tab);
+    const disciplineName = ns.cockpit.active().name;
+    let canLeave = null;
 
     const panel = el('div', { className: 'admin__panel' });
     panel.addEventListener('signedout', () => ns.app.reloadContent());
-    const disciplineName = ns.cockpit.active().name;
-    const tabs = el('nav', { className: 'toggles', attrs: { 'aria-label': 'Onderdeel van beheer' } }, allowedTabs.map((t) =>
-      el('a', { className: 'toggle', attrs: { href: '#/beheer/' + t.id, 'aria-current': t.id === tab ? 'page' : null } }, [
-        icon(t.icon),
-        el('span', { text: t.id === 'inhoud' ? 'Inhoud ' + disciplineName : t.label })
-      ])
-    ));
-    const reminder = tab === 'nieuwsbrief' ? null : ns.adminNewsletter.reminder();
-    session.append(
-      el('p', { className: 'admin__user' }, [icon('lock'), el('span', { text: 'Ingelogd als ' + ns.central.signedIn() })]),
+    // Onderaan de zijbalk: wie er is ingelogd, en Uitloggen
+    const session = el('div', { className: 'admin-nav__session' }, [
+      el('p', { className: 'admin-nav__user' }, [icon('lock'), el('span', { text: ns.central.signedIn() })]),
       el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: async () => {
         if (canLeave && !canLeave() && !(await ns.ui.confirmDialog('Je hebt wijzigingen die nog niet zijn opgeslagen.', { title: 'Toch uitloggen?', confirmLabel: 'Uitloggen zonder opslaan', cancelLabel: 'Blijven', danger: true }))) return;
         // Eerst je werk wegzetten (onder je eigen naam) en je afmelden bij wat je open had
@@ -639,16 +744,23 @@
         window.location.hash = '#/beheer';
         ns.app.reloadContent();
       } } }, [icon('logout'), el('span', { text: 'Uitloggen' })])
-    );
-    content.append(
-      ...(reminder ? [reminder] : []),
-      ...(TABS.find((t) => t.id === tab).perDiscipline ? [disciplineChooser(tab)] : []),
-      el('div', { className: 'admin__bar' }, [tabs]),
-      panel
-    );
-    if (!allowedTabs.length) {
-      panel.append(notice({ tone: 'warning', icon: 'lock', text: `Je hebt geen rol in ${disciplineName}. Kies een andere discipline of vraag een hoofdbeheerder om rechten.` }));
-    } else if (tab === 'gebruik') usageTab(panel);
+    ]);
+    // Bovenaan het onderdeel: voor welke discipline (of alle), de titel en één zin uitleg
+    const scope = def.perDiscipline
+      ? [icon('layers'), el('span', { text: disciplineName })]
+      : [icon(tab === 'start' ? 'lock' : 'globe'), el('span', { text: tab === 'start' ? 'Beheer' : 'Alle disciplines' })];
+    const head = el('header', { className: 'admin-head' }, [
+      el('p', { className: 'admin-head__scope' }, scope),
+      el('h1', { className: 'admin-head__title', text: tab === 'inhoud' ? `Inhoud ${disciplineName}` : def.label }),
+      el('p', { className: 'admin-head__lead', text: def.lead(disciplineName) })
+    ]);
+    const node = el('div', { className: 'page container admin-shell' }, [
+      sidebar(tab, allowedTabs, session),
+      el('div', { className: 'admin-main' }, [head, panel])
+    ]);
+
+    if (tab === 'start') startTab(panel, allowedTabs);
+    else if (tab === 'gebruik') usageTab(panel);
     else if (tab === 'overzicht') panel.append(ns.adminOverview.render().node);
     else if (tab === 'portfolio') panel.append(ns.adminPortfolio.render().node);
     else if (tab === 'copilot') panel.append(ns.adminCopilot.render().node);

@@ -1296,13 +1296,13 @@
   }
 
   function backupTools() {
-    const exportButton = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('download'), el('span', { text: 'Exporteer alles (JSON)' })]);
+    const exportButton = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('download'), el('span', { text: 'Exporteer alles (JSON)' })]);
     exportButton.addEventListener('click', () => {
       const rows = allRows().map(({ type, id, data, position, status, updated_at: updatedAt }) => ({ type, id, data, position, status, updated_at: updatedAt }));
       kit.download(`ai-cockpit-${scope.id}-inhoud-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ exported_at: new Date().toISOString(), namespace: scope.namespace, rows }, null, 2));
     });
     const fileInput = el('input', { className: 'sr-only', attrs: { type: 'file', accept: 'application/json,.json', tabindex: '-1' } });
-    const importButton = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Importeer back-up' })]);
+    const importButton = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Importeer back-up' })]);
     importButton.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files && fileInput.files[0];
@@ -1320,7 +1320,7 @@
         kit.failed('Importeren', error);
       }
     });
-    return el('div', { className: 'cms-backup' }, [exportButton, importButton, fileInput]);
+    return el('div', { className: 'cms-backup' }, [el('span', { className: 'cms-backup__label', text: `Back-up van ${scope.name}:` }), exportButton, importButton, fileInput]);
   }
 
   /* ---- Pagina ------------------------------------------------------------------------- */
@@ -1359,18 +1359,12 @@
         count != null && seeded ? el('span', { className: 'toggle__count', text: String(count) }) : null
       ]);
     }));
-    const intro = el('p', { className: 'cms__scope' }, [
-      icon(scope.kind === 'basis' ? 'globe' : 'pencil-line'),
-      el('span', { text: scope.kind === 'basis'
-        ? 'Gedeelde basis: wat je hier aanpast, staat in de cockpit van iedere discipline.'
-        : `Inhoud van ${scope.name}: alleen in deze cockpit. Wat voor iedereen is, pas je aan bij Gedeelde basis.` })
-    ]);
-
+    // Voor welke omgeving dit is, staat al bovenaan de pagina (js/view-admin.js)
     if (!seeded) {
-      if (!owner) return { node: el('div', { className: 'cms' }, [intro, el('p', { className: 'section__lead', text: 'Deze omgeving is nog niet ingericht. Dat doet een hoofdbeheerder.' })]), canLeave: null };
+      if (!owner) return { node: el('div', { className: 'cms' }, [el('p', { className: 'section__lead', text: 'Deze omgeving is nog niet ingericht. Dat doet een hoofdbeheerder.' })]), canLeave: null };
       const status = state && state.status;
       const panel = status === 'missing' || scope.files ? seedPanel(status) : scope.kind === 'basis' ? basisPanel() : newDisciplinePanel();
-      return { node: el('div', { className: 'cms' }, [intro, panel]), canLeave: null };
+      return { node: el('div', { className: 'cms' }, [panel]), canLeave: null };
     }
 
     let body;
@@ -1385,10 +1379,11 @@
     }
     return {
       node: el('div', { className: 'cms' }, [
-        intro,
         ...(editing || !scope.files || !owner ? [] : missingTypePanels()),
-        el('div', { className: 'cms__bar' }, [tabs, owner ? backupTools() : null]),
-        body
+        el('div', { className: 'cms__bar' }, [tabs]),
+        body,
+        // Weinig nodig, dus onderaan: een back-up van deze omgeving
+        owner && !editing ? backupTools() : null
       ]),
       canLeave
     };

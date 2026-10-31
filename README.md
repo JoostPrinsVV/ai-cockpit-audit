@@ -102,11 +102,22 @@ De cockpit is er per discipline (Audit, Accountancy, Belastingadvies, Salarisadm
 In de database heeft iedere discipline een eigen naamruimte (`ai-audit`, `ai-accountancy`, …) en de basis `ai-algemeen`;
 inzendingen en tellers gaan naar de discipline waarin je zit. Daarvoor hoeft de SQL niet opnieuw te worden uitgevoerd.
 
+## Beheer: de indeling
+
+Links staat een zijbalk: bovenaan **Je beheert** (de discipline), daaronder de onderdelen per groep: *Start*; *Inhoud*
+(de discipline en de gedeelde basis); *Inbreng van collega's* (inzendingen, reviews, portfolio); *Cijfers* (overzicht,
+gebruik van de cockpit, Copilot-gebruik); *Communicatie* (nieuwsbrief); *Instellingen* (disciplines, beheerders).
+Bovenaan ieder onderdeel staat voor welke discipline het is, of *Alle disciplines*. **Start** (`#/beheer`) laat zien wat
+er te doen is (nieuwe inzendingen, toelichtingen die nog niet gepubliceerd zijn, de nieuwsbrief, de laatste import van
+het Copilot-gebruik) en legt in drie zinnen uit hoe Beheer werkt. Wie alleen een rol voor inhoud heeft, ziet alleen
+Start en die inhoud. De onderdelen staan in `TABS` in `js/view-admin.js`.
+
 ## Inhoud beheren (Beheer → Inhoud)
 
 Na het eenmalig instellen (zie 'Supabase instellen' hieronder) beheer je alle inhoud in de site zelf, zonder bestanden:
 
-1. Ga naar `#/beheer` (link 'Beheer' onderaan iedere pagina) en log in.
+1. Ga naar `#/beheer` (link 'Beheer' onderaan iedere pagina) en log in; kies links bij *Inhoud* de discipline of de
+   gedeelde basis.
 2. De eerste keer: klik op **Overzetten naar de database**. De inhoud uit de bestanden gaat dan naar Supabase; vanaf
    dat moment tonen alle collega's de inhoud uit de database.
 3. Kies een soort (Usecases, Prompts, Tips, Trainingen, Agents & tools, Fasen, Teksten) en klik op **Bewerken** of
@@ -456,7 +467,7 @@ dicht bij cijfers per persoon; houd daar rekening mee. Een echte export hoort no
 
 ## Overzicht (Beheer → Overzicht)
 
-De stand van zaken over alle disciplines op één scherm, voor hoofdbeheerders (en het eerste tabblad van Beheer):
+De stand van zaken over alle disciplines op één scherm, voor hoofdbeheerders (in de zijbalk onder *Cijfers*):
 kerncijfers (Copilot-adoptie, usecases met demo, prompts, hoe vaak er in 30 dagen iets is bekeken en gekopieerd, met
 het verschil met de 30 dagen ervoor, en de ideeën), het gebruik van de cockpit per week, een tabel per discipline, het
 Copilot-gebruik per discipline (laatste import), de ideeënhub en het portfolio, en de laatste trainingen. Met

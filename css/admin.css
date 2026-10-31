@@ -7,15 +7,83 @@
    css/audit.css; bezoekers laden dit niet. Kleuren en maten: css/variables.css.
    ========================================================================== */
 .admin { display: grid; gap: var(--space-5); }
-.admin__bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
-.admin__bar .toggle { text-decoration: none; }
-/* Titel links, rechtsboven wie er is ingelogd en Uitloggen; op een smal scherm daaronder */
-.admin__top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 0 var(--space-6); }
-.admin__top > .page-head { flex: 1 1 30rem; }
-.admin__session { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-5); }
-.admin__session:empty { display: none; }
-.admin__user { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .admin__panel { display: grid; gap: var(--space-4); }
+
+/* ---- Beheer: links de zijbalk (discipline en onderdelen), rechts het onderdeel ----------------- */
+.admin-shell { display: grid; grid-template-columns: 16rem minmax(0, 1fr); align-items: start; gap: var(--space-7); }
+.admin-nav {
+  position: sticky;
+  top: calc(var(--sticky-top, 0px) + var(--space-4));
+  display: grid;
+  gap: var(--space-5);
+  max-height: calc(100vh - var(--sticky-top, 0px) - var(--space-6));
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  scrollbar-width: thin;
+}
+.admin-nav__label { margin-bottom: var(--space-1); padding-inline: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
+.admin-nav__scope { padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+.admin-nav__disciplines, .admin-nav__list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.admin-nav__menu { display: grid; gap: var(--space-4); }
+.admin-nav__discipline,
+.admin-nav__item { display: flex; align-items: center; gap: var(--space-2); min-height: 2.35rem; padding: 0.25rem var(--space-2); border-radius: var(--radius-sm); color: var(--color-text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-decoration: none; transition: background-color var(--duration-fast) var(--ease-out); }
+.admin-nav__discipline:hover,
+.admin-nav__item:hover { background: var(--color-surface-muted); }
+/* De gekozen discipline: een gevuld rondje, zoals een keuzerondje */
+.admin-nav__dot { flex: none; width: 1rem; height: 1rem; border: 2px solid var(--color-border-strong); border-radius: 50%; }
+.admin-nav__discipline[aria-current='true'] { background: var(--color-surface-muted); }
+.admin-nav__discipline[aria-current='true'] .admin-nav__dot { border-color: var(--color-primary); background: radial-gradient(circle, var(--color-primary) 0 42%, transparent 47%); }
+.admin-nav__discipline .icon { width: 0.9rem; height: 0.9rem; margin-left: auto; color: var(--color-text-muted); }
+.admin-nav__note { margin-top: var(--space-2); padding-inline: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-xs); }
+.admin-nav__item .icon { flex: none; width: 1.05rem; height: 1.05rem; color: var(--color-text-muted); }
+.admin-nav__item[aria-current='page'] { background: var(--color-selected); color: var(--color-on-selected); }
+.admin-nav__item[aria-current='page'] .icon { color: inherit; }
+.admin-nav__session { display: grid; gap: var(--space-2); padding: var(--space-4) var(--space-2) 0; border-top: 1px solid var(--color-border); }
+.admin-nav__user { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.admin-nav__user .icon { flex: none; width: 0.9rem; height: 0.9rem; }
+.admin-nav__session .btn { justify-self: start; }
+@media (pointer: coarse) {
+  .admin-nav__discipline, .admin-nav__item { min-height: 2.75rem; }
+}
+
+.admin-main { display: grid; gap: var(--space-5); min-width: 0; }
+.admin-head { display: grid; gap: var(--space-2); padding-bottom: var(--space-5); border-bottom: 1px solid var(--color-border); }
+.admin-head__scope { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--accent-teal-ink); font-size: var(--fs-sm); font-weight: var(--fw-semibold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
+.admin-head__scope .icon { width: 1rem; height: 1rem; }
+.admin-head__title { font-size: clamp(1.75rem, 1.3rem + 1.3vw, 2.4rem); }
+.admin-head__lead { max-width: 70ch; color: var(--color-text-muted); }
+
+/* Start: tegels naar wat je wilt doen (met de stand van nu), en hoe Beheer werkt */
+.admin-start { display: grid; gap: var(--space-7); }
+.admin-start__title { margin-bottom: var(--space-3); font-size: var(--fs-lg); }
+.admin-tasks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.admin-tasks > li { display: flex; }
+.admin-task { display: flex; flex: 1; align-items: center; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); color: var(--color-text); text-decoration: none; box-shadow: var(--shadow-sm); transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out); }
+.admin-task:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-card-hover); }
+.admin-task__icon { display: grid; flex: none; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: var(--radius-sm); background: var(--color-surface-muted); color: var(--color-text); }
+.admin-task__icon .icon { width: 1.3rem; height: 1.3rem; }
+.admin-task__body { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.admin-task__title { font-weight: var(--fw-bold); }
+.admin-task__status { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.admin-task__status.is-due { color: var(--accent-crimson-ink); font-weight: var(--fw-semibold); }
+.admin-task__go { flex: none; width: 1.1rem; height: 1.1rem; color: var(--color-text-muted); transition: transform var(--duration-fast) var(--ease-out); }
+.admin-task:hover .admin-task__go { transform: translateX(3px); }
+.admin-howto { padding: var(--space-5); border-radius: var(--radius); background: var(--color-surface-sunken); }
+.admin-howto__list { display: grid; gap: var(--space-2); max-width: 75ch; padding-left: 1.3rem; color: var(--color-text-body); }
+.admin-howto__list strong { color: var(--color-text); }
+
+/* Op een smaller scherm: de zijbalk boven het onderdeel, de keuzes naast elkaar */
+@media (max-width: 1020px) {
+  .admin-shell { grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+  .admin-nav { position: static; max-height: none; overflow: visible; padding: var(--space-3); }
+  .admin-nav__disciplines, .admin-nav__list { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+  .admin-nav__menu { grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: var(--space-3); }
+  .admin-nav__session { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+}
 
 .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: var(--space-3); }
 .kpi { display: grid; gap: var(--space-1); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
@@ -40,6 +108,8 @@
 .admin-item__summary::-webkit-details-marker { display: none; }
 .admin-item__date { color: var(--color-text-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; min-width: 6.5rem; }
 .admin-item__title { flex: 1 1 14rem; color: var(--color-text); font-weight: var(--fw-semibold); }
+/* Het pijltje altijd rechts, ook als de labels naar een tweede regel gaan */
+.admin-item__summary > .admin-item__chevron { margin-left: auto; }
 .admin-item__chevron { color: var(--color-text-muted); transition: transform var(--duration) var(--ease-out); }
 .admin-item[open] .admin-item__chevron { transform: rotate(180deg); }
 .admin-item__body { display: grid; gap: var(--space-4); padding: var(--space-4); border-top: 1px solid var(--color-border); }
@@ -396,12 +466,6 @@
   .nl-print .nl-doc * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
-/* Beheer: van discipline wisselen, en waarin je werkt */
-.admin__scope { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
-.admin__scope-label { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-eyebrow); text-transform: uppercase; }
-.admin__scope .toggle { text-decoration: none; }
-.cms__scope { display: flex; align-items: flex-start; gap: var(--space-2); margin-bottom: var(--space-4); color: var(--color-text-muted); font-size: var(--fs-sm); }
-.cms__scope .icon { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.15em; color: var(--accent-steel-ink); }
 .seed__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .basis-setup > div { display: grid; gap: var(--space-3); }
 .basis-setup__groups { display: grid; gap: var(--space-3); }
@@ -436,8 +500,15 @@
 
 /* ---- Beheer → Inhoud ---- */
 .cms { display: grid; gap: var(--space-5); }
-.cms__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
-.cms-tabs .toggle { text-decoration: none; }
+/* De soorten inhoud als tabs met een streep eronder: een niveau lager dan de zijbalk */
+.cms__bar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--color-border); }
+.cms-tabs { gap: 0; }
+.cms-tabs .toggle { min-height: 2.75rem; margin-bottom: -1px; padding: 0.4rem 0.85rem; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; color: var(--color-text-muted); font-size: var(--fs-sm); text-decoration: none; }
+.cms-tabs .toggle:hover:not(:disabled) { border-bottom-color: var(--color-border-strong); color: var(--color-text); }
+.cms-tabs .toggle[aria-current='page'] { border-bottom-color: var(--color-primary); background: none; color: var(--color-text); }
+.cms-tabs .toggle[aria-current='page'] .toggle__count { background: var(--color-surface-muted); color: var(--color-text-muted); }
+.cms > .cms-backup { align-items: center; padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.cms-backup__label { color: var(--color-text-muted); font-size: var(--fs-sm); }
 .cms-backup { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .cms-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
 .cms-toolbar__search { flex: 1 1 16rem; }
@@ -508,7 +579,6 @@
 .seed > .icon { color: var(--accent-steel-ink); }
 
 @media (max-width: 720px) {
-  .admin__session { justify-content: flex-start; margin-top: calc(-1 * var(--space-3)); }
   .admin-item__date { min-width: 0; }
   .form-grid { grid-template-columns: minmax(0, 1fr); }
   /* Geneste groepen: minder inspringing, zodat de velden breed genoeg blijven */
@@ -543,7 +613,7 @@
 .copilot__sheets .copilot__note { display: block; }
 .copilot__head { display: grid; gap: var(--space-1); }
 .copilot__meta { color: var(--color-text-muted); font-size: var(--fs-sm); }
-.copilot__kpis { grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); }
+.copilot__kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
 
 .kpi__delta { display: inline-flex; align-items: center; gap: var(--space-1); margin-top: var(--space-1); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
 .kpi__delta .icon { flex: none; width: 0.9rem; height: 0.9rem; }
@@ -704,7 +774,7 @@
 .overview__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-3); }
 .overview__stamp { color: var(--color-text-muted); font-size: var(--fs-sm); }
 .overview__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-.overview__kpis { grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); }
+.overview__kpis { grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
 .kpis .kpi { align-content: start; }
 .kpi__note { color: var(--color-text-muted); font-size: var(--fs-xs); }
 .overview__quadrants { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; margin-top: var(--space-3); border-radius: var(--radius-sm); overflow: hidden; }
