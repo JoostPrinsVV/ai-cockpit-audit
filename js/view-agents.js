@@ -84,7 +84,7 @@
         agent.summary ? el('p', { className: 'uc-card__subtitle', text: agent.summary }) : null
       ]),
       el('div', { className: 'uc-card__footer' }, [
-        el('div', { className: 'uc-card__meta' }, [statusBadge(agent)]),
+        el('div', { className: 'uc-card__meta' }, [statusBadge(agent), agent.stopped ? null : ns.check.levelChip(agent)]),
         el('span', { className: 'uc-card__go', attrs: { 'aria-hidden': 'true' } }, [icon('arrow-right')])
       ])
     ]);
@@ -267,7 +267,8 @@
             el('h2', { className: 'why__title', attrs: { id: 'ag-access' } }, [icon('key'), el('span', { text: 'Zo krijg je toegang' })]),
             ...paragraphs(agent.access)
           ]) : null,
-          warningList('ag-notfor', 'Niet gebruiken voor', agent.notFor)
+          // Wat mag erin, wel en niet geschikt voor, het AI-beleid en 'Mag dit?' (js/check.js)
+          agent.stopped ? warningList('ag-notfor', 'Niet gebruiken voor', agent.notFor) : ns.check.agentBlock(agent)
         ]),
         aside
       ])

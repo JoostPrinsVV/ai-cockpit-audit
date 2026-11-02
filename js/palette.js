@@ -32,6 +32,8 @@
       { label: 'Mijn gegevens', meta: 'Naam, functie en boekjaar in iedere prompt', icon: 'user', href: '#/mijn', words: 'profiel naam functie boekjaar persoonlijk', quick: true },
       weekly ? { label: 'Tip van de week: ' + weekly.title, meta: 'Tip', icon: 'gift', href: ns.kinds.href('tip', weekly.id), words: 'tip week vrijdag', quick: true } : null,
       { label: 'Stel een vraag aan het AI-team', meta: 'Ideeënhub', icon: 'question', href: '#/ideeen/vraag', words: 'vraag hulp help ideeenhub', quick: true },
+      { label: 'Mag dit? Check het in drie vragen', meta: 'AI-beleid', icon: 'shield', run: () => ns.check.open(), words: 'mag dit toegestaan beleid privacy klantgegevens persoonsgegevens bsn veilig tool' },
+      ns.check.policyUrl() ? { label: 'Het AI-beleid van V&V', meta: 'Opent het Serviceplein', icon: 'book', run: () => window.open(ns.check.policyUrl(), '_blank', 'noopener,noreferrer'), words: 'beleid ai-beleid regels richtlijn informatiebeveiliging' } : null,
       { label: 'Deel een idee', meta: 'Ideeënhub', icon: 'bulb', href: '#/ideeen/idee', words: 'idee ideeenhub voorstel' },
       { label: 'Deel een prompt', meta: 'Ideeënhub', icon: 'chat', href: '#/ideeen/prompt', words: 'prompt delen ideeenhub' },
       { label: 'Wissel tussen licht en donker', meta: 'Thema', icon: 'moon', run: () => document.getElementById('theme-button').click(), words: 'thema donker licht dark mode' },

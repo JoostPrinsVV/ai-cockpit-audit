@@ -233,6 +233,8 @@
         { key: 'access', label: 'Zo krijg je toegang', type: 'textarea', hint: 'Waar vind je het en wie regelt de toegang of licentie?' },
         { key: 'link', label: 'Link om te openen', type: 'url', hint: 'Begint met https://. Opent in een nieuw tabblad.' },
         { key: 'owner', label: 'Aanspreekpunt', type: 'text', hint: 'Liever een afdeling of functie dan een naam, bijv. ICT of het AI-team.' },
+        { key: 'dataLevel', label: 'Gegevens in deze tool', type: 'select', options: () => ns.content.DATA_LEVELS.map((value) => ({ value, label: ns.check.LEVELS[value].label })), hint: 'Wat erin mag. Staat als label op de kaart, bij "Wat mag erin?" op de pagina en bepaalt het antwoord bij "Mag dit?". Leeg = nog niet vastgesteld.' },
+        { key: 'useFor', label: 'Wel geschikt voor', type: 'list', hint: 'Eén punt per regel. Op de pagina en in "Mag dit?".' },
         { key: 'notFor', label: 'Niet gebruiken voor', type: 'list', hint: 'Eén punt per regel' },
         { key: 'phases', label: 'Fasen', type: 'refs', ref: 'phase', hint: 'Bij welke fasen hij staat op de pagina Agents & tools. In (bijna) alle fasen: één keer, bij "In elke fase". Namen en volgorde van de fasen: Fasen.' },
         { key: 'usecases', label: 'Usecases hierbij', type: 'refs', ref: 'usecase' },
@@ -261,6 +263,7 @@
         { key: 'tagline', label: 'Slogan onder de titel', type: 'text', placeholder: 'Jij bepaalt de koers, Copilot navigeert mee.' },
         { key: 'applicationSubtitle', label: 'Uitleg onder de slogan op de startpagina', type: 'textarea' },
         { key: 'rules', label: 'Gouden regels (onderaan iedere pagina)', type: 'list', hint: 'Eén regel per regel' },
+        { key: 'policyUrl', label: 'Link naar het AI-beleid', type: 'url', hint: 'Onderaan iedere pagina, bij "Mag dit?" en bij iedere agent. Begint met https://; opent in een nieuw tabblad. Leeg = de link uit js/config.js.' },
         { key: '_route', label: 'Route van een idee (Ideeënhub)', type: 'heading', hint: 'Leeg = de route uit de gedeelde basis, of anders de standaardroute uit data/disciplines.js. Eigen stappen vervangen alle standaardstappen (zo ook bij de rollen): neem de standaard over en pas hem aan. De site is openbaar: noem rollen en teams, geen namen.' },
         { key: 'routeIntro', label: 'Inleiding boven de route', type: 'textarea' },
         { key: 'route', label: 'Stappen', type: 'group', itemLabel: 'Stap', defaults: routeDefaults('steps'), fields: [

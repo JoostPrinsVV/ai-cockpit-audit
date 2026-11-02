@@ -264,6 +264,27 @@
       }
     });
 
+    /* ---- mag dit? ---- */
+    describe('Mag dit? (js/check.js)');
+    await test('een andere of gratis tool: nee; BSN of bijzondere gegevens: altijd nee', () => {
+      const copilot = { title: 'Copilot Chat', status: 'Beschikbaar', dataLevel: 'vertrouwelijk', useFor: [], notFor: [] };
+      equal(ns.check.verdict(ns.check.OTHER, 'geen').tone, 'nee', 'andere tool');
+      equal(ns.check.verdict(copilot, 'bijzonder').tone, 'nee', 'BSN');
+    });
+    await test('per tool wat erin mag: klantgegevens, persoonsgegevens (mits), niet vastgesteld', () => {
+      const tool = (dataLevel, status) => ({ title: 'Tool', status: status || 'Beschikbaar', dataLevel, useFor: [], notFor: [] });
+      equal(['geen', 'klant', 'persoon'].map((data) => ns.check.verdict(tool('vertrouwelijk'), data).tone), ['ja', 'ja', 'mits'], 'vertrouwelijk');
+      equal(['geen', 'klant', 'persoon'].map((data) => ns.check.verdict(tool('klant'), data).tone), ['ja', 'ja', 'nee'], 'klant');
+      equal(['geen', 'klant'].map((data) => ns.check.verdict(tool('algemeen'), data).tone), ['ja', 'nee'], 'algemeen');
+      equal(['geen', 'klant'].map((data) => ns.check.verdict(tool(''), data).tone), ['ja', 'onbekend'], 'niet vastgesteld');
+      equal([ns.check.verdict(tool('vertrouwelijk', 'Pilot'), 'geen').tone, ns.check.verdict(tool('vertrouwelijk', 'In ontwikkeling'), 'geen').tone], ['mits', 'nee'], 'status');
+    });
+    await test('naar de klant: de uitkomst nalezen, het oordeel blijft van jou (niet bij nee)', () => {
+      const copilot = { title: 'Copilot Chat', status: 'Beschikbaar', dataLevel: 'vertrouwelijk', useFor: [], notFor: [] };
+      ok(ns.check.verdict(copilot, 'klant', 'klant').reasons.some((line) => /oordeel/.test(line)), 'advies');
+      ok(!ns.check.verdict(ns.check.OTHER, 'klant', 'klant').reasons.some((line) => /oordeel/.test(line)), 'niet bij nee');
+    });
+
     /* ---- promptbouwer ---- */
     describe('Promptbouwer (js/view-builder.js)');
     await test('opbouw: rol, doel, context, bron en verwachting, lege stappen vallen weg', () => {

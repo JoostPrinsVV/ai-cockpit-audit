@@ -33,6 +33,7 @@ js/profile.js         Mijn gegevens: naam, functie, boekjaar … die de cockpit 
 js/compass.js         Seizoenskompas op de startpagina (seizoenen uit Beheer of data/seizoenen.js)
 js/radar.js           Radar: wat nieuw is sinds je vorige bezoek, op de kompasroos en onder het zoekvak
 js/palette.js         Zoekvenster: Ctrl+K, / of de zoekknop, met acties en prompt meteen kopiëren
+js/check.js           Het AI-beleid (link) en 'Mag dit?': de check in drie vragen, en 'Wat mag erin?' per agent
 js/improve.js         'Stel een verbetering voor' onder een prompt (stap 11); js/admin-improve.js beoordeelt het in Beheer
 css/motion.css        Beweging in CSS: overgangen, uitklappers, panelen, scrolleffecten (uit bij 'minder beweging')
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
@@ -443,6 +444,25 @@ openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromp
   beginnen, 'Over mij invoegen' uit Mijn gegevens, een waarschuwing bij iets dat op een BSN of IBAN lijkt, en
   *Deel in de ideeënhub* (de prompt staat dan al in het formulier). Wat je typt wordt niet bewaard.
 - **Een kopie op je eigen computer** (localhost of een bestand) telt niet mee in de anonieme tellers.
+
+## AI-beleid en 'Mag dit?'
+
+Geen eigen pagina: het beleid staat waar je de vraag hebt.
+
+- **Het AI-beleid van V&V**: een link onder de gouden regels onderaan iedere pagina, bij iedere agent en in de check.
+  Het adres staat in `policyUrl` (`js/config.js`, nu het Serviceplein) en is te overschrijven in Beheer → Gedeelde
+  basis → Teksten. Het beleid zelf staat niet op de site.
+- **Mag dit?** (de knop onder de gouden regels, Ctrl+K "mag dit", de knop bij een agent en de BSN-waarschuwing in de
+  promptbouwer): een venster met drie vragen. Welke tool (de agents & tools die niet gestopt zijn, of een andere of
+  gratis AI-tool), welke gegevens (geen, klantgegevens zonder persoonsgegevens, persoonsgegevens, BSN of bijzondere
+  gegevens) en waar de uitkomst terechtkomt. Het antwoord (groen ja, oranje ja mits of nog niet vastgesteld, rood nee)
+  volgt uit de gouden regels en uit wat per tool is vastgelegd: een andere of gratis tool is altijd nee, BSN en
+  bijzondere gegevens altijd nee, een tool in ontwikkeling nee, een pilot 'mits', en klant- en persoonsgegevens volgens
+  *Gegevens in deze tool*. Naar de klant of in het dossier: met de herinnering om na te lezen en vast te leggen.
+- **Per agent** (Beheer → Agents & tools): *Gegevens in deze tool* (alleen algemene informatie; klantgegevens zonder
+  persoonsgegevens; of ook persoonsgegevens, binnen V&V), *Wel geschikt voor* en *Niet gebruiken voor*. Het niveau
+  staat als label op de kaart; op de pagina staat het blok *Wat mag erin?* met de knop *Mag dit? Check het*. Zolang het
+  niveau leeg is, zegt de check bij klant- of persoonsgegevens *Nog niet vastgesteld*.
 
 ## Verbetervoorstellen bij prompts (stap 11)
 

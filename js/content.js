@@ -481,6 +481,8 @@
   /* ---- Agents & tools ------------------------------------------------------------------ */
   const AGENT_KINDS = ['Microsoft-standaard', 'Eigen agent', 'Extern product'];
   const AGENT_STATUSES = ['Beschikbaar', 'Pilot', 'In ontwikkeling', 'Gestopt'];
+  // Welke gegevens erin mogen (vastgesteld door het AI-team; uitleg en de check 'Mag dit?' in js/check.js)
+  const DATA_LEVELS = ['algemeen', 'klant', 'vertrouwelijk'];
   const KIND_ACCENTS = { 'Microsoft-standaard': 'steel', 'Eigen agent': 'deepteal', 'Extern product': 'rose' };
 
   function loadAgents(raw) {
@@ -524,6 +526,8 @@
         access: text(item.access),
         link: HTTPS_URL.test(link) ? link : '',
         owner: text(item.owner),
+        dataLevel: DATA_LEVELS.includes(text(item.dataLevel)) ? text(item.dataLevel) : '',
+        useFor: list(item.useFor),
         notFor: list(item.notFor),
         usecases: list(item.usecases),
         trainings: list(item.trainings),
@@ -600,7 +604,7 @@
       ].join(' '));
     });
     state.agents.forEach((agent) => {
-      agent.haystack = normalize([agent.title, agent.summary, agent.description, agent.kind, agent.status, agent.access, agent.owner, agent.notFor.join(' '), agent.phases.map((p) => p.label).join(' ')].join(' '));
+      agent.haystack = normalize([agent.title, agent.summary, agent.description, agent.kind, agent.status, agent.access, agent.owner, agent.useFor.join(' '), agent.notFor.join(' '), agent.phases.map((p) => p.label).join(' ')].join(' '));
     });
   }
 
@@ -642,7 +646,7 @@
   // Teksten die je in Beheer kunt aanpassen (de rest van de instellingen blijft in js/config.js;
   // de naam van de discipline komt uit Beheer → Disciplines; de standaardroute van een idee uit data/disciplines.js;
   // de standaardseizoenen van het seizoenskompas uit data/seizoenen.js)
-  const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules', 'routeIntro', 'route', 'routeRoles', 'routeLink', 'seasons'];
+  const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules', 'policyUrl', 'routeIntro', 'route', 'routeRoles', 'routeLink', 'seasons'];
   // Bij het samenvoegen: eigen fasen, usecases en prompts vóór die van de basis; tips, trainingen en agents erna
   const OWN_FIRST = { phase: true, usecase: true, prompt: true };
   const filesId = () => (ns.cockpit ? ns.cockpit.FILES_ID : 'audit');
@@ -800,7 +804,7 @@
     return state;
   }
 
-  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES,
+  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES, DATA_LEVELS,
     // Dezelfde controles in Beheer (js/admin-content.js)
     patterns: { ID_PATTERN, LOCAL_PATH, HTTPS_URL, LEGACY_ASSETS } });
 })(window.AIAudit);

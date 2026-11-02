@@ -43,6 +43,10 @@ window.AIAudit.config = {
     'Deel niet meer dan nodig: geen BSN, privégegevens of stukken die niet bij de opdracht horen.'
   ],
 
+  /* ---- AI-beleid (onderaan iedere pagina en bij 'Mag dit?') -------------- */
+  // Te overschrijven in Beheer → Gedeelde basis → Teksten. Alleen https://; opent in een nieuw tabblad.
+  policyUrl: 'https://serviceplein.visser-visser.nl/knowledgebase/onderwerpen/informatiebeveiliging/algemeen-beleid/ai-beleid',
+
   /* ---- Ideeënhub -------------------------------------------------------- */
   enableIdeas: true,                    // Formulier en overzicht in de ideeënhub
   ideaMaxLength: 2000,                  // Maximaal aantal tekens voor de toelichting

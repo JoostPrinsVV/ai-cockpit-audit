@@ -136,7 +136,9 @@
     const meterLabel = el('span', { className: 'meter__label' });
     const meter = gauge();
     const checklist = el('ul', { className: 'builder__checks', attrs: { role: 'list' } });
-    const warning = el('div', { className: 'builder__warning', attrs: { role: 'alert', hidden: true } }, [icon('alert'), el('span', { text: 'Dit lijkt op een BSN of rekeningnummer. Deel niet meer dan nodig: haal persoons- en klantgegevens weg of gebruik een [PLAATSHOUDER].' })]);
+    const checkButton = el('button', { className: 'builder__check-link', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [el('span', { text: 'Mag dit? Check het' })]);
+    checkButton.addEventListener('click', () => ns.check.open());
+    const warning = el('div', { className: 'builder__warning', attrs: { role: 'alert', hidden: true } }, [icon('alert'), el('span', {}, ['Dit lijkt op een BSN of rekeningnummer. Deel niet meer dan nodig: haal persoons- en klantgegevens weg of gebruik een [PLAATSHOUDER]. ', checkButton])]);
     const announcer = el('p', { className: 'sr-only', attrs: { 'aria-live': 'polite' } });
     let lastLevel = '';
 

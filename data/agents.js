@@ -31,6 +31,10 @@
      access       Hoe krijg je toegang? Waar vind je het, wie regelt het?
      link         Waar je het opent. Begint met https://; opent in een nieuw tabblad.
      owner        Aanspreekpunt: liever een afdeling of functie dan een naam.
+     dataLevel    Welke gegevens erin mogen: 'algemeen' (geen klant- of persoonsgegevens), 'klant'
+                  (klantgegevens zonder persoonsgegevens) of 'vertrouwelijk' (ook persoonsgegevens,
+                  binnen V&V). Leeg = nog niet vastgesteld. Bepaalt het antwoord bij 'Mag dit?'.
+     useFor       Waarvoor is het wel geschikt (lijst).
      notFor       Waarvoor gebruik je het níet (lijst).
      usecases     Optioneel: id's uit data/usecases.js.
      trainings    Optioneel: id's uit data/trainings.js.
