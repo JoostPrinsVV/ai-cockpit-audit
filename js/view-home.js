@@ -236,6 +236,8 @@
     const compass = ns.compass.section(config, itemRow);
     const radar = ns.radar.fresh();
     const node = el('div', { className: 'home' }, [hero(config, radar), tiles(), compass, mine, featuredUsecases(), colleagues(), featuredTips(), recent(radar), ideasCta()]);
+    // Eerste bezoek: de rondleiding (js/tour.js), even na het opstarten van de instrumenten
+    ns.tour.maybeStart();
     return { node, title: '', destroy: stopSaved };
   }
 

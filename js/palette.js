@@ -36,6 +36,7 @@
       ns.check.policyUrl() ? { label: 'Het AI-beleid van V&V', meta: 'Opent het Serviceplein', icon: 'book', run: () => window.open(ns.check.policyUrl(), '_blank', 'noopener,noreferrer'), words: 'beleid ai-beleid regels richtlijn informatiebeveiliging' } : null,
       { label: 'Deel een idee', meta: 'Ideeënhub', icon: 'bulb', href: '#/ideeen/idee', words: 'idee ideeenhub voorstel' },
       { label: 'Deel een prompt', meta: 'Ideeënhub', icon: 'chat', href: '#/ideeen/prompt', words: 'prompt delen ideeenhub' },
+      { label: 'Rondleiding door de cockpit', meta: 'In een minuut waar alles staat', icon: 'plane', run: () => ns.tour.restart(), words: 'rondleiding uitleg tour help hulp begin wegwijs' },
       { label: 'Wissel tussen licht en donker', meta: 'Thema', icon: 'moon', run: () => document.getElementById('theme-button').click(), words: 'thema donker licht dark mode' },
       { label: 'Startpagina', meta: 'Pagina', icon: 'plane', href: '#/', words: 'home start begin' },
       ...ns.kinds.pages.map((kind) => ({ label: kind.title, meta: 'Pagina', icon: kind.icon, href: '#/' + kind.list, words: kind.many + ' overzicht' })),

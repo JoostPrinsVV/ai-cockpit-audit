@@ -34,6 +34,7 @@ js/compass.js         Seizoenskompas op de startpagina (seizoenen uit Beheer of 
 js/radar.js           Radar: wat nieuw is sinds je vorige bezoek, op de kompasroos en onder het zoekvak
 js/palette.js         Zoekvenster: Ctrl+K, / of de zoekknop, met acties en prompt meteen kopiëren
 js/check.js           Het AI-beleid (link) en 'Mag dit?': de check in drie vragen, en 'Wat mag erin?' per agent
+js/tour.js            Rondleiding bij het eerste bezoek (opnieuw via de voet en Ctrl+K)
 js/improve.js         'Stel een verbetering voor' onder een prompt (stap 11); js/admin-improve.js beoordeelt het in Beheer
 css/motion.css        Beweging in CSS: overgangen, uitklappers, panelen, scrolleffecten (uit bij 'minder beweging')
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
@@ -444,6 +445,14 @@ openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromp
   beginnen, 'Over mij invoegen' uit Mijn gegevens, een waarschuwing bij iets dat op een BSN of IBAN lijkt, en
   *Deel in de ideeënhub* (de prompt staat dan al in het formulier). Wat je typt wordt niet bewaard.
 - **Een kopie op je eigen computer** (localhost of een bestand) telt niet mee in de anonieme tellers.
+- **Rondleiding** (`js/tour.js`): wie de cockpit voor het eerst opent, krijgt op de startpagina (even na het opstarten,
+  na het slot met pincode) een korte rondleiding: welkom, zoeken (Ctrl+K), het menu, de radar, het seizoenskompas,
+  Mijn gegevens en veilig werken, en een slot met de weg naar de prompts en de promptbouwer. Een lichtbundel schuift
+  vloeiend van onderdeel naar onderdeel; vorige en volgende met de knoppen of de pijltjes, Esc of het kruisje stopt.
+  Een onderdeel dat er niet is (de kompasroos op een smal scherm), slaat hij over. Daarna nooit meer vanzelf
+  (`ai-snackbar-audit:rondleiding`); opnieuw via *Rondleiding* onderaan iedere pagina, Ctrl+K of `?rondleiding` in het
+  adres. Een ingelogde beheerder krijgt hem niet vanzelf. Iedereen opnieuw laten zien (bijv. na een grote
+  vernieuwing): verhoog `VERSION` in `js/tour.js`.
 
 ## AI-beleid en 'Mag dit?'
 

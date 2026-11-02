@@ -599,8 +599,9 @@
     document.getElementById('rules-heading').textContent = rules.length <= 10
       ? `${ns.ui.countWord(rules.length)} gouden ${rules.length === 1 ? 'regel' : 'regels'}`
       : 'Gouden regels';
-    // Daaronder: het AI-beleid en 'Mag dit?' (js/check.js)
+    // Daaronder: het AI-beleid en 'Mag dit?' (js/check.js); bij de links de rondleiding (js/tour.js)
     document.getElementById('footer-policy').replaceChildren(...ns.check.footerLinks());
+    document.getElementById('footer-tour').replaceChildren(ns.tour.footerLink());
     document.getElementById('rules-section').hidden = !rules.length && !ns.check.policyUrl();
     document.getElementById('footer-updated').textContent = config.lastUpdated ? 'Laatst bijgewerkt: ' + config.lastUpdated : '';
     document.getElementById('footer-org').textContent = `${config.organizationName} · Alle demo's werken met fictieve gegevens. Copilot ondersteunt; het professionele oordeel blijft bij jou.`;

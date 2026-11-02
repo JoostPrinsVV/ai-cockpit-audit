@@ -82,6 +82,8 @@
     inertNodes.forEach((node) => { node.inert = false; });
     inertNodes = [];
     delete root.dataset.slot;
+    // Voor wie erop wacht (de rondleiding bij het eerste bezoek, js/tour.js)
+    document.dispatchEvent(new CustomEvent('ai:ontgrendeld'));
   }
 
   function build(pinHash) {
