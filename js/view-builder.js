@@ -11,7 +11,7 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, pageHeader, copyButton, copilotButton, toast } = ns.ui;
+  const { el, icon, pageHeader, copyButton, copilotButton } = ns.ui;
   const SENSITIVE = /\b\d{9}\b|\bNL\d{2}\s?[A-Z]{4}(\s?\d){10}\b/i;
 
   // Wat je invult, zolang de site open is
@@ -248,12 +248,9 @@
 
     // Kopiëren, Copilot en delen
     const filled = () => ns.profile.fill(compose());
-    const share = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('message-plus'), el('span', { text: 'Deel in de ideeënhub' })]);
-    share.addEventListener('click', () => {
-      ns.ideaDraft = { kind: 'prompt', title: state.goal.trim().slice(0, 100), body: compose() };
-      window.location.hash = '#/ideeen/prompt';
-      toast('Je prompt staat in het formulier. Vertel er kort bij waarvoor je hem gebruikt.', { duration: 6000 });
-    });
+    // Delen in een venster op deze pagina (js/view-ideas.js), met de prompt al ingevuld
+    const share = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [icon('message-plus'), el('span', { text: 'Deel je prompt' })]);
+    share.addEventListener('click', () => ns.ideas.quick({ kind: 'prompt', title: state.goal.trim().slice(0, 100), body: compose() }));
     const actions = el('div', { className: 'builder__actions' }, [
       copyButton(filled, { label: 'Kopieer prompt' }),
       copilotButton(filled, { className: 'btn--sm' }),

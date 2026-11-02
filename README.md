@@ -440,10 +440,17 @@ openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromp
 - **Zoekvenster** (Ctrl+K, / buiten een tekstveld, of de zoekknop): zoek en kies met de pijltjes een usecase, prompt,
   tip, training, agent of actie (promptbouwer, Mijn gegevens, een vraag stellen, het thema). Enter opent, Ctrl+Enter
   kopieert een prompt meteen (met je gegevens erin).
+- **Prompt aanvragen of delen zonder naar de ideeënhub** (`ns.ideas.quick` in `js/view-ideas.js`): bovenaan de
+  promptdatabase staat *Staat jouw prompt er niet bij?* met *Vraag een prompt aan*, *Deel je prompt* en de
+  promptbouwer. Een venster op de pagina zelf; wat je al zocht en de fase die je koos staan er al in, je naam uit Mijn
+  gegevens ook. Een aanvraag wordt een *Verzoek* met de titel "Prompt voor: …", een gedeelde prompt een *Prompt delen*,
+  gewoon in Beheer → Inzendingen. Ook bij geen zoekresultaten (op de promptdatabase, de zoekpagina en in Ctrl+K:
+  *Vraag een prompt aan: "…"*), met Ctrl+K (*Vraag een prompt aan*, *Deel je prompt*) en in de promptbouwer (*Deel je
+  prompt*, met de prompt al ingevuld). Met dezelfde controle op een BSN of IBAN als in de hub.
 - **Promptbouwer** (`#/promptbouwer`, ook vanaf de promptdatabase): rol, doel, context, bron, verwachting en extra
   zekerheid; rechts groeit de prompt mee met een meter (0–100) en wat er nog mist. Drie voorbeelden om mee te
   beginnen, 'Over mij invoegen' uit Mijn gegevens, een waarschuwing bij iets dat op een BSN of IBAN lijkt, en
-  *Deel in de ideeënhub* (de prompt staat dan al in het formulier). Wat je typt wordt niet bewaard.
+  *Deel je prompt* (een venster met de prompt al ingevuld). Wat je typt wordt niet bewaard.
 - **Een kopie op je eigen computer** (localhost of een bestand) telt niet mee in de anonieme tellers.
 - **Rondleiding** (`js/tour.js`): wie de cockpit voor het eerst opent, krijgt op de startpagina (even na het opstarten,
   na het slot met pincode) een korte rondleiding: welkom, zoeken (Ctrl+K), het menu, de radar, het seizoenskompas,

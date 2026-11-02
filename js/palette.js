@@ -35,7 +35,8 @@
       { label: 'Mag dit? Check het in drie vragen', meta: 'AI-beleid', icon: 'shield', run: () => ns.check.open(), words: 'mag dit toegestaan beleid privacy klantgegevens persoonsgegevens bsn veilig tool' },
       ns.check.policyUrl() ? { label: 'Het AI-beleid van V&V', meta: 'Opent het Serviceplein', icon: 'book', run: () => window.open(ns.check.policyUrl(), '_blank', 'noopener,noreferrer'), words: 'beleid ai-beleid regels richtlijn informatiebeveiliging' } : null,
       { label: 'Deel een idee', meta: 'Ideeënhub', icon: 'bulb', href: '#/ideeen/idee', words: 'idee ideeenhub voorstel' },
-      { label: 'Deel een prompt', meta: 'Ideeënhub', icon: 'chat', href: '#/ideeen/prompt', words: 'prompt delen ideeenhub' },
+      { label: 'Vraag een prompt aan', meta: 'Het AI-team maakt hem', icon: 'flag', run: () => ns.ideas.quick({ kind: 'verzoek' }), words: 'prompt aanvragen verzoek mis zoek nodig' },
+      { label: 'Deel je prompt', meta: 'Voor in de cockpit', icon: 'chat', run: () => ns.ideas.quick({ kind: 'prompt' }), words: 'prompt delen ideeenhub voorstel' },
       { label: 'Rondleiding door de cockpit', meta: 'In een minuut waar alles staat', icon: 'plane', run: () => ns.tour.restart(), words: 'rondleiding uitleg tour help hulp begin wegwijs' },
       { label: 'Wissel tussen licht en donker', meta: 'Thema', icon: 'moon', run: () => document.getElementById('theme-button').click(), words: 'thema donker licht dark mode' },
       { label: 'Startpagina', meta: 'Pagina', icon: 'plane', href: '#/', words: 'home start begin' },
@@ -106,7 +107,11 @@
     return [
       { title: 'Acties', entries: actions().filter((action) => matches(action.haystack, q)).slice(0, 4) },
       { title: 'In de cockpit', entries: items },
-      { title: '', entries: [{ label: total > items.length ? `Alle ${total} resultaten voor "${q}"` : `Zoek "${q}" op de zoekpagina`, meta: 'Zoeken', icon: 'search', href: '#/zoeken/' + encodeURIComponent(q) }] }
+      { title: '', entries: [
+        { label: total > items.length ? `Alle ${total} resultaten voor "${q}"` : `Zoek "${q}" op de zoekpagina`, meta: 'Zoeken', icon: 'search', href: '#/zoeken/' + encodeURIComponent(q) },
+        // Geen prompt gevonden: meteen aanvragen, met wat je zocht
+        found.prompts.length ? null : { label: `Vraag een prompt aan: "${q}"`, meta: 'Het AI-team maakt hem', icon: 'flag', run: () => ns.ideas.quick({ kind: 'verzoek', title: q }) }
+      ].filter(Boolean) }
     ];
   }
 

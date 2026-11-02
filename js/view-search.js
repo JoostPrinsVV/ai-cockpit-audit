@@ -41,8 +41,10 @@
       const total = found.usecases.length + found.prompts.length + found.tips.length + found.trainings.length + found.agents.length;
       count.textContent = total === 1 ? '1 resultaat' : total + ' resultaten';
       if (!total) {
-        results.replaceChildren(emptyState(`Niets gevonden voor "${query}"`, 'Probeer een ander woord. Of laat het ons weten: misschien is dit precies een goed idee voor een nieuwe usecase of prompt.',
-          ns.blocks.linkButton('#/ideeen/verzoek', 'message-plus', 'Doe een verzoek', 'btn--primary')));
+        // Meteen een prompt aanvragen, met wat je zocht (js/view-ideas.js)
+        const ask = el('button', { className: 'btn btn--primary', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [icon('flag'), el('span', { text: 'Vraag een prompt aan' })]);
+        ask.addEventListener('click', () => ns.ideas.quick({ kind: 'verzoek', title: query }));
+        results.replaceChildren(emptyState(`Niets gevonden voor "${query}"`, 'Probeer een ander woord. Of laat het ons weten: misschien is dit precies een goed idee voor een nieuwe prompt of usecase.', ask));
         return;
       }
       results.replaceChildren(...[

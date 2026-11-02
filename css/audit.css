@@ -2611,10 +2611,16 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .meter__max { color: var(--color-on-dark-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 .meter__label { color: var(--color-on-dark); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-instrument); text-transform: uppercase; }
 
-/* Op de promptdatabase: de weg naar de bouwer */
-.builder-cta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); max-width: 52rem; margin: calc(var(--space-2) * -1) 0 var(--space-6); padding: var(--space-3) var(--space-4); border: 1px dashed var(--color-border-strong); border-radius: var(--radius); background: var(--color-surface); }
-.builder-cta__icon { display: grid; place-items: center; flex: none; width: 2.5rem; height: 2.5rem; border-radius: 0.8rem; background: var(--accent-crimson-tint); color: var(--vv-navy); }
-.builder-cta__text { flex: 1 1 18rem; font-size: var(--fs-sm); }
+/* Op de promptdatabase: staat je prompt er niet bij? Aanvragen, delen of zelf bouwen */
+.prompt-help { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); margin: calc(var(--space-2) * -1) 0 var(--space-6); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border); border-left: 4px solid var(--accent-crimson); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.prompt-help__icon { display: grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; border-radius: 0.9rem; background: var(--accent-crimson-tint); color: var(--vv-navy); }
+.prompt-help__text { flex: 1 1 18rem; color: var(--color-text-body); font-size: var(--fs-sm); }
+.prompt-help__title { color: var(--color-text); font-size: var(--fs-base); font-weight: var(--fw-bold); }
+.prompt-help__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.quick .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 600px) {
+  .quick .field-row { grid-template-columns: minmax(0, 1fr); }
+}
 
 @media (max-width: 1019px) {
   .builder { grid-template-columns: minmax(0, 1fr); }

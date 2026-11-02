@@ -163,15 +163,6 @@
     }
     applyKind();
 
-    // Uit de promptbouwer (js/view-builder.js): de prompt staat al klaar, één keer
-    const draft = ns.ideaDraft;
-    if (draft && draft.kind === kind) {
-      title.value = String(draft.title || '').slice(0, 120);
-      body.value = String(draft.body || '').slice(0, maxBody);
-      counter.textContent = `${body.value.length}/${maxBody}`;
-      ns.ideaDraft = null;
-    }
-
     function setError(input, node, message) {
       node.textContent = message;
       input.setAttribute('aria-invalid', message ? 'true' : 'false');
@@ -599,7 +590,165 @@
     return { node, title: 'Ideeënhub' };
   }
 
-  ns.ideas = { KINDS, ALL_KINDS, STATUSES, statusBadge, kindChip, routeOf, rememberSubmission, SENSITIVE };
+  /* ---- Snel insturen zonder naar de hub te gaan (promptdatabase, promptbouwer, Ctrl+K) ---------- */
+  const QUICK = {
+    verzoek: {
+      icon: 'flag', title: 'Vraag een prompt aan', send: 'Aanvragen', prefix: 'Prompt voor: ',
+      lead: 'Staat jouw prompt er niet bij? Vertel waarvoor je hem nodig hebt; het AI-team maakt hem en zet hem in de cockpit.',
+      what: 'Voor welke taak zoek je een prompt?', whatHint: 'Bijv. "Een huurcontract samenvatten voor de controle"',
+      body: 'Wat moet de prompt doen?', bodyHint: 'Wat geef je Copilot mee (een bestand, een mail, cijfers) en wat wil je terugkrijgen? Noem geen klantgegevens.',
+      thanks: 'Bedankt! Je aanvraag is binnen bij het AI-team.'
+    },
+    prompt: {
+      icon: 'chat', title: 'Deel je prompt', send: 'Delen', prefix: '',
+      lead: 'Werkt een prompt goed voor jou? Deel hem, dan kan het AI-team hem in de cockpit zetten voor iedereen.',
+      what: 'Waarvoor gebruik je hem?', whatHint: 'Bijv. "Twee proefsaldibalansen vergelijken"',
+      body: 'Je prompt', bodyHint: 'Plak de prompt. Vervang klantnamen en andere gegevens door [PLAATSHOUDERS], zoals [KLANTNAAM].',
+      thanks: 'Bedankt voor het delen! Het AI-team bekijkt je prompt.'
+    }
+  };
+  let quickCount = 0;
+
+  /**
+   * Een prompt aanvragen of delen in een venster, op de pagina waar je bent. Gaat als inzending naar de
+   * ideeënhub (soort 'verzoek' of 'prompt'), net als het formulier daar.
+   * options: { kind: 'verzoek' | 'prompt', title, body, phase } (om alvast in te vullen).
+   */
+  function quick(options) {
+    const opts = options || {};
+    const kind = QUICK[opts.kind] ? opts.kind : 'verzoek';
+    const config = ns.app.config();
+    // Zonder centrale opslag of met de hub uit: het gewone formulier in de hub (met de terugvalmogelijkheden)
+    if (!ns.central.isEnabled() || config.enableIdeas === false) {
+      window.location.hash = '#/ideeen/' + kind;
+      return;
+    }
+    const info = QUICK[kind];
+    const id = 'quick-' + (++quickCount);
+    const opener = document.activeElement;
+    const maxBody = kind === 'prompt' ? 4000 : Number(config.ideaMaxLength) || 2000;
+    const title = el('input', { className: 'field__input', attrs: { id: id + '-title', type: 'text', maxlength: '120', placeholder: info.whatHint, autocomplete: 'off', 'aria-describedby': id + '-title-error' } });
+    title.value = String(opts.title || '').slice(0, 120);
+    const body = el('textarea', { className: 'field__input field__textarea' + (kind === 'prompt' ? ' improve__text' : ''), attrs: { id: id + '-body', rows: kind === 'prompt' ? '8' : '4', maxlength: String(maxBody), 'aria-describedby': id + '-body-hint ' + id + '-body-error' } });
+    body.value = String(opts.body || '').slice(0, maxBody);
+    const note = kind === 'prompt' ? el('textarea', { className: 'field__input field__textarea improve__why', attrs: { id: id + '-note', rows: '2', maxlength: '500', placeholder: 'Bijv. Werkt het best met de proefsaldibalans als Excel-bestand erbij.' } }) : null;
+    const phase = el('select', { className: 'field__input', attrs: { id: id + '-phase' } }, [
+      el('option', { attrs: { value: '' }, text: 'Geen specifieke fase' }),
+      ...ns.content.phases.map((p) => el('option', { attrs: { value: p.id }, text: p.label }))
+    ]);
+    phase.value = ns.content.phaseById.has(opts.phase) ? opts.phase : '';
+    const name = el('input', { className: 'field__input', attrs: { id: id + '-name', type: 'text', maxlength: '100', autocomplete: 'name' } });
+    name.value = ns.profile.get().naam;
+    const email = el('input', { className: 'field__input', attrs: { id: id + '-email', type: 'email', maxlength: '254', autocomplete: 'email', inputmode: 'email', spellcheck: 'false' } });
+    const allowPublic = el('input', { attrs: { id: id + '-public', type: 'checkbox', checked: true } });
+    const titleError = el('p', { className: 'field__error', attrs: { id: id + '-title-error' } });
+    const bodyError = el('p', { className: 'field__error', attrs: { id: id + '-body-error' } });
+    const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
+    const send = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('send'), el('span', { text: info.send })]);
+    const cancel = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [el('span', { text: 'Annuleren' })]);
+    const optional = (text) => el('span', { className: 'field__optional', text });
+    let confirmSensitive = false;
+    [title, body].forEach((input) => input.addEventListener('input', () => {
+      confirmSensitive = false;
+    }));
+
+    const form = el('form', { className: 'improve__panel', attrs: { novalidate: true } }, [
+      el('div', { className: 'improve__head' }, [
+        el('span', { className: 'improve__icon', attrs: { 'aria-hidden': 'true' } }, [icon(info.icon)]),
+        el('div', {}, [
+          el('h2', { className: 'improve__title', attrs: { id: id + '-heading' }, text: info.title }),
+          el('p', { className: 'improve__subject', text: info.lead })
+        ])
+      ]),
+      el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-title' }, text: info.what }), title, titleError]),
+      el('div', { className: 'field' }, [
+        el('label', { className: 'field__label', attrs: { for: id + '-body' }, text: info.body }),
+        el('p', { className: 'field__hint', attrs: { id: id + '-body-hint' }, text: info.bodyHint }),
+        body,
+        bodyError
+      ]),
+      note ? el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-note' } }, ['Toelichting ', optional('(optioneel)')]), note]) : null,
+      el('div', { className: 'field-row' }, [
+        el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-phase' } }, ['Fase ', optional('(optioneel)')]), phase]),
+        el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-name' } }, ['Naam ', optional('(optioneel)')]), name])
+      ]),
+      el('div', { className: 'field' }, [
+        el('label', { className: 'field__label', attrs: { for: id + '-email' } }, ['E-mailadres ', optional(kind === 'verzoek' ? '(optioneel: dan hoor je het als hij er is)' : '(optioneel)')]),
+        email
+      ]),
+      el('label', { className: 'check', attrs: { for: id + '-public' } }, [allowPublic, el('span', { text: kind === 'verzoek' ? 'Mag zichtbaar worden in de ideeënhub (zonder naam), zodat collega\'s zien dat deze prompt is aangevraagd.' : 'Mag zichtbaar worden in de ideeënhub (zonder naam en e-mailadres).' })]),
+      el('p', { className: 'privacy' }, [icon('shield'), el('span', { text: 'Noem geen klantnamen, dossier- of persoonsgegevens. Je naam en e-mailadres ziet alleen het AI-team.' })]),
+      formError,
+      el('div', { className: 'improve__actions' }, [cancel, send])
+    ]);
+    const dialog = el('dialog', { className: 'improve quick', attrs: { 'aria-labelledby': id + '-heading' } }, [form]);
+    const close = () => {
+      if (dialog.open) dialog.close();
+    };
+    cancel.addEventListener('click', close);
+    dialog.addEventListener('close', () => {
+      dialog.remove();
+      if (opener && opener.isConnected) opener.focus({ preventScroll: true });
+    });
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      formError.hidden = true;
+      const what = title.value.trim();
+      const extra = note ? note.value.trim() : '';
+      const text = body.value.trim() + (extra ? '\n\nToelichting: ' + extra : '');
+      const mail = email.value.trim();
+      titleError.textContent = what.length < 3 ? 'Vul kort in waarvoor (minimaal 3 tekens).' : '';
+      bodyError.textContent = body.value.trim().length < 10 ? (kind === 'prompt' ? 'Plak je prompt (minimaal 10 tekens).' : 'Vertel iets meer (minimaal 10 tekens).') : '';
+      if (mail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) bodyError.textContent = bodyError.textContent || 'Dit lijkt geen geldig e-mailadres.';
+      title.setAttribute('aria-invalid', String(Boolean(titleError.textContent)));
+      body.setAttribute('aria-invalid', String(Boolean(bodyError.textContent)));
+      if (titleError.textContent || bodyError.textContent) {
+        (titleError.textContent ? title : body).focus();
+        return;
+      }
+      if (!confirmSensitive && SENSITIVE.test(what + ' ' + text)) {
+        confirmSensitive = true;
+        formError.replaceChildren(
+          el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Staat hier een BSN of rekeningnummer in?' })]),
+          el('p', { text: 'Haal persoons- en klantgegevens weg of gebruik een [PLAATSHOUDER]. Weet je zeker dat het goed is? Klik dan nog een keer op ' + info.send + '.' })
+        );
+        formError.hidden = false;
+        return;
+      }
+      const payload = {
+        ref: ns.ui.randomId(), kind, title: (info.prefix + what).slice(0, 140), body: text.slice(0, 4000),
+        phase: phase.value, name: name.value.trim(), email: mail, allowPublic: allowPublic.checked
+      };
+      send.disabled = true;
+      const result = await ns.central.submitIdea(payload);
+      send.disabled = false;
+      if (result === 'ok') {
+        rememberSubmission({ ref: payload.ref, kind, title: payload.title, at: new Date().toISOString() });
+        close();
+        toast(info.thanks + ' Je vindt hem terug in de ideeënhub, bij Jouw inzendingen.', { tone: 'success', duration: 6000 });
+        return;
+      }
+      // Mislukt: niets kwijtraken
+      const copy = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('copy'), el('span', { text: 'Kopieer je tekst' })]);
+      copy.addEventListener('click', async () => {
+        const ok = await copyText(`${payload.title}\n\n${payload.body}`);
+        toast(ok ? 'Je tekst staat op het klembord' : 'Kopiëren lukte niet', { tone: ok ? 'success' : 'warning' });
+      });
+      formError.replaceChildren(
+        el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Versturen lukte niet.' })]),
+        el('p', { text: 'Controleer je verbinding en probeer het nog eens. Kopieer je tekst eventueel, dan raak je niets kwijt.' }),
+        el('div', { className: 'form-error__actions' }, [copy])
+      );
+      formError.hidden = false;
+    });
+
+    document.body.append(dialog);
+    dialog.showModal();
+    (title.value ? body : title).focus();
+  }
+
+  ns.ideas = { KINDS, ALL_KINDS, STATUSES, statusBadge, kindChip, routeOf, rememberSubmission, SENSITIVE, quick };
   ns.views = ns.views || {};
   ns.views.ideas = { render };
 })(window.AIAudit);

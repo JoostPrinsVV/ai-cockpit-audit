@@ -88,10 +88,14 @@
     const all = ns.content.prompts;
     const list = el('div', { className: 'p-list' });
     const count = B.resultCount();
+    // Aanvragen en delen in een venster (js/view-ideas.js), met wat je al zocht en de fase die je koos
+    const phaseNow = () => (filters.phase !== 'all' ? filters.phase : '');
+    const askButton = (label, className) => el('button', { className: 'btn ' + className, attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.ideas.quick({ kind: 'verzoek', title: filters.query.trim(), phase: phaseNow() }) } }, [icon('flag'), el('span', { text: label })]);
+    const shareButton = () => el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.ideas.quick({ kind: 'prompt', phase: phaseNow() }) } }, [icon('chat'), el('span', { text: 'Deel je prompt' })]);
     // Een lege catalogus (nieuwe discipline) is iets anders dan niets vinden met deze filters
     const empty = all.length
-      ? emptyState('Geen prompts gevonden', 'Probeer een ander zoekwoord of zet de filters terug op Alle.')
-      : emptyState('De eerste prompts komen eraan', `Hier verschijnen prompts voor Copilot in ${ns.cockpit.active().label} die je direct kunt kopiëren.`, null, 'chat');
+      ? emptyState('Geen prompts gevonden', 'Probeer een ander zoekwoord of zet de filters terug op Alle. Of vraag deze prompt aan: het AI-team maakt hem.', askButton('Vraag deze prompt aan', 'btn--primary'))
+      : emptyState('De eerste prompts komen eraan', `Hier verschijnen prompts voor Copilot in ${ns.cockpit.active().label} die je direct kunt kopiëren. Heb je er een die goed werkt? Deel hem.`, shareButton(), 'chat');
     // In een fasegroep een iets andere kaart (de fase staat dan al in de kop)
     const cardFor = B.cardCache((p, variant) => card(p, variant === 'groep' ? 'h3' : 'h2', variant === 'groep'));
     const saved = B.savedFilter('prompt', filters, update, (id) => ns.content.promptById.has(id));
@@ -185,10 +189,14 @@
         title: 'Prompts die je direct kunt gebruiken',
         lead: 'Kopieer een prompt, plak hem in Copilot en vul de [PLAATSHOUDERS] in. Of vul ze hier alvast in via "Invullen". Prompts met een demo horen bij een usecase.'
       }),
-      el('div', { className: 'builder-cta' }, [
-        el('span', { className: 'builder-cta__icon', attrs: { 'aria-hidden': 'true' } }, [icon('blocks')]),
-        el('p', { className: 'builder-cta__text' }, [el('strong', { text: 'Staat jouw taak er niet bij? ' }), 'Bouw zelf een prompt in zes stappen, met een meter die laat zien wat er nog beter kan.']),
-        B.linkButton('#/promptbouwer', 'arrow-right', 'Naar de promptbouwer', 'btn--secondary btn--sm')
+      // Staat je prompt er niet bij: meteen aanvragen of delen (zonder naar de ideeënhub), of zelf bouwen
+      el('div', { className: 'prompt-help' }, [
+        el('span', { className: 'prompt-help__icon', attrs: { 'aria-hidden': 'true' } }, [icon('message-plus')]),
+        el('div', { className: 'prompt-help__text' }, [
+          el('p', { className: 'prompt-help__title', text: 'Staat jouw prompt er niet bij?' }),
+          el('p', { text: 'Vraag hem aan, deel een prompt die bij jou goed werkt, of bouw er zelf een in zes stappen.' })
+        ]),
+        el('div', { className: 'prompt-help__actions' }, [askButton('Vraag een prompt aan', 'btn--primary btn--sm'), shareButton(), B.linkButton('#/promptbouwer', 'blocks', 'Promptbouwer', 'btn--quiet btn--sm')])
       ]),
       el('div', { className: 'filters' }, [
         search,
