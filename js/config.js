@@ -36,11 +36,12 @@ window.AIAudit.config = {
   lockPinHash: '5f653a94cdf1072581a9c971ee99f97abdc5117be998d0242e5099f1e48ca002',
 
   /* ---- Gouden regels (onderaan iedere pagina) -------------------------- */
+  // In lijn met het AI-beleid van V&V (zie README.md, 'Zo volgt de cockpit het AI-beleid')
   rules: [
-    'Werk alleen in Copilot met je zakelijke account (het schildje), nooit in een gratis of privé-AI-tool.',
+    'Werk alleen in Copilot met je zakelijke account (het schildje, Werk-modus) of in Ilse, nooit in ChatGPT, Claude of een andere AI-tool via de browser, ook niet betaald.',
     'Copilot ondersteunt, jij beoordeelt: het professionele oordeel en de handtekening blijven van jou.',
     'Controleer iedere uitkomst tegen de bron en leg vast in het dossier wat je met Copilot hebt gedaan.',
-    'Deel niet meer dan nodig: geen BSN, privégegevens of stukken die niet bij de opdracht horen.'
+    'Deel niet meer dan nodig: anonimiseer waar het kan, en nooit hoog-risico-data zoals bijzondere persoonsgegevens, BSN of stukken onder geheimhouding.'
   ],
 
   /* ---- AI-beleid (onderaan iedere pagina en bij 'Mag dit?') -------------- */

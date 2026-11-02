@@ -481,8 +481,8 @@
   /* ---- Agents & tools ------------------------------------------------------------------ */
   const AGENT_KINDS = ['Microsoft-standaard', 'Eigen agent', 'Extern product'];
   const AGENT_STATUSES = ['Beschikbaar', 'Pilot', 'In ontwikkeling', 'Gestopt'];
-  // Welke gegevens erin mogen (vastgesteld door het AI-team; uitleg en de check 'Mag dit?' in js/check.js)
-  const DATA_LEVELS = ['algemeen', 'klant', 'vertrouwelijk'];
+  // Welke data erin mag, in de termen van het AI-beleid (vastgesteld door het AI-team; uitleg en 'Mag dit?' in js/check.js)
+  const DATA_LEVELS = ['algemeen', 'vertrouwelijk', 'hoog'];
   const KIND_ACCENTS = { 'Microsoft-standaard': 'steel', 'Eigen agent': 'deepteal', 'Extern product': 'rose' };
 
   function loadAgents(raw) {
@@ -527,6 +527,7 @@
         link: HTTPS_URL.test(link) ? link : '',
         owner: text(item.owner),
         dataLevel: DATA_LEVELS.includes(text(item.dataLevel)) ? text(item.dataLevel) : '',
+        web: item.web === true, // 'Work + Web': gebruikt ook webbronnen
         useFor: list(item.useFor),
         notFor: list(item.notFor),
         usecases: list(item.usecases),

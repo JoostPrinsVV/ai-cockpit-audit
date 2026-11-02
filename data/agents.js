@@ -31,9 +31,11 @@
      access       Hoe krijg je toegang? Waar vind je het, wie regelt het?
      link         Waar je het opent. Begint met https://; opent in een nieuw tabblad.
      owner        Aanspreekpunt: liever een afdeling of functie dan een naam.
-     dataLevel    Welke gegevens erin mogen: 'algemeen' (geen klant- of persoonsgegevens), 'klant'
-                  (klantgegevens zonder persoonsgegevens) of 'vertrouwelijk' (ook persoonsgegevens,
-                  binnen V&V). Leeg = nog niet vastgesteld. Bepaalt het antwoord bij 'Mag dit?'.
+     dataLevel    Welke data erin mag, volgens het AI-beleid: 'algemeen' (alleen algemene data),
+                  'vertrouwelijk' (ook persoonsgegevens en klantdata, zoals Copilot in de Werk-modus)
+                  of 'hoog' (ook hoog-risico-data na afstemming met de CTO, zoals in-house-apps).
+                  Leeg = nog niet vastgesteld. Bepaalt het antwoord bij 'Mag dit?'.
+     web          true = gebruikt ook webbronnen ('Work + Web'); staat dan zichtbaar bij de agent.
      useFor       Waarvoor is het wel geschikt (lijst).
      notFor       Waarvoor gebruik je het níet (lijst).
      usecases     Optioneel: id's uit data/usecases.js.

@@ -6,12 +6,14 @@
      en in de check.
    - 'Mag dit?': een venster met drie vragen (welke tool, welke gegevens, waar
      komt de uitkomst terecht) en een antwoord in groen, oranje of rood. Het
-     antwoord volgt uit de gouden regels en uit wat het AI-team per tool heeft
-     vastgelegd in Beheer → Agents & tools (Gegevens in deze tool, Wel
-     geschikt voor, Niet gebruiken voor). Te openen vanuit de voet, met
-     Ctrl+K, bij een agent en vanuit de waarschuwing in de promptbouwer.
-   - Per agent: het gegevensniveau als label op de kaart en het blok 'Wat
-     mag erin?' op de pagina.
+     antwoord volgt het AI-beleid ('Welke tools zijn toegestaan voor welke
+     data?': de vier soorten data en de tabel met tools) en wat het AI-team per
+     tool heeft vastgelegd in Beheer → Agents & tools (Gegevens in deze tool,
+     Work + Web, Wel geschikt voor, Niet gebruiken voor). Te openen vanuit de
+     voet, met Ctrl+K, bij een agent en vanuit de waarschuwing in de promptbouwer.
+   - Per agent: het gegevensniveau (en 'Work + Web') als label op de kaart en
+     het blok 'Wat mag erin?' op de pagina.
+   Hoe dit op het beleid aansluit: README.md, 'Zo volgt de cockpit het AI-beleid'.
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -19,18 +21,28 @@
   const { el, icon, accentClass } = ns.ui;
   const HTTPS = /^https:\/\/[^\s<>"'`]+$/i;
 
-  /* Welke gegevens erin mogen, per tool (veld dataLevel; de volgorde is van weinig naar veel) */
+  /* Welke data erin mag, per tool (veld dataLevel), in de termen van het AI-beleid (van weinig naar veel) */
   const LEVELS = {
-    algemeen: { step: 1, label: 'Alleen algemene informatie', short: 'Geen klantgegevens', text: 'Geen klant- of persoonsgegevens: alleen algemene vragen, je eigen teksten en openbare informatie.' },
-    klant: { step: 2, label: 'Klantgegevens, zonder persoonsgegevens', short: 'Klantgegevens', text: 'Cijfers, stukken en notulen van een klant, maar zonder namen of andere persoonsgegevens.' },
-    vertrouwelijk: { step: 3, label: 'Klant- en persoonsgegevens, binnen V&V', short: 'Ook persoonsgegevens', text: 'Ook vertrouwelijke klantgegevens en persoonsgegevens, binnen de beveiligde omgeving van Visser & Visser. Deel niet meer dan nodig.' }
+    algemeen: { step: 1, label: 'Alleen algemene data', short: 'Alleen algemene data', text: 'Alles wat je ook aan vrienden zou kunnen vertellen: algemene informatie, breed beschikbare kennis en geanonimiseerde cases. Geen persoonsgegevens, klantdata of hoog-risico-data.' },
+    vertrouwelijk: { step: 2, label: 'Ook persoonsgegevens en klantdata', short: 'Ook klantdata', text: 'Algemene data, persoonsgegevens en vertrouwelijke klantgegevens, binnen de beheerde omgeving van Visser & Visser en je eigen toegangsrechten. Pas dataminimalisatie toe. Geen hoog-risico-data.' },
+    hoog: { step: 3, label: 'Ook hoog-risico-data, na afstemming met de CTO', short: 'Ook hoog-risico (CTO)', text: 'Daarnaast hoog-risico-data, maar alleen als dat onvermijdelijk is, na afstemming met de CTO en met extra maatregelen (zoals bij de V&V in-house-apps).' }
   };
+  /* De vier soorten data uit het AI-beleid; kies de zwaarste die van toepassing is */
   const DATA = [
-    { id: 'geen', label: 'Geen klant- of persoonsgegevens', hint: 'Een algemene vraag, je eigen tekst, openbare informatie' },
-    { id: 'klant', label: 'Klantgegevens zonder persoonsgegevens', hint: 'Cijfers, stukken of notulen van een klant, zonder namen' },
-    { id: 'persoon', label: 'Persoonsgegevens', hint: 'Namen, contactgegevens, gegevens van medewerkers of klanten' },
-    { id: 'bijzonder', label: 'BSN, medische of andere bijzondere gegevens', hint: 'Ook in een bijlage of een geplakte tekst' }
+    { id: 'algemeen', label: 'Algemene data', hint: 'Wat je ook aan vrienden zou kunnen vertellen: algemene kennis, geanonimiseerde cases' },
+    { id: 'persoon', label: 'Persoonsgegevens', hint: 'Alles over een herkenbaar persoon: namen, contactgegevens, gegevens van klanten of medewerkers' },
+    { id: 'klant', label: 'Vertrouwelijke klantgegevens', hint: 'Rapportages, stukken, correspondentie, contracten, of iets wat eenvoudig naar een klant te herleiden is' },
+    { id: 'hoog', label: 'Hoog-risico-data', hint: 'Bijzondere persoonsgegevens (zoals gezondheid), BSN, bedrijfsgeheimen, stukken onder geheimhouding, of veel schade bij een datalek' }
   ];
+  /* 'Welke tools zijn toegestaan voor welke data?' uit het AI-beleid, kort (in het venster: 'Het beleid in het kort') */
+  const POLICY_TABLE = [
+    { tool: 'V&V in-house-apps (zoals Ilse)', cells: ['ja', 'ja', 'ja', 'cto'] },
+    { tool: 'Microsoft Copilot (alleen in de Werk-modus)', cells: ['ja', 'ja', 'ja', 'nee'] },
+    { tool: 'ChatGPT, Claude, Gemini en andere LLM\'s via de browser', cells: ['privé', 'nee', 'nee', 'nee'] },
+    { tool: 'Overige tools (tenzij goedgekeurd door CTO, Business IT en Legal & Risk)', cells: ['privé', 'nee', 'nee', 'nee'] }
+  ];
+  const CELL_TEXT = { ja: 'Toegestaan', nee: 'Niet toegestaan', cto: 'Alleen na afstemming met de CTO', privé: 'Alleen persoonlijk, niet voor je werk' };
+  const DOUBT = 'Bij twijfel: niet gebruiken voordat je hebt afgestemd met je leidinggevende, de disciplinedirectie, Business IT, Legal & Risk of de CTO.';
   const DESTINATIONS = [
     { id: 'zelf', label: 'Alleen voor mezelf' },
     { id: 'intern', label: 'Intern of in het dossier' },
@@ -50,8 +62,9 @@
   };
 
   /**
-   * Het antwoord: { tone: 'ja' | 'mits' | 'nee' | 'onbekend', title, reasons: [] }.
-   * tool: een agent uit Agents & tools, of 'anders' (een andere of gratis AI-tool).
+   * Het antwoord: { tone: 'ja' | 'mits' | 'nee' | 'onbekend', title, reasons: [], doubt }.
+   * tool: een agent uit Agents & tools, of 'anders' (ChatGPT, Claude of een andere tool via de browser).
+   * data: 'algemeen' | 'persoon' | 'klant' | 'hoog' (de soorten data uit het AI-beleid).
    */
   function verdict(tool, data, destination) {
     const reasons = [];
@@ -60,9 +73,14 @@
       const rank = { ja: 0, onbekend: 1, mits: 2, nee: 3 };
       if (rank[next] > rank[tone]) tone = next;
     };
+    const sensitive = data === 'persoon' || data === 'klant';
     if (tool === OTHER || !tool) {
+      // Zakelijk gebruik van LLM's alleen via Copilot of Ilse; overige tools alleen persoonlijk met algemene data
       worse('nee');
-      reasons.push('Gebruik voor je werk alleen Copilot met je zakelijke account (het schildje) of een agent of tool uit deze cockpit, nooit een gratis of privé-AI-tool.');
+      reasons.push('Voor je werk gebruik je AI alleen via Microsoft Copilot (met je zakelijke account, in de Werk-modus), een V&V in-house-app zoals Ilse of een tool uit deze cockpit. ChatGPT, Claude, Gemini en andere tools via de browser zijn voor je werk niet toegestaan, ook niet betaald.');
+      reasons.push(data === 'algemeen'
+        ? 'Buiten je werk mag je ze alleen gebruiken voor algemene ondersteuning (taalhulp, ideeën, uitleg) en alleen met algemene data.'
+        : 'Persoonsgegevens, klantdata, bedrijfsinformatie en hoog-risico-data horen er nooit in.');
     } else {
       if (tool.status === 'In ontwikkeling' || tool.stopped) {
         worse('nee');
@@ -72,34 +90,59 @@
         reasons.push(`${tool.title} is in pilot: alleen als je in de pilotgroep zit.`);
       }
       const level = LEVELS[tool.dataLevel] ? tool.dataLevel : '';
-      if (data === 'bijzonder') {
-        worse('nee');
-        reasons.push('Deel geen BSN, medische of andere bijzondere persoonsgegevens met AI, ook niet in Copilot. Haal ze weg of gebruik een [PLAATSHOUDER].');
-      } else if (data === 'klant' || data === 'persoon') {
+      if (data === 'hoog') {
+        if (level === 'hoog') {
+          worse('mits');
+          reasons.push('Hoog-risico-data vermijd je in beginsel. Is het onvermijdelijk, stem dan vooraf af met de CTO en spreek extra maatregelen af.');
+        } else {
+          worse('nee');
+          reasons.push(`Hoog-risico-data hoort niet in ${tool.title}. Haal het weg, anonimiseer of gebruik een [PLAATSHOUDER]; is verwerking onvermijdelijk, stem dan eerst af met de CTO.`);
+        }
+      } else if (sensitive) {
+        const what = data === 'persoon' ? 'persoonsgegevens' : 'vertrouwelijke klantgegevens';
         if (!level) {
           worse('onbekend');
-          reasons.push(`Voor ${tool.title} is nog niet vastgelegd welke gegevens erin mogen. Gebruik hem voorlopig zonder klant- en persoonsgegevens, of vraag het na bij het AI-team.`);
-        } else if (data === 'klant' && level === 'algemeen') {
+          reasons.push(`Voor ${tool.title} is nog niet vastgelegd welke data erin mag. Gebruik hem voorlopig alleen met algemene data.`);
+        } else if (level === 'algemeen') {
           worse('nee');
-          reasons.push(`In ${tool.title} mogen geen klantgegevens: ${LEVELS.algemeen.text.charAt(0).toLowerCase() + LEVELS.algemeen.text.slice(1)}`);
-        } else if (data === 'persoon' && level !== 'vertrouwelijk') {
-          worse('nee');
-          reasons.push(`In ${tool.title} mogen geen persoonsgegevens (${LEVELS[level].label.toLowerCase()}). Haal namen en andere persoonsgegevens weg, of gebruik [PLAATSHOUDERS].`);
-        } else if (data === 'persoon') {
-          worse('mits');
-          reasons.push('Alleen de persoonsgegevens die echt nodig zijn voor de opdracht: deel niet meer dan nodig.');
-        } else if (tone !== 'nee') {
-          reasons.push(`${tool.title} is geschikt voor klantgegevens zonder persoonsgegevens.`);
+          reasons.push(`In ${tool.title} mag alleen algemene data, geen ${what}. Anonimiseer de gegevens zodat ze niet naar een klant of persoon te herleiden zijn, of gebruik [PLAATSHOUDERS].`);
+        } else {
+          // Toegestaan, binnen de beheerde omgeving; persoonsgegevens alleen wat nodig is (dataminimalisatie)
+          if (data === 'persoon') worse('mits');
+          reasons.push(data === 'persoon'
+            ? `Persoonsgegevens mogen in ${tool.title}, mits je alleen deelt wat nodig is voor de opdracht (dataminimalisatie) en anonimiseert waar het kan.`
+            : `Vertrouwelijke klantgegevens mogen in ${tool.title}, binnen de beheerde omgeving van V&V en je eigen toegangsrechten. Deel niet meer dan nodig.`);
+          if (tool.kind === 'Microsoft-standaard') reasons.push('Gebruik Copilot in de Werk-modus (Work), niet met webbronnen (Web).');
+          if (tool.web) reasons.push(`${tool.title} gebruikt ook webbronnen (Work + Web): deel alleen wat hiervoor uitdrukkelijk is toegestaan.`);
         }
-      } else if (data === 'geen' && tone !== 'nee') {
-        reasons.push(`Algemene informatie kun je in ${tool.title} gebruiken.`);
+      } else if (data === 'algemeen' && tone !== 'nee') {
+        reasons.push(`Algemene data kun je in ${tool.title} gebruiken.`);
       }
+      if (tone !== 'nee' && tool.web) reasons.push('Output op basis van webbronnen controleer je altijd extra: betrouwbaarheid, actualiteit, herkomst en auteursrecht.');
     }
     // Waar de uitkomst terechtkomt: wat er daarna van je verwacht wordt
-    if (tone !== 'nee' && destination === 'intern') reasons.push('Controleer de uitkomst tegen de bron en leg in het dossier vast wat je met AI hebt gedaan.');
-    if (tone !== 'nee' && destination === 'klant') reasons.push('Controleer de uitkomst tegen de bron en lees hem kritisch na: het professionele oordeel en de handtekening blijven van jou.');
+    if (tone !== 'nee' && destination === 'intern') reasons.push('AI-output is een concept, geen eindproduct: beoordeel hem op juistheid, volledigheid en actualiteit, en leg in het dossier vast wat je met AI hebt gedaan.');
+    if (tone !== 'nee' && destination === 'klant') reasons.push('Controleer harde feiten (cijfers, datums, citaten, wetsartikelen) aan de bron en neem tekst niet letterlijk over maar herschrijf in je eigen woorden. Het professionele oordeel en de handtekening blijven van jou.');
     const titles = { ja: 'Ja, dat mag', mits: 'Ja, mits…', nee: 'Nee, dat mag niet', onbekend: 'Nog niet vastgesteld' };
-    return { tone, title: titles[tone], reasons };
+    return { tone, title: titles[tone], reasons, doubt: tone === 'mits' || tone === 'onbekend' ? DOUBT : '' };
+  }
+
+  /** 'Het beleid in het kort': de tabel met tools en soorten data, uit het AI-beleid. */
+  function policyTable() {
+    const icons = { ja: 'check', nee: 'close', cto: 'alert', privé: 'user' };
+    return el('details', { className: 'check__policy' }, [
+      el('summary', {}, [el('span', { text: 'Het beleid in het kort: welke tool voor welke data?' }), icon('chevron-down')]),
+      el('div', { className: 'check__table-wrap' }, [
+        el('table', { className: 'check__table' }, [
+          el('thead', {}, [el('tr', {}, [el('th', { attrs: { scope: 'col' }, text: 'Tool' }), ...DATA.map((item) => el('th', { attrs: { scope: 'col' }, text: item.label }))])]),
+          el('tbody', {}, POLICY_TABLE.map((row) => el('tr', {}, [
+            el('th', { attrs: { scope: 'row' }, text: row.tool }),
+            ...row.cells.map((cell) => el('td', { className: 'check__cell check__cell--' + (cell === 'privé' ? 'prive' : cell) }, [icon(icons[cell]), el('span', { text: CELL_TEXT[cell] })]))
+          ])))
+        ])
+      ]),
+      el('p', { className: 'check__table-note', text: 'Agents in Copilot Studio volgen Copilot, binnen de beheerde omgeving en als pilot; met webtoegang heten ze "Work + Web". ' + DOUBT })
+    ]);
   }
 
   /* ---- Het venster ------------------------------------------------------------------ */
@@ -115,7 +158,7 @@
     const tool = el('select', { className: 'field__input', attrs: { id: id + '-tool' } }, [
       el('option', { attrs: { value: '' }, text: 'Kies een tool…' }),
       ...agents.map((agent) => el('option', { attrs: { value: agent.id }, text: agent.title })),
-      el('option', { attrs: { value: OTHER }, text: 'Een andere AI-tool (bijv. gratis ChatGPT of een privé-account)' })
+      el('option', { attrs: { value: OTHER }, text: 'ChatGPT, Claude, Gemini of een andere tool via de browser' })
     ]);
     if (opts.tool && agents.some((agent) => agent.id === opts.tool)) tool.value = opts.tool;
 
@@ -138,7 +181,7 @@
       const chosenTool = tool.value === OTHER ? OTHER : agents.find((agent) => agent.id === tool.value) || null;
       const chosenData = value(data);
       if (!tool.value || !chosenData) {
-        result.replaceChildren(el('p', { className: 'check__wait', text: 'Kies een tool en welke gegevens erin gaan, dan zie je hier het antwoord.' }));
+        result.replaceChildren(el('p', { className: 'check__wait', text: 'Kies een tool en welke data erin gaat, dan zie je hier het antwoord.' }));
         return;
       }
       const answer = verdict(chosenTool, chosenData, value(where));
@@ -151,9 +194,10 @@
         el('p', { className: 'check__verdict' }, [el('span', { className: 'check__lamp', attrs: { 'aria-hidden': 'true' } }, [icon(iconName)]), el('span', { text: answer.title })]),
         el('ul', { className: 'check__reasons' }, answer.reasons.map((line) => el('li', { text: line }))),
         ...notes,
+        answer.doubt ? el('p', { className: 'check__doubt' }, [icon('info'), el('span', { text: answer.doubt })]) : null,
         el('div', { className: 'check__links' }, [
           policyLink('Lees het AI-beleid', 'btn btn--secondary btn--sm'),
-          el('a', { className: 'btn btn--quiet btn--sm', attrs: { href: '#/ideeen/vraag' }, on: { click: () => close() } }, [icon('question'), el('span', { text: 'Twijfel je? Stel je vraag' })])
+          el('a', { className: 'btn btn--quiet btn--sm', attrs: { href: '#/ideeen/vraag' }, on: { click: () => close() } }, [icon('question'), el('span', { text: 'Stel je vraag aan het AI-team' })])
         ])
       ]));
     }
@@ -168,14 +212,15 @@
           el('span', { className: 'check__icon', attrs: { 'aria-hidden': 'true' } }, [icon('shield')]),
           el('div', {}, [
             el('h2', { className: 'check__title', attrs: { id: id + '-title' }, text: 'Mag dit?' }),
-            el('p', { className: 'check__lead', text: 'Drie vragen, dan weet je of het mag. Op basis van de gouden regels en wat het AI-team per tool heeft vastgelegd.' })
+            el('p', { className: 'check__lead', text: 'Drie vragen, dan weet je of het mag. Volgens het AI-beleid van V&V en wat het AI-team per tool heeft vastgelegd.' })
           ]),
           closeButton
         ]),
         el('div', { className: 'field' }, [el('label', { className: 'check__question', attrs: { for: id + '-tool' } }, [el('span', { className: 'check__number', text: '1' }), 'Welke tool wil je gebruiken?']), tool]),
-        el('fieldset', { className: 'check__group' }, [el('legend', { className: 'check__question' }, [el('span', { className: 'check__number', text: '2' }), 'Welke gegevens gaan erin?']), data]),
+        el('fieldset', { className: 'check__group' }, [el('legend', { className: 'check__question' }, [el('span', { className: 'check__number', text: '2' }), 'Welke data gaat erin? ', el('span', { className: 'field__optional', text: '(kies de zwaarste)' })]), data]),
         el('fieldset', { className: 'check__group' }, [el('legend', { className: 'check__question' }, [el('span', { className: 'check__number', text: '3' }), 'Waar komt de uitkomst terecht? ', el('span', { className: 'field__optional', text: '(optioneel)' })]), where]),
-        result
+        result,
+        policyTable()
       ])
     ]);
     dialog.querySelector('form').addEventListener('submit', (event) => event.preventDefault());
@@ -206,10 +251,18 @@
     return [policyLink('Lees het AI-beleid van V&V', 'footer__policy-link'), button].filter(Boolean);
   }
 
-  /** Label op de kaart van een agent: welke gegevens erin mogen (of niets als dat niet is vastgelegd). */
+  /** Labels op de kaart van een agent: welke data erin mag, en 'Work + Web' als hij ook webbronnen gebruikt. */
   function levelChip(agent) {
     const level = LEVELS[agent.dataLevel];
-    return level ? el('span', { className: 'data-chip data-chip--' + agent.dataLevel, attrs: { title: level.text } }, [icon('shield'), level.short]) : null;
+    return [
+      level ? el('span', { className: 'data-chip data-chip--' + agent.dataLevel, attrs: { title: level.text } }, [icon('shield'), level.short]) : null,
+      webChip(agent)
+    ].filter(Boolean);
+  }
+
+  /** 'Work + Web': het AI-beleid vraagt dat zichtbaar te maken bij een agent met webtoegang. */
+  function webChip(agent) {
+    return agent.web ? el('span', { className: 'data-chip data-chip--web', attrs: { title: 'Gebruikt naast je werkgegevens ook webbronnen: controleer de output extra.' } }, [icon('globe'), 'Work + Web']) : null;
   }
 
   /** Op de pagina van een agent: 'Wat mag erin?', wel en niet geschikt voor, het beleid en de check. */
@@ -224,7 +277,8 @@
     return el('section', { className: 'policy-card ' + accentClass(agent.accent), attrs: { 'aria-labelledby': 'ag-policy' } }, [
       el('h2', { className: 'policy-card__title', attrs: { id: 'ag-policy' } }, [icon('shield'), el('span', { text: 'Wat mag erin?' })]),
       level ? meter : null,
-      el('p', { className: 'policy-card__text', text: level ? level.text : 'Het AI-team heeft voor deze tool nog niet vastgelegd welke gegevens erin mogen. Gebruik hem voorlopig zonder klant- en persoonsgegevens.' }),
+      el('p', { className: 'policy-card__text', text: level ? level.text : 'Het AI-team heeft voor deze tool nog niet vastgelegd welke data erin mag. Gebruik hem voorlopig alleen met algemene data.' }),
+      agent.web ? el('p', { className: 'policy-card__web' }, [webChip(agent), el('span', { text: ' Deze tool gebruikt naast je werkgegevens ook webbronnen. Controleer de output altijd extra, en deel alleen wat hiervoor uitdrukkelijk is toegestaan.' })]) : null,
       agent.useFor.length ? el('div', { className: 'policy-card__list policy-card__list--yes' }, [
         el('h3', { className: 'policy-card__subtitle', text: 'Wel geschikt voor' }),
         el('ul', { attrs: { role: 'list' } }, agent.useFor.map((line) => el('li', {}, [icon('check'), el('span', { text: line })])))
@@ -237,5 +291,5 @@
     ]);
   }
 
-  ns.check = { LEVELS, DATA, DESTINATIONS, OTHER, policyUrl, verdict, open, footerLinks, levelChip, agentBlock };
+  ns.check = { LEVELS, DATA, DESTINATIONS, POLICY_TABLE, OTHER, policyUrl, verdict, open, footerLinks, levelChip, agentBlock };
 })(window.AIAudit);

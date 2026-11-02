@@ -2405,11 +2405,33 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .check__notes-title { color: var(--color-text); font-weight: var(--fw-bold); }
 .check__notes ul { margin: var(--space-1) 0 0; padding-left: 1.2rem; }
 .check__links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.check__doubt { display: flex; gap: var(--space-2); color: var(--color-text-body); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.check__doubt .icon { flex: none; margin-top: 0.15em; color: var(--tone); }
+
+/* 'Het beleid in het kort': de tabel met tools en soorten data uit het AI-beleid */
+.check__policy { border-top: 1px solid var(--color-border); padding-top: var(--space-3); }
+.check__policy summary { display: inline-flex; align-items: center; gap: 0.35em; min-height: 2.25rem; color: var(--color-link); font-size: var(--fs-sm); font-weight: var(--fw-semibold); list-style: none; cursor: pointer; }
+.check__policy summary::-webkit-details-marker { display: none; }
+.check__policy summary .icon { transition: transform var(--duration) var(--ease-out); }
+.check__policy[open] summary .icon { transform: rotate(180deg); }
+.check__table-wrap { margin-top: var(--space-2); overflow-x: auto; }
+.check__table { width: 100%; min-width: 34rem; border-collapse: collapse; font-size: var(--fs-xs); }
+.check__table th, .check__table td { padding: var(--space-2); border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
+.check__table thead th { color: var(--color-text-muted); font-weight: var(--fw-bold); }
+.check__table tbody th { width: 34%; color: var(--color-text); font-weight: var(--fw-semibold); }
+.check__cell { color: var(--color-text-body); }
+.check__cell .icon { width: 1em; height: 1em; margin-right: 0.3em; vertical-align: -0.15em; }
+.check__cell--ja .icon { color: var(--color-success); }
+.check__cell--nee .icon { color: var(--color-danger); }
+.check__cell--cto .icon, .check__cell--prive .icon { color: var(--color-warning); }
+.check__table-note { margin-top: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-xs); }
 
 /* Op de kaart van een agent: welke gegevens erin mogen */
 .data-chip { display: inline-flex; align-items: center; gap: 0.3em; padding: 0.15rem 0.6rem; border-radius: var(--radius-pill); background: var(--color-surface-muted); color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
 .data-chip .icon { width: 0.95em; height: 0.95em; }
-.data-chip--vertrouwelijk { background: var(--badge-free-bg); color: var(--badge-free-ink); }
+.data-chip--vertrouwelijk, .data-chip--hoog { background: var(--badge-free-bg); color: var(--badge-free-ink); }
+.data-chip--web { background: var(--color-warning-fill); color: var(--color-warning); }
+.policy-card__web { color: var(--color-text-body); font-size: var(--fs-sm); }
 
 /* Op de pagina van een agent: 'Wat mag erin?' */
 .policy-card { display: grid; gap: var(--space-3); padding: var(--card-padding); border: 1px solid var(--color-border); border-top: 4px solid var(--color-chrome); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }

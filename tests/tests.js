@@ -265,23 +265,28 @@
     });
 
     /* ---- mag dit? ---- */
-    describe('Mag dit? (js/check.js)');
-    await test('een andere of gratis tool: nee; BSN of bijzondere gegevens: altijd nee', () => {
-      const copilot = { title: 'Copilot Chat', status: 'Beschikbaar', dataLevel: 'vertrouwelijk', useFor: [], notFor: [] };
-      equal(ns.check.verdict(ns.check.OTHER, 'geen').tone, 'nee', 'andere tool');
-      equal(ns.check.verdict(copilot, 'bijzonder').tone, 'nee', 'BSN');
+    describe('Mag dit? (js/check.js, volgens het AI-beleid)');
+    const tool = (dataLevel, extra) => Object.assign({ title: 'Tool', kind: 'Eigen agent', status: 'Beschikbaar', dataLevel, web: false, useFor: [], notFor: [] }, extra);
+    await test('ChatGPT, Claude of een andere tool via de browser: voor je werk altijd nee (ook met algemene data)', () => {
+      const answer = ns.check.verdict(ns.check.OTHER, 'algemeen');
+      equal(answer.tone, 'nee');
+      ok(answer.reasons.some((line) => /persoonlijk|Buiten je werk/.test(line)), 'de uitzondering voor persoonlijk gebruik staat erbij');
     });
-    await test('per tool wat erin mag: klantgegevens, persoonsgegevens (mits), niet vastgesteld', () => {
-      const tool = (dataLevel, status) => ({ title: 'Tool', status: status || 'Beschikbaar', dataLevel, useFor: [], notFor: [] });
-      equal(['geen', 'klant', 'persoon'].map((data) => ns.check.verdict(tool('vertrouwelijk'), data).tone), ['ja', 'ja', 'mits'], 'vertrouwelijk');
-      equal(['geen', 'klant', 'persoon'].map((data) => ns.check.verdict(tool('klant'), data).tone), ['ja', 'ja', 'nee'], 'klant');
-      equal(['geen', 'klant'].map((data) => ns.check.verdict(tool('algemeen'), data).tone), ['ja', 'nee'], 'algemeen');
-      equal(['geen', 'klant'].map((data) => ns.check.verdict(tool(''), data).tone), ['ja', 'onbekend'], 'niet vastgesteld');
-      equal([ns.check.verdict(tool('vertrouwelijk', 'Pilot'), 'geen').tone, ns.check.verdict(tool('vertrouwelijk', 'In ontwikkeling'), 'geen').tone], ['mits', 'nee'], 'status');
+    await test('de tabel uit het beleid: Copilot t/m klantdata (persoonsgegevens: mits), hoog-risico alleen in-house na de CTO', () => {
+      const copilot = tool('vertrouwelijk', { kind: 'Microsoft-standaard' });
+      equal(['algemeen', 'persoon', 'klant', 'hoog'].map((data) => ns.check.verdict(copilot, data).tone), ['ja', 'mits', 'ja', 'nee'], 'Copilot');
+      equal(['algemeen', 'persoon', 'klant', 'hoog'].map((data) => ns.check.verdict(tool('hoog'), data).tone), ['ja', 'mits', 'ja', 'mits'], 'in-house');
+      equal(['algemeen', 'persoon', 'klant'].map((data) => ns.check.verdict(tool('algemeen'), data).tone), ['ja', 'nee', 'nee'], 'alleen algemeen');
+      equal(['algemeen', 'klant'].map((data) => ns.check.verdict(tool(''), data).tone), ['ja', 'onbekend'], 'niet vastgesteld');
+      ok(ns.check.verdict(copilot, 'klant').reasons.some((line) => /Werk-modus/.test(line)), 'Copilot: de Werk-modus');
     });
-    await test('naar de klant: de uitkomst nalezen, het oordeel blijft van jou (niet bij nee)', () => {
-      const copilot = { title: 'Copilot Chat', status: 'Beschikbaar', dataLevel: 'vertrouwelijk', useFor: [], notFor: [] };
-      ok(ns.check.verdict(copilot, 'klant', 'klant').reasons.some((line) => /oordeel/.test(line)), 'advies');
+    await test('status, Work + Web en twijfel', () => {
+      equal([ns.check.verdict(tool('vertrouwelijk', { status: 'Pilot' }), 'algemeen').tone, ns.check.verdict(tool('vertrouwelijk', { status: 'In ontwikkeling' }), 'algemeen').tone], ['mits', 'nee'], 'status');
+      ok(ns.check.verdict(tool('vertrouwelijk', { web: true }), 'algemeen').reasons.some((line) => /webbronnen/.test(line)), 'webbronnen extra controleren');
+      ok(/Bij twijfel/.test(ns.check.verdict(tool(''), 'klant').doubt) && !ns.check.verdict(tool('vertrouwelijk'), 'klant').doubt, 'twijfel alleen bij mits of niet vastgesteld');
+    });
+    await test('naar de klant: harde feiten aan de bron, niet letterlijk overnemen, het oordeel blijft van jou (niet bij nee)', () => {
+      ok(ns.check.verdict(tool('vertrouwelijk'), 'klant', 'klant').reasons.some((line) => /oordeel/.test(line) && /eigen woorden/.test(line)), 'advies');
       ok(!ns.check.verdict(ns.check.OTHER, 'klant', 'klant').reasons.some((line) => /oordeel/.test(line)), 'niet bij nee');
     });
 

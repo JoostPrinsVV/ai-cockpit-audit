@@ -84,7 +84,7 @@
         agent.summary ? el('p', { className: 'uc-card__subtitle', text: agent.summary }) : null
       ]),
       el('div', { className: 'uc-card__footer' }, [
-        el('div', { className: 'uc-card__meta' }, [statusBadge(agent), agent.stopped ? null : ns.check.levelChip(agent)]),
+        el('div', { className: 'uc-card__meta' }, [statusBadge(agent), ...(agent.stopped ? [] : ns.check.levelChip(agent))]),
         el('span', { className: 'uc-card__go', attrs: { 'aria-hidden': 'true' } }, [icon('arrow-right')])
       ])
     ]);

@@ -453,16 +453,47 @@ Geen eigen pagina: het beleid staat waar je de vraag hebt.
   Het adres staat in `policyUrl` (`js/config.js`, nu het Serviceplein) en is te overschrijven in Beheer → Gedeelde
   basis → Teksten. Het beleid zelf staat niet op de site.
 - **Mag dit?** (de knop onder de gouden regels, Ctrl+K "mag dit", de knop bij een agent en de BSN-waarschuwing in de
-  promptbouwer): een venster met drie vragen. Welke tool (de agents & tools die niet gestopt zijn, of een andere of
-  gratis AI-tool), welke gegevens (geen, klantgegevens zonder persoonsgegevens, persoonsgegevens, BSN of bijzondere
-  gegevens) en waar de uitkomst terechtkomt. Het antwoord (groen ja, oranje ja mits of nog niet vastgesteld, rood nee)
-  volgt uit de gouden regels en uit wat per tool is vastgelegd: een andere of gratis tool is altijd nee, BSN en
-  bijzondere gegevens altijd nee, een tool in ontwikkeling nee, een pilot 'mits', en klant- en persoonsgegevens volgens
-  *Gegevens in deze tool*. Naar de klant of in het dossier: met de herinnering om na te lezen en vast te leggen.
-- **Per agent** (Beheer → Agents & tools): *Gegevens in deze tool* (alleen algemene informatie; klantgegevens zonder
-  persoonsgegevens; of ook persoonsgegevens, binnen V&V), *Wel geschikt voor* en *Niet gebruiken voor*. Het niveau
-  staat als label op de kaart; op de pagina staat het blok *Wat mag erin?* met de knop *Mag dit? Check het*. Zolang het
-  niveau leeg is, zegt de check bij klant- of persoonsgegevens *Nog niet vastgesteld*.
+  promptbouwer): een venster met drie vragen. Welke tool (de agents & tools die niet gestopt zijn, of ChatGPT, Claude
+  of een andere tool via de browser), welke data (de vier soorten uit het AI-beleid: algemene data, persoonsgegevens,
+  vertrouwelijke klantgegevens, hoog-risico-data) en waar de uitkomst terechtkomt. Het antwoord (groen ja, oranje ja
+  mits of nog niet vastgesteld, rood nee) volgt het AI-beleid en wat per tool is vastgelegd: een tool via de browser is
+  voor je werk altijd nee, hoog-risico-data nee (behalve in een in-house-app, na afstemming met de CTO), een tool in
+  ontwikkeling nee, een pilot 'mits', en persoonsgegevens en klantdata volgens *Data in deze tool*. Naar de klant of in
+  het dossier: met de herinnering om na te lezen en vast te leggen. Onderaan: *Het beleid in het kort*, de tabel met
+  tools en soorten data uit het beleid.
+- **Per agent** (Beheer → Agents & tools): *Data in deze tool* (alleen algemene data; ook persoonsgegevens en
+  klantdata; of ook hoog-risico-data na afstemming met de CTO), *Gebruikt ook webbronnen (Work + Web)*, *Wel geschikt
+  voor* en *Niet gebruiken voor*. Het niveau (en *Work + Web*) staat als label op de kaart; op de pagina staat het blok
+  *Wat mag erin?* met de knop *Mag dit? Check het*. Zolang het niveau leeg is, zegt de check bij persoonsgegevens of
+  klantdata *Nog niet vastgesteld*.
+
+### Zo volgt de cockpit het AI-beleid
+
+Getoetst aan het AI-beleid van V&V (Serviceplein, stand november 2026). Het beleid gaat over AI in het algemeen; de
+cockpit gaat over Copilot. Hieronder per onderdeel van het beleid waar het in de cockpit zit. Wijzigt het beleid, loop
+deze lijst dan na (en `js/check.js`: `DATA`, `LEVELS`, `POLICY_TABLE` en `verdict`).
+
+| Uit het beleid | In de cockpit |
+| --- | --- |
+| Vier soorten data: algemene data, persoonsgegevens, vertrouwelijke klantgegevens, hoog-risico-data | Vraag 2 van *Mag dit?*, met dezelfde namen en uitleg; *kies de zwaarste* |
+| Tools vs. type data: in-house-apps (Ilse) alles, hoog-risico alleen na afstemming met de CTO; Copilot (alleen Werk-modus) t/m klantdata; LLM's via de browser en overige tools alleen persoonlijk met algemene data | *Het beleid in het kort* (tabel in *Mag dit?*), de niveaus bij *Data in deze tool* en het antwoord van de check |
+| Zakelijk gebruik van LLM's alleen via Copilot of Ilse; ChatGPT, Claude, Gemini via de browser niet, ook niet betaald | Keuze *ChatGPT, Claude, Gemini of een andere tool via de browser* in de check: altijd nee voor je werk, met de uitzondering voor persoonlijke algemene ondersteuning; gouden regel 1 |
+| Copilot alleen in de Werk-modus; extra alert bij webbronnen | Bij persoonsgegevens of klantdata in een Microsoft-tool: *gebruik de Werk-modus*; bij een agent met webtoegang: label *Work + Web* en *controleer extra* |
+| Agents in Copilot Studio als pilot, binnen de beheerde omgeving; *Work + Web* zichtbaar via naam of toelichting | Status *Pilot* (check: *alleen voor de pilotgroep*), veld *Gebruikt ook webbronnen (Work + Web)* met het label op kaart en pagina |
+| Dataminimalisatie, anonimiseren, fictieve gegevens en gevoelige informatie pas zelf invullen in de definitieve versie | De [PLAATSHOUDERS] in alle prompts (wat je invult wordt niet bewaard), *Mag dit?* bij persoonsgegevens (*ja, mits*), gouden regel 4, de BSN/IBAN-waarschuwing in de promptbouwer en de ideeënhub |
+| AI is een hulpmiddel; output is een concept; controleer harde feiten aan de bron; niet letterlijk overnemen; jij blijft verantwoordelijk | Gouden regels 2 en 3, en in de check bij *intern* of *naar de klant* |
+| Bij twijfel niet gebruiken tot afstemming met leidinggevende, disciplinedirectie, Business IT, Legal & Risk of de CTO | Onder ieder *ja, mits* en *nog niet vastgesteld* in de check, en in *Het beleid in het kort* |
+| Nieuwe tools en AI-modules vooraf toetsen (CTO, leverancierscontrole) | Een andere tool is in de check altijd nee; de ideeënhub en de route van een idee lopen via het AI-team |
+| AI-geletterdheid (AI Act) en kennis delen via de AI-werkgroep | De cockpit zelf: usecases, prompts, tips, trainingen en de ideeënhub |
+
+**Bewust strenger of specifieker dan het beleid:** de gouden regels noemen het BSN apart (de check rekent het tot
+hoog-risico-data), en *leg vast in het dossier* komt uit de beroepspraktijk van de audit. **Nog te bevestigen:** de
+vinkjes van de tabel *tools vs type data* zijn uit de tekst van het beleid afgeleid; voor Copilot en hoog-risico-data
+staat in het beleid "tot en met level 3 van de interne dataclassificatie" (de cockpit gaat uit van: geen hoog-risico-data).
+
+**Gouden regels:** die staan in de database (Beheer → Gedeelde basis → Teksten) en gaan voor `js/config.js`. In
+`js/config.js` staan ze in lijn met het beleid (regel 1 noemt Ilse en betaalde LLM's, regel 4 hoog-risico-data);
+neem ze daar over als ze nog de oude tekst hebben.
 
 ## Verbetervoorstellen bij prompts (stap 11)
 
