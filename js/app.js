@@ -10,7 +10,7 @@
      #/agents                agents & tools         #/agent/<id>     één agent of tool
      #/ideeen                ideeënhub              #/ideeen/vraag   met 'Vraag' alvast gekozen
      #/zoeken/<woorden>      zoeken
-     #/mijn                  mijn gegevens (naam, functie, boekjaar: alleen op dit apparaat)
+     #/mijn                  mijn logboek (AI-brevetten) en mijn gegevens (naam, functie, boekjaar: alleen op dit apparaat)
      #/promptbouwer          zelf een prompt bouwen, met een meter
      #/beheer                beheer (inloggen)      #/beheer/inhoud  inhoud aanpassen
    Andere discipline: ?d=<id> vóór de #, bijv. ?d=accountancy#/prompts (zie js/disciplines.js).
@@ -374,6 +374,8 @@
     ns.content.source = source ? kind : 'bestanden';
     contentReady = true;
     applySettings();
+    // Voor wie op de inhoud wacht (de regels van de AI-brevetten, js/brevet.js)
+    document.dispatchEvent(new CustomEvent('ai:inhoud'));
     if (config.debugMode && ns.content.issues.length) ns.ui.toast(ns.content.issues.length + ' melding(en) over de inhoud: zie de console', { tone: 'warning' });
   }
 
@@ -391,7 +393,7 @@
      Bezoekers laden de beheercode niet (ruim een derde van alle JavaScript, plus css/admin.css).
      Wie ingelogd is of naar #/beheer gaat, krijgt hem erbij, met de bestanden in data/ (voor
      Overzetten en inrichten). De volgorde van de scripts is belangrijk. */
-  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-goals.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/admin-improve.js', 'js/view-admin.js', 'js/editmode.js'];
+  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-goals.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/admin-improve.js', 'js/admin-brevet.js', 'js/view-admin.js', 'js/editmode.js'];
   let adminLoading = null;
 
   function loadAdmin() {
@@ -625,6 +627,8 @@
       }, ns.config || {});
       ns.ui.init({ config: baseConfig });
       ns.central.init({ config: baseConfig });
+      // Wie ben je (AI-brevetten): vóór de eerste route, want na inloggen staat de sessie in het adres
+      ns.account.init(baseConfig);
       // Welke discipline: bepaalt de naamruimte van de inhoud, inzendingen en tellers (central leest die per verzoek)
       baseConfig.namespace = ns.cockpit.init({ admin: Boolean(ns.central.signedIn()) && ns.central.isAdmin() });
       // Slot met pincode over de hele cockpit (de rest laadt eronder alvast door)
@@ -632,6 +636,8 @@
       config = Object.assign({}, baseConfig);
       initTheme();
       ns.profile.init(); // je initialen in de kopbalk
+      ns.brevet.init(); // je logboek met AI-miles (laadt zodra de inhoud er is)
+      ns.brevetUi.init(); // de strepen van je brevet op de knop rechtsboven
       ns.palette.init(); // zoekvenster: Ctrl+K, / of de zoekknop
       fillChrome();
       ns.instruments.init();

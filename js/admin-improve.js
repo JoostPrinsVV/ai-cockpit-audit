@@ -153,7 +153,10 @@
       }
       const restore = kit.busy(apply);
       try {
+        const wasDone = item.status === 'gerealiseerd';
         Object.assign(item, await ns.central.adminUpdateIdea(item.id, { status: 'gerealiseerd' }));
+        // AI-miles voor wie het voorstelde, als die meedoet (js/admin-brevet.js)
+        if (!wasDone) ns.adminBrevet.awardFor(item).then(ns.adminBrevet.awardToast).catch((error) => kit.failed('AI-miles toekennen', error));
       } catch (error) {
         kit.failed('Status bijwerken', error);
       } finally {

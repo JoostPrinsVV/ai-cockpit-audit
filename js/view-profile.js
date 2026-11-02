@@ -1,8 +1,10 @@
 /* ==========================================================================
-   Mijn gegevens (#/mijn): één keer invullen, voortaan in iedere prompt
+   Mijn logboek (#/mijn): je AI-brevet en je gegevens
    --------------------------------------------------------------------------
-   Bewaart meteen (alleen in deze browser, zie js/profile.js). Rechts zie je
-   hoe het in een prompt komt te staan, en hoeveel prompts het scheelt.
+   Bovenaan je logboek met AI-miles en brevetten (js/view-logbook.js), daaronder
+   Mijn gegevens: één keer invullen, voortaan in iedere prompt. Die bewaart meteen
+   (alleen in deze browser, zie js/profile.js). Rechts zie je hoe het in een prompt
+   komt te staan, en hoeveel prompts het scheelt.
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -109,15 +111,22 @@
     ]);
     showSample();
 
+    const logbook = ns.views.logbook.section();
+    const withLogbook = Boolean(logbook.node);
     const node = el('div', { className: 'page container' }, [
-      pageHeader({ eyebrow: 'Persoonlijk', title: 'Mijn gegevens', lead: 'Vul één keer in wie je bent. Daarna staan je naam, functie en boekjaar al in iedere prompt: onder een e-mail, in een rolomschrijving, bij de vergelijking met vorig jaar.' }),
+      pageHeader(withLogbook
+        ? { eyebrow: 'Persoonlijk', title: 'Mijn logboek', lead: 'Je AI-brevet en je AI-miles, en je gegevens: één keer invullen, daarna staan je naam, functie en boekjaar al in iedere prompt.' }
+        : { eyebrow: 'Persoonlijk', title: 'Mijn gegevens', lead: 'Vul één keer in wie je bent. Daarna staan je naam, functie en boekjaar al in iedere prompt: onder een e-mail, in een rolomschrijving, bij de vergelijking met vorig jaar.' }),
+      logbook.node,
+      withLogbook ? el('h2', { className: 'section__title mine__heading', text: 'Mijn gegevens' }) : null,
       el('div', { className: 'mine' }, [form, aside])
     ]);
     return {
       node,
-      title: 'Mijn gegevens',
+      title: withLogbook ? 'Mijn logboek' : 'Mijn gegevens',
       // Weg vlak na typen: nog even bewaren
       destroy: () => {
+        logbook.destroy();
         if (!timer) return;
         window.clearTimeout(timer);
         ns.profile.set(Object.fromEntries(Object.entries(inputs).map(([id, input]) => [id, input.value])));

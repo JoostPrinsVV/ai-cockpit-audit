@@ -67,6 +67,18 @@ window.AIAudit.config = {
   /* ---- Gebruik meten ------------------------------------------------------ */
   enableUsageStats: true,               // Anoniem tellen welke usecases, demo's en prompts gebruikt worden (zichtbaar in Beheer)
 
+  /* ---- AI-brevetten (js/brevet.js, js/account.js) --------------------------- */
+  // Meedoen is vrijwillig. mode 'demo': jij plus fictieve collega's, alles alleen in deze browser
+  // (zolang de cockpit nog niet op een V&V-systeem staat). mode 'supabase': echte accounts (stap 12,
+  // setup/supabase-audit-brevetten.sql); login 'email' = een inloglink naar je V&V-mailadres,
+  // 'microsoft' = de Azure-koppeling van Supabase. Na de migratie met Microsoft SSO: zie README, 'Migratie'.
+  brevet: {
+    enabled: true,
+    mode: 'demo',
+    login: 'email',
+    domain: 'visser-visser.nl'          // Alleen e-mailadressen van dit domein kunnen inloggen (de database controleert dat ook)
+  },
+
   /* ---- Centrale opslag (Supabase) ---------------------------------------- */
   // Hetzelfde Supabase-project als de AI Snackbar, met eigen tabellen voor audit.
   // Eenmalig instellen: voer setup/supabase-audit.sql uit (zie README.md).

@@ -647,7 +647,7 @@
   // Teksten die je in Beheer kunt aanpassen (de rest van de instellingen blijft in js/config.js;
   // de naam van de discipline komt uit Beheer → Disciplines; de standaardroute van een idee uit data/disciplines.js;
   // de standaardseizoenen van het seizoenskompas uit data/seizoenen.js)
-  const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules', 'policyUrl', 'routeIntro', 'route', 'routeRoles', 'routeLink', 'seasons'];
+  const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules', 'policyUrl', 'routeIntro', 'route', 'routeRoles', 'routeLink', 'seasons', 'brevet'];
   // Bij het samenvoegen: eigen fasen, usecases en prompts vóór die van de basis; tips, trainingen en agents erna
   const OWN_FIRST = { phase: true, usecase: true, prompt: true };
   const filesId = () => (ns.cockpit ? ns.cockpit.FILES_ID : 'audit');

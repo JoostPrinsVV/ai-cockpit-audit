@@ -4,7 +4,8 @@
    (fetch nagebootst), de werkversies, het gereedschap van Beheer en het
    inlezen van het Copilot-gebruik (met een verzonnen bestand uit
    fixture-copilot.js), de route van een idee per discipline, Mijn gegevens,
-   het seizoenskompas, de promptbouwer en het verbetervoorstel bij een prompt.
+   het seizoenskompas, de promptbouwer, het verbetervoorstel bij een prompt en
+   de AI-brevetten (miles, plafonds, checkrides, royalty's en de demo).
    Draait in de browser (tests/index.html), zonder build of npm.
    ========================================================================== */
 (function (ns) {
@@ -307,6 +308,79 @@
       const full = { role: 'Je bent een auditor', goal: 'Vat de notulen samen in besluiten, acties en open punten', context: 'Het overleg ging over de planning van de controle bij een klant', source: 'de Teams-vergadering', formats: ['een tabel'], extras: ['x'] };
       equal([ns.views.builder.score({}).score, ns.views.builder.score(full).score], [0, 100]);
       equal(ns.views.builder.score({ goal: 'Vat samen', context: 'Voor het team' }).score, 30);
+    });
+    /* ---- AI-brevetten ---- */
+    describe('AI-brevetten (js/brevet.js, js/brevet-data.js, js/account.js)');
+    const B = ns.brevet;
+    // Een moment om 12 uur 's middags (lokale tijd), zodat de dag vast ligt
+    const noon = (day, hour) => {
+      const [y, m, d] = day.split('-').map(Number);
+      return new Date(y, m - 1, d, hour || 12, 0, 0).toISOString();
+    };
+    const fact = (kind, item, day, detail) => ({ kind, item, at: noon(day), detail });
+    const cadetFacts = (day) => [fact('tour_done', '', day), fact('profile_done', '', day), fact('policy_check', '', day)];
+    await test('gebruik telt per uniek ding, en hoogstens 25 miles per dag', () => {
+      const facts = ['a', 'b', 'c', 'd', 'e', 'f', 'a'].map((id) => fact('prompt_used', id, '2026-10-05'));
+      const result = B.compute(facts, { today: '2026-10-05' });
+      equal([result.stats.prompts, result.miles], [6, 25]);
+      ok(result.entries.some((entry) => entry.capped), 'de zesde prompt staat als plafond in het logboek');
+      equal(B.compute(facts.concat(fact('prompt_used', 'g', '2026-10-06')), { today: '2026-10-06' }).miles, 30, 'een nieuwe dag, nieuwe ruimte');
+    });
+    await test('een brevet = genoeg miles én de checkride (ook van de vorige)', () => {
+      equal(B.compute(cadetFacts('2026-10-01'), { today: '2026-10-01' }).level, 0, 'Cadet');
+      equal(B.compute(cadetFacts('2026-10-01').slice(0, 2), { today: '2026-10-01' }).level, -1, 'zonder check nog geen brevet');
+      const rich = cadetFacts('2026-10-01').concat(fact('bonus', 'b1', '2026-10-02', { miles: 900, reason: 'test' }));
+      const result = B.compute(rich, { today: '2026-10-02' });
+      equal([result.level, result.next.level.id, result.next.milesNeeded], [0, 'copilot', 0], 'veel miles, maar zonder checkride geen Co-pilot');
+      equal(result.next.checks.map((check) => check.stat), ['prompts', 'demos', 'trainings', 'weeks']);
+    });
+    await test('insturen hoogstens 3 keer per week; vliegritme bij 3 actieve dagen in een week', () => {
+      const sent = ['r1', 'r2', 'r3', 'r4'].map((ref) => fact('idea_sent', ref, '2026-10-06'));
+      equal(B.compute(sent, { today: '2026-10-06' }).miles, 30);
+      const days = ['2026-10-05', '2026-10-07', '2026-10-09', '2026-10-13', '2026-10-14'].map((day) => fact('active_day', day, day));
+      const result = B.compute(days, { today: '2026-10-14' });
+      equal([result.miles, result.stats.weeks, result.lastActive], [15, 2, '2026-10-14'], 'één week met 3 dagen, twee weken actief');
+    });
+    await test('royalty\'s: collega\'s die jouw prompt gebruiken (elk één keer, nooit jijzelf), met een maandplafond', () => {
+      const all = [
+        { email: 'a@x.nl', kind: 'prompt_author', item: 'p1', at: noon('2026-09-01') },
+        { email: 'a@x.nl', kind: 'prompt_used', item: 'p1', at: noon('2026-09-02') },
+        { email: 'b@x.nl', kind: 'prompt_used', item: 'p1', at: noon('2026-09-03') },
+        { email: 'b@x.nl', kind: 'prompt_used', item: 'p1', at: noon('2026-10-03') },
+        { email: 'c@x.nl', kind: 'prompt_used', item: 'p1', at: noon('2026-10-04') },
+        { email: 'c@x.nl', kind: 'prompt_used', item: 'p2', at: noon('2026-10-04') }
+      ];
+      equal(B.royaltiesFrom(all, 'a@x.nl').sort((x, y) => x.month.localeCompare(y.month)), [{ item: 'p1', month: '2026-09', users: 1 }, { item: 'p1', month: '2026-10', users: 1 }]);
+      const result = B.compute([], { today: '2026-10-10', royalties: [{ item: 'p1', month: '2026-10', users: 30 }] });
+      equal([result.miles, result.stats.colleagues, result.entries[0].capped], [100, 30, true]);
+    });
+    await test('regels uit Beheer: namen, drempels en miles; onzin valt terug op de standaard', () => {
+      const r = B.rules({ copilotName: 'First Officer', copilotMiles: 300, milesPrompt: 7, captainMiles: 'veel', cadetPerks: ['', 'Eigen logboek'] });
+      equal([r.levels[1].name, r.levels[1].miles, r.miles.prompt_used, r.levels[2].miles, r.levels[0].perks], ['First Officer', 300, 7, 1000, ['Eigen logboek']]);
+      equal(B.compute([fact('prompt_used', 'a', '2026-10-01')], { rules: r, today: '2026-10-01' }).miles, 7);
+    });
+    await test('actief = de laatste 90 dagen; ISO-weken', () => {
+      equal(B.compute(cadetFacts('2026-06-01'), { today: '2026-10-01' }).active, false);
+      equal(B.compute(cadetFacts('2026-08-01'), { today: '2026-10-01' }).active, true);
+      equal([B.weekOf('2026-01-01'), B.weekOf('2024-12-30'), B.weekOf('2026-11-02')], ['2026-W01', '2025-W01', '2026-W45']);
+    });
+    await test('demo: de fictieve collega\'s komen op het bedoelde brevet uit', () => {
+      const data = ns.brevetData.seed();
+      const levelOf = (name) => {
+        const account = data.accounts.find((row) => row.name === name);
+        const own = data.facts.filter((row) => row.email === account.email);
+        return B.compute(own, { royalties: B.royaltiesFrom(data.facts, account.email) });
+      };
+      equal(['Fatima El Amrani', 'Sanne de Vries', 'Eva Smit', 'Mark Jansen', 'Lotte Mulder', 'Daan Meijer', 'Thomas Bakker', 'Ruben de Jong'].map((name) => levelOf(name).level), [3, 2, 2, 1, 1, 1, 0, -1]);
+      equal(levelOf('Daan Meijer').active, false, 'Daan is al een tijd niet geweest');
+      ok(data.accounts.every((row) => row.email.endsWith('@demo.cockpit')), 'alleen verzonnen adressen');
+      const keys = data.facts.map((row) => row.email + '|' + row.kind + '|' + row.item);
+      equal(new Set(keys).size, keys.length, 'geen dubbele feiten');
+    });
+    await test('account: alleen V&V-adressen; het e-mailadres uit het token', () => {
+      const part = window.btoa(JSON.stringify({ email: 'Jan.Jansen@Visser-Visser.nl' })).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+      equal(ns.account.emailOfToken('x.' + part + '.y'), 'jan.jansen@visser-visser.nl');
+      equal([ns.account.allowed('jan@visser-visser.nl'), ns.account.allowed('jan@gmail.com'), ns.account.allowed('geen adres')], [true, false, false]);
     });
     await test('kaart op de promptdatabase: een link naar de bouwer, met de meter als versiering', () => {
       const teaser = ns.views.builder.teaser();

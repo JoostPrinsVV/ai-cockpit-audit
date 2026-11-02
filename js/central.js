@@ -12,6 +12,8 @@
      audit_copilot_usage totalen van het Copilot-gebruik per periode (stap 9,
                         setup/supabase-audit-copilot.sql; alleen hoofdbeheerders),
                         en per discipline één rij met de momenten (datum 1900-01-01)
+     audit_accounts     deelnemers aan de AI-brevetten (stap 12, setup/supabase-audit-brevetten.sql)
+     audit_brevet_facts hun logboek: feiten waaruit miles en brevetten worden berekend (js/brevet.js)
 
    Rechten (Row Level Security):
    - Iedereen mag gepubliceerde inhoud lezen.
@@ -38,7 +40,7 @@
 (function (ns) {
   'use strict';
 
-  const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content', reviews: 'audit_reviews', log: 'audit_log', history: 'audit_content_history', copilot: 'audit_copilot_usage' };
+  const TABLES = { ideas: 'audit_ideas', votes: 'audit_idea_votes', events: 'audit_events', content: 'audit_content', reviews: 'audit_reviews', log: 'audit_log', history: 'audit_content_history', copilot: 'audit_copilot_usage', accounts: 'audit_accounts', facts: 'audit_brevet_facts' };
   const COPILOT_COLUMNS = 'id,period_start,period_end,source,summary,imported_at,imported_by';
   // Kolommen die iedereen mag lezen (geen naam of e-mailadres).
   const PUBLIC_COLUMNS = 'id,ref,created_at,kind,title,body,phase,status,answer,answered_at,votes';
@@ -232,7 +234,11 @@
     };
     // Een verbetervoorstel: bij welke prompt (stap 11). Alleen dan meesturen: zonder stap 11 bestaat de kolom nog niet.
     if (idea.target) row.target = idea.target;
-    return add(TABLES.ideas, row, 'Inzending versturen');
+    return add(TABLES.ideas, row, 'Inzending versturen').then((result) => {
+      // Voor je logboek (js/brevet.js), als je meedoet met de AI-brevetten
+      if (result === 'ok') document.dispatchEvent(new CustomEvent('ai:ingestuurd', { detail: { ref: idea.ref, kind: idea.kind } }));
+      return result;
+    });
   }
 
   /** Gepubliceerde inzendingen (voor iedereen zichtbaar). */
@@ -258,7 +264,10 @@
       voter: review.voter,
       rating: review.rating,
       comment: review.comment || null
-    }, 'Review versturen');
+    }, 'Review versturen').then((result) => {
+      if (result === 'ok') document.dispatchEvent(new CustomEvent('ai:beoordeeld', { detail: { type: review.type, id: String(review.id) } }));
+      return result;
+    });
   }
 
   /** Gemiddelde en aantal reviews per item in deze discipline: items [{ item_type, item_id, reviews, average }]. */
@@ -277,6 +286,8 @@
 
   /** kind: 'view_usecase' | 'play_demo' | 'copy_prompt' | 'view_tip' | 'copy_tip' | 'view_training' | 'play_training' | 'view_agent' | 'open_agent'. Geen persoonsgegevens. */
   function track(kind, itemId) {
+    // Altijd als signaal in de pagina (je logboek, js/brevet.js); de anonieme teller alleen als die aan staat
+    document.dispatchEvent(new CustomEvent('ai:track', { detail: { kind, id: String(itemId || '') } }));
     if (!enabled || trackingOff || LOCAL || !config.enableUsageStats || signedIn()) return; // beheerders tellen niet mee
     add(TABLES.events, { namespace: config.namespace, kind, item_id: String(itemId || '').slice(0, 80) }, 'Tellen').then((result) => {
       if (result === 'missing') trackingOff = true; // geen tabel: niet bij elke klik opnieuw proberen
@@ -651,6 +662,148 @@
     if (!response.ok) throw await failure(response, 'opslaan');
   }
 
+  /* ---- AI-brevetten (stap 12, setup/supabase-audit-brevetten.sql) ---------------------------- */
+  // Deelnemers loggen in met een link naar hun V&V-mailadres of met Microsoft (js/account.js) en
+  // werken met hun eigen token; de database bewaakt wat ze mogen lezen en toevoegen. Alleen in de
+  // Supabase-modus: in de demo staat alles in de browser (js/brevet-data.js).
+  const ACCOUNT_COLUMNS = 'email,name,team,vestiging,joined_at,share_brevet,level,level_seen';
+  const FACT_COLUMNS = 'id,email,kind,item_id,namespace,detail,created_at,created_by';
+  const factOf = (row) => ({ id: row.id, email: row.email, kind: row.kind, item: row.item_id, detail: row.detail, namespace: row.namespace, at: row.created_at, by: row.created_by });
+  const factRow = (fact) => ({ email: String(fact.email).toLowerCase(), kind: fact.kind, item_id: String(fact.item == null ? '' : fact.item).slice(0, 80), namespace: fact.namespace || null, detail: fact.detail || null });
+  const missingBrevet = () => new Error('de tabellen voor de AI-brevetten ontbreken nog: voer setup/supabase-audit-brevetten.sql (stap 12) uit');
+
+  /** Een inloglink naar dit adres (Supabase stuurt de mail, terug naar redirect); true als dat lukte. */
+  async function sendLoginLink(email, redirect) {
+    if (!enabled) return false;
+    try {
+      const response = await request('/auth/v1/otp?redirect_to=' + encodeURIComponent(redirect), post({ email, create_user: true }));
+      return response.ok;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /** Inloggen via een andere partij (provider 'azure' = Microsoft); komt terug op redirect met #access_token. */
+  function authorizeUrl(provider, redirect) {
+    return `${base}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&scopes=email&redirect_to=${encodeURIComponent(redirect)}`;
+  }
+
+  /** De sessie van een deelnemer verlengen; null als dat niet meer kan. */
+  async function refreshParticipant(refresh) {
+    if (!enabled || !refresh) return null;
+    try {
+      const response = await request('/auth/v1/token?grant_type=refresh_token', post({ refresh_token: refresh }));
+      return response.ok ? response.json() : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /** Een verzoek als deelnemer (nooit de beheerderssessie aanraken bij een fout). */
+  async function participantCall(path, init, what) {
+    const response = await request(path, init);
+    if (await isMissingTable(response)) throw missingBrevet();
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const data = await response.json();
+        detail = data && data.message ? ': ' + data.message : '';
+      } catch (error) {
+        /* geen details */
+      }
+      throw new Error(`${what} mislukt (${response.status})${detail}`);
+    }
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  async function brevetAccount(token, email) {
+    if (!enabled || !token) return null;
+    const rows = await participantCall(tablePath(TABLES.accounts, { select: ACCOUNT_COLUMNS, email: 'eq.' + email }), { headers: headers(token) }, 'Je account lezen');
+    return (rows && rows[0]) || null;
+  }
+
+  /** Je account aanmaken of bijwerken (alleen de meegegeven velden); geeft het account. */
+  async function brevetSaveAccount(token, row) {
+    const rows = await participantCall(tablePath(TABLES.accounts, { on_conflict: 'email', select: ACCOUNT_COLUMNS }), {
+      method: 'POST',
+      headers: headers(token, { Prefer: 'resolution=merge-duplicates,return=representation' }),
+      body: JSON.stringify(row)
+    }, 'Je account opslaan');
+    return rows[0];
+  }
+
+  /** Stoppen met meedoen: je account weg, en daarmee je hele logboek (on delete cascade). */
+  function brevetRemoveAccount(token, email) {
+    return participantCall(tablePath(TABLES.accounts, { email: 'eq.' + email }), { method: 'DELETE', headers: headers(token) }, 'Stoppen');
+  }
+
+  async function brevetFacts(token) {
+    const rows = await participantCall(tablePath(TABLES.facts, { select: FACT_COLUMNS, order: 'id.asc', limit: 10000 }), { headers: headers(token) }, 'Je logboek lezen');
+    return rows.map(factOf);
+  }
+
+  /** Een feit dat je zelf mag toevoegen; bestaat het al, dan blijft het zoals het was. */
+  async function brevetAddFact(token, fact) {
+    if (!enabled || !token) return 'failed';
+    try {
+      const response = await request(tablePath(TABLES.facts, { on_conflict: 'email,kind,item_id' }), {
+        method: 'POST',
+        headers: headers(token, { Prefer: 'resolution=ignore-duplicates,return=minimal' }),
+        body: JSON.stringify(factRow(fact))
+      });
+      return outcome(response, 'Logboek bijwerken');
+    } catch (error) {
+      return 'failed';
+    }
+  }
+
+  /** Je royalty's: per prompt waarvan je auteur bent en per maand het aantal collega's dat hem gebruikte. */
+  async function brevetRoyalties(token) {
+    if (!enabled || !token) return [];
+    const response = await request(RPC + 'audit_brevet_royalties', post({}, token));
+    if (!response.ok) return [];
+    return (await response.json()).map((row) => ({ item: row.item_id, month: row.month, users: Number(row.users) || 0 }));
+  }
+
+  /** Beheer: alle rijen van een tabel zonder naamruimte (accounts), in pagina's. */
+  async function readEvery(table, params, what) {
+    const rows = [];
+    for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
+      const response = await request(tablePath(table, Object.assign({}, params, { limit: PAGE_SIZE, offset })), { headers: await adminHeaders() });
+      if (await isMissingTable(response)) throw missingBrevet();
+      if (!response.ok) throw await failure(response, what);
+      const page = await response.json();
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+    return rows;
+  }
+
+  function adminBrevetAccounts() {
+    return readEvery(TABLES.accounts, { select: ACCOUNT_COLUMNS, order: 'name.asc' }, 'deelnemers lezen');
+  }
+
+  async function adminBrevetFacts() {
+    return (await readEvery(TABLES.facts, { select: FACT_COLUMNS, order: 'id.asc' }, 'logboeken lezen')).map(factOf);
+  }
+
+  /** Feiten namens het AI-team; alleen voor bestaande accounts (de database weigert andere). Geeft het aantal nieuwe. */
+  async function adminBrevetAdd(facts) {
+    const response = await request(tablePath(TABLES.facts, { on_conflict: 'email,kind,item_id', select: 'id' }), {
+      method: 'POST',
+      headers: await adminHeaders({ Prefer: 'resolution=ignore-duplicates,return=representation' }),
+      body: JSON.stringify(facts.map(factRow))
+    });
+    if (await isMissingTable(response)) throw missingBrevet();
+    if (!response.ok) throw await failure(response, 'opslaan');
+    return (await response.json()).length;
+  }
+
+  function adminBrevetRemove(id) {
+    return changeOne(tablePath(TABLES.facts, { id: 'eq.' + id, select: 'id' }));
+  }
+
   /* ---- Beheer: werkversies, publiceren, logboek, beheerders, media (stap 7) ------------------ */
   /** Staan de werkversies in de database (stap 7 uitgevoerd)? null = nog onbekend. */
   const draftingAvailable = () => drafting;
@@ -802,6 +955,19 @@
     listMoments,
     saveMoments,
     listGoals,
-    saveGoals
+    saveGoals,
+    sendLoginLink,
+    authorizeUrl,
+    refreshParticipant,
+    brevetAccount,
+    brevetSaveAccount,
+    brevetRemoveAccount,
+    brevetFacts,
+    brevetAddFact,
+    brevetRoyalties,
+    adminBrevetAccounts,
+    adminBrevetFacts,
+    adminBrevetAdd,
+    adminBrevetRemove
   };
 })(window.AIAudit);

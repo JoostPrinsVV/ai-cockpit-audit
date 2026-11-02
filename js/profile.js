@@ -167,8 +167,10 @@
     label.textContent = letters;
     label.hidden = !letters;
     if (svg) svg.style.display = letters ? 'none' : '';
-    button.setAttribute('aria-label', letters ? `Mijn gegevens (${get().naam})` : 'Mijn gegevens');
-    button.title = letters ? 'Mijn gegevens' : 'Mijn gegevens: vul je naam en functie één keer in';
+    button.setAttribute('aria-label', letters ? `Mijn logboek (${get().naam})` : 'Mijn logboek');
+    button.title = letters ? 'Mijn logboek' : 'Mijn logboek: vul je naam en functie één keer in';
+    // Met een brevet: de strepen erbij (js/brevet-ui.js)
+    if (ns.brevetUi) ns.brevetUi.syncMeButton();
   }
 
   function init() {

@@ -69,6 +69,8 @@
         attrs: { src: usecase.video, poster: opts.poster || null, controls: true, preload: 'metadata', playsinline: true, 'aria-label': (opts.trackKind === 'play_training' ? 'Opname: ' : 'Demo: ') + usecase.title }
       });
       video.addEventListener('play', trackPlay);
+      // Helemaal bekeken: telt voor je logboek (js/brevet.js); een opname van een training niet (dat legt beheer vast)
+      if (opts.trackKind !== 'play_training') video.addEventListener('ended', () => document.dispatchEvent(new CustomEvent('ai:demo-af', { detail: { id: usecase.id } })), { once: true });
       video.addEventListener('error', () => {
         stage.replaceChildren(opts.trackKind === 'play_training'
           ? placeholder('Opname niet gevonden', 'Het videobestand ontbreekt of kon niet laden. Laat het weten via de ideeënhub.')

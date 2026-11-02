@@ -29,7 +29,7 @@
     const weekly = ns.content.currentWeeklyTip;
     const list = [
       { label: 'Bouw je eigen prompt', meta: 'Promptbouwer', icon: 'blocks', href: '#/promptbouwer', words: 'prompt maken schrijven bouwer opbouwen', quick: true },
-      { label: 'Mijn gegevens', meta: 'Naam, functie en boekjaar in iedere prompt', icon: 'user', href: '#/mijn', words: 'profiel naam functie boekjaar persoonlijk', quick: true },
+      { label: 'Mijn logboek', meta: 'AI-brevet, AI-miles en je gegevens', icon: 'user', href: '#/mijn', words: 'profiel naam functie boekjaar persoonlijk gegevens brevet brevetten miles logboek cadet copilot captain commander', quick: true },
       weekly ? { label: 'Tip van de week: ' + weekly.title, meta: 'Tip', icon: 'gift', href: ns.kinds.href('tip', weekly.id), words: 'tip week vrijdag', quick: true } : null,
       { label: 'Stel een vraag aan het AI-team', meta: 'Ideeënhub', icon: 'question', href: '#/ideeen/vraag', words: 'vraag hulp help ideeenhub', quick: true },
       { label: 'Mag dit? Check het in drie vragen', meta: 'AI-beleid', icon: 'shield', run: () => ns.check.open(), words: 'mag dit toegestaan beleid privacy klantgegevens persoonsgegevens bsn veilig tool' },

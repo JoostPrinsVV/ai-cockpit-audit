@@ -529,6 +529,67 @@ Eenmalig: voer `setup/supabase-audit-verbeteringen.sql` uit (stap 11, na stap 1;
 van stap 7). Die voegt de soort *verbetering* toe en één kolom `target` (bij welke prompt). Tot dan lukt versturen
 niet en biedt het venster aan je versie te kopiëren; de andere inzendingen werken gewoon.
 
+## AI-brevetten (Mijn logboek, Beheer → AI-brevetten, stap 12)
+
+Wie meedoet (opt-in), verdient **AI-miles** en haalt **brevetten**: Cadet, Co-pilot, CaptAIn en Commander, als
+epauletstrepen (1, 3, 4, en 4 met een ster). Een brevet = genoeg miles én de checkride van dat brevet (en van de
+vorige), zoals een piloot vlieguren én een examen nodig heeft. Alles staat op **Mijn logboek** (`#/mijn`, de knop
+rechtsboven, met je strepen erop): je brevet, je miles, de checkride voor het volgende brevet met knoppen om meteen te
+beginnen, wat je recent verdiende, trainingen waarvoor je bent aangemeld, en stoppen (dan wordt je logboek gewist).
+Bij een promotie verschijnt één keer een venster met een korte animatie, wat het brevet betekent en de volgende
+checkride (bij openen van de cockpit, of terwijl je hem open hebt). De rondleiding eindigt met een uitnodiging om mee
+te doen; wie de rondleiding al had, krijgt op de startpagina één keer een kaartje.
+
+| Brevet | Miles | Checkride |
+|---|---|---|
+| Cadet | 0 | rondleiding, Mijn gegevens, check "Veilig vliegen" (5 vragen over het AI-beleid) |
+| Co-pilot | 250 | 10 verschillende prompts, 3 demo's, 1 training (live of opname), 4 weken actief |
+| CaptAIn | 1.000 | 1 bijdrage overgenomen, 1 live training, 2 trainingen, 25 verschillende prompts |
+| Commander | 2.500 | 25 keer dat een collega jouw prompt gebruikte, een sessie gegeven, voorgedragen door het AI-team |
+
+**Tegen sparen met klikken** (`js/brevet.js`): gebruik telt per uniek ding (elke prompt, demo of beoordeling één
+keer) en samen hoogstens 25 miles per dag; insturen hoogstens 3 keer per week; het grootste deel komt pas als het
+AI-team een bijdrage overneemt; royalty's tellen elke collega één keer (nooit jezelf), hoogstens 100 per maand. Een
+video-demo telt pas als hij helemaal is bekeken. Miles worden altijd opnieuw berekend uit het **feitenlogboek** (wie,
+wat, welk item, wanneer); de database zet het tijdstip, dus terugdateren kan niet.
+
+**Wie ziet wat.** Het AI-team (hoofdbeheerders) ziet het logboek: gebruik en bijdragen. Collega's zien alleen wat
+iemand kiest te delen (het brevet, nooit het gebruik). Wie niet meedoet, wordt alleen anoniem geteld, zoals altijd.
+Omdat beheer gebruik per persoon ziet, kan dit gelden als personeelsvolgsysteem (art. 27 lid 1 sub l WOR): leg het
+voor aan de ondernemingsraad en de privacy-officer voordat echte collega's meedoen.
+
+**Beheer → AI-brevetten** (hoofdbeheerders): *Deelnemers* (brevet, miles, laatst actief; per persoon het logboek,
+miles toekennen met een reden, een sessie vastleggen, voordragen als Commander, een prompt op iemands naam zetten voor
+de royalty's, een feit weghalen; CSV), *Trainingen* (per training wie is aangemeld en wie er was; alleen deelnemers
+toe te voegen; *aanwezig* levert miles op en telt voor de checkride) en *Regels*. Een inzending op **Gerealiseerd**
+zetten (ook via *Overnemen in de cockpit* bij een verbetervoorstel) kent automatisch miles toe als de indiener
+meedoet (op e-mailadres; in de demo op naam). Namen, drempels, voordelen en de belangrijkste miles pas je aan in
+**Gedeelde basis → Teksten → AI-brevetten** (leeg = de standaard).
+
+**Demo of echt** (`js/config.js`, `brevet.mode`):
+- `'demo'` (nu): jij plus ruim dertig verzonnen collega's (adressen op `@demo.cockpit`), alles alleen in deze browser.
+  Op Mijn logboek kun je *kijken als* een collega en de demo opnieuw beginnen. Geen echte persoonsgegevens buiten
+  V&V-systemen.
+- `'supabase'`: echte accounts. Voer `setup/supabase-audit-brevetten.sql` uit (stap 12, na stap 1). Zet in Supabase
+  → Authentication het adres van de cockpit bij *Site URL* en *Redirect URLs*, en zet *Allow new users to sign up*
+  aan (wie geen V&V-adres heeft, kan in de database niets: dat bewaakt `audit_brevet_allowed`). Inloggen gaat met een
+  link naar je V&V-mailadres (`brevet.login: 'email'`; voor meer dan een handvol mensen een eigen SMTP-server instellen)
+  of met Microsoft (`'microsoft'`: Providers → Azure, met een app-registratie van IT voor alleen de V&V-tenant).
+
+### Migratie naar de Microsoft-omgeving (SSO)
+
+De cockpit is zo gebouwd dat je bij de migratie twee dingen verwisselt en de rest blijft:
+1. **Wie ben je** staat alleen in `js/account.js` (`current()`, `token()`, `signIn()`). Blijft Supabase de
+   database, dan is het `brevet.login: 'microsoft'` met de Azure-koppeling. Komt er een andere database of een
+   inlog van het hostingplatform, dan vervang je alleen de Supabase-stukken in `js/account.js` en
+   `js/brevet-data.js` (de functies `account`, `saveAccount`, `facts`, `add`, `royalties` en de `admin…`-varianten).
+2. **De gegevens**: twee tabellen, `audit_accounts` en `audit_brevet_facts` (exporteer ze als CSV in Supabase →
+   Table editor). De sleutel is het zakelijke e-mailadres in kleine letters; dat is in Microsoft hetzelfde, dus bij de
+   eerste SSO-login vindt iemand zijn logboek terug. Miles en brevetten staan nergens opgeslagen: die rekent de
+   cockpit uit de feiten uit, met dezelfde regels.
+Neem de regels in `setup/supabase-audit-brevetten.sql` mee (alleen eigen gegevens lezen, alleen eigen gebruik
+toevoegen, tijdstip door de server, alleen V&V-adressen); in een andere database worden dat rechten of een kleine API.
+
 ## Nieuwsbrief (Beheer → Nieuwsbrief)
 
 Een weekupdate of maandnieuwsbrief, vanzelf samengesteld uit wat er in die periode nieuw was in de cockpit van de
@@ -677,7 +738,8 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    Stap 1 en 8 opnieuw uitvoeren kan geen kwaad; stap 7 weigert na stap 8 (zie hierboven). Voor Beheer →
    Copilot-gebruik ook `setup/supabase-audit-copilot.sql` (stap 9), voor Beheer → Portfolio
    `setup/supabase-audit-portfolio.sql` (stap 10) en voor de verbetervoorstellen bij prompts
-   `setup/supabase-audit-verbeteringen.sql` (stap 11); alle drie mogen op ieder moment na stap 1 en opnieuw.
+   `setup/supabase-audit-verbeteringen.sql` (stap 11); alle drie mogen op ieder moment na stap 1 en opnieuw. Voor
+   de AI-brevetten met echte accounts `setup/supabase-audit-brevetten.sql` (stap 12; zie 'AI-brevetten').
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').

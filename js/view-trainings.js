@@ -132,19 +132,24 @@
 
   /* ---- Eén training --------------------------------------------------------------- */
   function recordingBlock(training) {
+    // Doe je mee met de AI-brevetten: 'Opname bekeken' voor je logboek (js/brevet-ui.js)
+    const withLog = (node) => {
+      const button = ns.brevetUi.trainingButton(training);
+      return button ? el('div', { className: 'recording-with-log' }, [node, button]) : node;
+    };
     if (training.video) {
       const player = ns.player.create(training, { trackKind: 'play_training', note: 'Opname van de training', poster: training.poster });
-      return { node: player.node, video: player.video, destroy: player.destroy };
+      return { node: withLog(player.node), video: player.video, destroy: player.destroy };
     }
     if (training.link) {
       return {
-        node: statusPanel({
+        node: withLog(statusPanel({
           accent: training.accent,
           icon: 'play-circle',
           title: training.duration ? `Opname · ${training.duration}` : 'Opname',
           text: 'De opname staat in Microsoft 365 en opent in een nieuw tabblad. Log in met je Visser & Visser-account.',
           action: openButton(training.link, 'Open de opname', { icon: 'play', onOpen: () => ns.central.track('play_training', training.id) })
-        })
+        }))
       };
     }
     // Geen opname, wel naslagwerk: dan geen 'Opname volgt' (de slides staan op die plek)

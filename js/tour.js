@@ -38,16 +38,27 @@
       { target: ['.nav'], title: 'De zes onderdelen', text: 'Usecases met demo, de promptdatabase, tips & tricks, trainingen, agents & tools en de ideeënhub. Het lampje brandt bij het onderdeel waar je bent.' },
       { target: ['.hero__rose', '.radar-strip'], title: 'De radar', text: 'Wat nieuw is sinds je vorige bezoek, verschijnt als rood stipje bij het onderdeel. Wijs het aan voor de titel, klik om het te openen.' },
       { target: ['.compass'], title: 'Wat speelt er nu?', text: 'Het seizoenskompas laat zien wat er nu speelt in het jaar, met de usecases en prompts die daar het handigst bij zijn.' },
-      { target: ['#me-button'], title: 'Maak het persoonlijk', text: 'Vul één keer je naam, functie en boekjaar in. Dan staan ze voortaan al in iedere prompt, en blijven klantgegevens gewoon open om zelf in te vullen.' },
+      { target: ['#me-button'], title: 'Maak het persoonlijk', text: 'Vul één keer je naam, functie en boekjaar in. Dan staan ze voortaan al in iedere prompt, en blijven klantgegevens gewoon open om zelf in te vullen. Hier staat ook je logboek met AI-miles.' },
       { target: ['#rules-section'], title: 'Veilig werken', text: 'De gouden regels, het AI-beleid van V&V en "Mag dit?": in drie vragen weet je of iets mag in Copilot.' },
-      {
-        kind: 'finish',
-        eyebrow: 'Klaar voor vertrek',
-        title: 'Jij bepaalt de koers',
-        text: 'Begin bij de prompts, of bouw je eigen prompt. De rondleiding vind je altijd terug onderaan de pagina en met Ctrl+K.'
-      }
+      // Einde: met de AI-brevetten een uitnodiging om mee te doen (zolang je nog niet meedoet)
+      invite()
+        ? {
+          kind: 'finish',
+          brevet: true,
+          eyebrow: 'Klaar voor vertrek',
+          title: 'Haal je eerste brevet',
+          text: 'Verdien AI-miles met wat je doet en deelt in de cockpit, en promoveer van Cadet tot Commander, met echte voordelen. Meedoen is vrijwillig: het AI-team ziet je logboek, collega\'s alleen wat jij kiest te delen.'
+        }
+        : {
+          kind: 'finish',
+          eyebrow: 'Klaar voor vertrek',
+          title: 'Jij bepaalt de koers',
+          text: 'Begin bij de prompts, of bouw je eigen prompt. De rondleiding vind je altijd terug onderaan de pagina en met Ctrl+K.'
+        }
     ];
   }
+
+  const invite = () => Boolean(ns.brevet && ns.brevet.enabled() && !ns.brevet.joined());
 
   let state = null; // { dialog, spot, card, list, index, … } zolang de rondleiding loopt
 
@@ -229,7 +240,15 @@
     if (step.kind === 'welcome') {
       actions.push(el('button', { className: 'tour__link', attrs: { type: 'button' }, on: { click: () => stop('overgeslagen') } }, [el('span', { text: 'Liever zelf ontdekken' })]));
     }
-    if (step.kind === 'finish') {
+    if (step.kind === 'finish' && step.brevet) {
+      actions.push(
+        el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => {
+          stop('klaar');
+          window.setTimeout(() => ns.brevetUi.join(), calm() ? 0 : 300);
+        } } }, [icon('plane'), el('span', { text: 'Doe mee' })]),
+        el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#/prompts' }, on: { click: () => stop('klaar') } }, [icon('chat'), el('span', { text: 'Eerst de prompts' })])
+      );
+    } else if (step.kind === 'finish') {
       actions.push(
         el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#/prompts' }, on: { click: () => stop('klaar') } }, [icon('chat'), el('span', { text: 'Naar de prompts' })]),
         el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#/promptbouwer' }, on: { click: () => stop('klaar') } }, [icon('blocks'), el('span', { text: 'Bouw een prompt' })])
@@ -255,6 +274,8 @@
   function stop(how) {
     if (!state) return;
     remember(how);
+    // In je logboek (als je meedoet met de AI-brevetten)
+    if (ns.brevet) ns.brevet.record('tour_done', '');
     const { dialog } = state;
     window.removeEventListener('resize', place);
     window.removeEventListener('scroll', place);
@@ -291,6 +312,8 @@
    */
   function maybeStart() {
     const forced = new URLSearchParams(window.location.search).has('rondleiding');
+    // Al gezien: dan misschien één keer de uitnodiging voor de AI-brevetten (js/brevet-ui.js)
+    if (!forced && seen() && !state && ns.brevetUi) ns.brevetUi.maybeInvite();
     if (state || scheduled || (!forced && (seen() || ns.central.signedIn()))) return;
     const later = () => {
       scheduled = window.setTimeout(() => {
