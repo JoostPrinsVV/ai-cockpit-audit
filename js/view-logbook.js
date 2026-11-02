@@ -80,7 +80,8 @@
         ]),
         join
       ]),
-      ns.brevetUi.ladder(-1)
+      ns.brevetUi.ladder(-1),
+      ns.brevetUi.earnings()
     ]);
   }
 

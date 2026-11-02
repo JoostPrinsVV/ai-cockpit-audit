@@ -3042,15 +3042,29 @@ html[data-slot='dicht'] body > :not(.gate, .fatal) { visibility: hidden; }
 @keyframes insignia-star { from { opacity: 0; transform: translate(-50%, -50%) scale(0.3) rotate(-40deg); } to { opacity: 1; transform: translate(-50%, -50%); } }
 @keyframes insignia-glint { to { background-position: -30% 0; } }
 
-/* De ladder van brevetten (Mijn logboek, meedoen, promotie) */
-.ladder { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.5rem), 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
-.ladder__step { display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
-.ladder__step.is-current { border-color: var(--vv-teal); box-shadow: 0 0 0 2px color-mix(in srgb, var(--vv-teal) 28%, transparent); }
-.ladder__text { display: grid; gap: 0.15rem; min-width: 0; }
-.ladder__name { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--color-text); font-weight: var(--fw-bold); }
-.ladder__badge { padding: 0.05rem 0.5rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--vv-teal) 18%, transparent); color: var(--color-text); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+/* De ladder: de vier brevetten naast elkaar als route, met de strepen op één stippellijn */
+.ladder { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin: 0; padding: var(--space-5) var(--space-4) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface-muted); list-style: none; }
+.ladder::before { content: ''; position: absolute; top: calc(var(--space-5) + 1.4rem); right: 12.5%; left: 12.5%; border-top: 2px dashed color-mix(in srgb, var(--vv-teal) 55%, var(--color-border-strong)); }
+.ladder__step { position: relative; display: grid; align-content: start; justify-items: center; gap: 0.15rem; min-width: 0; text-align: center; }
+.ladder__mark { display: grid; place-items: center; padding: 0 var(--space-2); background: var(--color-surface-muted); }
+.ladder__step.is-current .insignia__board { box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-teal) 50%, transparent), 0 4px 12px rgba(7, 13, 38, 0.3); }
+.ladder__name { margin-top: var(--space-2); color: var(--color-text); font-size: var(--fs-md); font-weight: var(--fw-bold); }
 .ladder__miles { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
-.ladder__perks { display: grid; gap: 0.2rem; margin: var(--space-2) 0 0; padding-left: 1.1em; color: var(--color-text-body); font-size: var(--fs-sm); }
+.ladder__step.is-current .ladder__miles { padding: 0 0.55rem; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--vv-teal) 22%, transparent); color: var(--color-text); }
+.ladder__perks { display: grid; justify-items: start; gap: 0.3rem; margin: var(--space-2) 0 0; padding: 0; color: var(--color-text-body); font-size: var(--fs-xs); line-height: 1.35; list-style: none; text-align: left; }
+.ladder__perks li { display: flex; align-items: flex-start; gap: 0.35rem; }
+.ladder__perks .icon { flex: none; width: 0.9em; height: 0.9em; margin-top: 0.2em; color: var(--vv-teal); }
+
+/* Zo verdien je AI-miles */
+.earn { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.earn__label { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
+.earn__list { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.earn__item { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.25rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-pill); background: var(--color-surface); color: var(--color-text-body); font-size: var(--fs-sm); }
+.earn__item strong { color: var(--color-text); font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .ladder { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-5); }
+  .ladder::before { display: none; }
+}
 
 /* De checkride als lijst met vinkjes */
 .checkride { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
@@ -3088,6 +3102,19 @@ html[data-slot='dicht'] body > :not(.gate, .fatal) { visibility: hidden; }
 .promo[open] .improve__actions { animation-delay: 1.6s; }
 @keyframes promo-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
+/* Meedoen: één scherm met de route, hoe je verdient, en onderin wie wat ziet naast je naam en de knoppen */
+.join { width: min(60rem, calc(100% - 2rem)); }
+.join__panel { gap: var(--space-4); }
+.join__head { display: grid; gap: 0.2rem; }
+.join__eyebrow { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-instrument); text-transform: uppercase; }
+.join__eyebrow .icon { color: var(--vv-teal); }
+.join__title { font-size: var(--fs-xl); }
+.join__lead { max-width: 46rem; color: var(--color-text-body); }
+.join__bottom { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); align-items: stretch; }
+.join__form { display: grid; align-content: space-between; gap: var(--space-3); }
+@media (max-width: 760px) {
+  .join__bottom { grid-template-columns: minmax(0, 1fr); }
+}
 .join__privacy { padding: var(--space-4); border-radius: var(--radius); background: var(--color-surface-muted); color: var(--color-text-body); font-size: var(--fs-sm); }
 .join__label { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text); font-size: var(--fs-sm); }
 .join__label .icon { color: var(--vv-teal); }

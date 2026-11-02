@@ -23,9 +23,9 @@
   'use strict';
 
   const LEVELS = [
-    { id: 'cadet', name: 'Cadet', stripes: 1, miles: 0, perks: ['Je eigen logboek: je miles, je voortgang en wat je nog mist', 'Aantoonbaar: je weet hoe je veilig werkt met Copilot'] },
-    { id: 'copilot', name: 'Co-pilot', stripes: 3, miles: 250, perks: ['Upgrade: voorrang op een Copilot-licentie', 'Priority boarding: jouw prompt-aanvragen pakt het AI-team als eerste op'] },
-    { id: 'captain', name: 'CaptAIn', stripes: 4, miles: 1000, perks: ['Testpiloot: eerder toegang tot nieuwe agents en functies', 'Stemrecht: kies mee welke ideeën als eerste gebouwd worden', 'Lounge: het Teams-kanaal met het AI-team', 'Cockpitcheck: een half uur 1-op-1 met een AI-specialist over jouw werk'] },
+    { id: 'cadet', name: 'Cadet', stripes: 1, miles: 0, perks: ['Je eigen logboek met miles', 'Bewijs dat je veilig vliegt'] },
+    { id: 'copilot', name: 'Co-pilot', stripes: 3, miles: 250, perks: ['Upgrade: voorrang op een licentie', 'Priority boarding voor je aanvragen'] },
+    { id: 'captain', name: 'CaptAIn', stripes: 4, miles: 1000, perks: ['Testpiloot voor nieuwe agents', 'Stemrecht over wat we bouwen', 'Lounge met het AI-team', 'Cockpitcheck: 1-op-1 sessie'] },
     { id: 'commander', name: 'Commander', stripes: 4, miles: 2500, insignia: true, perks: ['Een agent op maat voor je team', 'Een plek in het AI-panel', 'Aanspreekpunt voor AI in je team'] }
   ];
 

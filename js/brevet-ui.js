@@ -47,22 +47,32 @@
     }, [el('span', { className: 'insignia__button', attrs: { 'aria-hidden': 'true' } }), board]);
   }
 
-  /** De ladder: alle brevetten, met het jouwe gemarkeerd. */
+  /** De ladder: de vier brevetten naast elkaar als route (strepen op een lijn), met het jouwe gemarkeerd. */
   function ladder(current, rules) {
     const r = rules || ns.brevet.rules();
     return el('ol', { className: 'ladder', attrs: { role: 'list' } }, r.levels.map((level, index) => el('li', {
       className: 'ladder__step' + (index === current ? ' is-current' : '') + (index < current ? ' is-done' : '')
     }, [
-      insignia(index, 'md', { rules: r }),
-      el('div', { className: 'ladder__text' }, [
-        el('p', { className: 'ladder__name' }, [
-          el('span', { text: level.name }),
-          index === current ? el('span', { className: 'ladder__badge', text: 'Jouw brevet' }) : null
-        ]),
-        el('p', { className: 'ladder__miles', text: index === 0 ? 'Na de eerste stappen' : `${level.miles.toLocaleString('nl-NL')} AI-miles en de checkride` }),
-        el('ul', { className: 'ladder__perks', attrs: { role: 'list' } }, level.perks.map((perk) => el('li', { text: perk })))
-      ])
+      el('span', { className: 'ladder__mark' }, [insignia(index, 'md', { rules: r })]),
+      el('p', { className: 'ladder__name', text: level.name }),
+      el('p', { className: 'ladder__miles', text: index === current ? 'Jouw brevet' : index === 0 ? 'De eerste stappen' : `${level.miles.toLocaleString('nl-NL')} AI-miles` }),
+      el('ul', { className: 'ladder__perks', attrs: { role: 'list', 'aria-label': 'Voordelen' } }, level.perks.map((perk) => el('li', {}, [icon('check'), el('span', { text: perk })])))
     ])));
+  }
+
+  /** Zo verdien je AI-miles: een paar voorbeelden als labels. */
+  function earnings(rules) {
+    const m = (rules || ns.brevet.rules()).miles;
+    const most = Math.max(...Object.values(m.adopted));
+    return el('div', { className: 'earn' }, [
+      el('p', { className: 'earn__label', text: 'Zo verdien je AI-miles' }),
+      el('ul', { className: 'earn__list', attrs: { role: 'list' } }, [
+        ['Prompt gebruiken', '+' + m.prompt_used],
+        ['Demo bekijken', '+' + m.demo_watched],
+        ['Live training', '+' + m.training_attended],
+        ['Bijdrage overgenomen', 'tot +' + most]
+      ].map(([what, miles]) => el('li', { className: 'earn__item' }, [el('span', { text: what }), el('strong', { text: miles })])))
+    ]);
   }
 
   /** De checkride als lijst met vinkjes (checks uit compute().next). */
@@ -161,31 +171,33 @@
     const cancel = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [el('span', { text: 'Niet nu' })]);
     const send = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('plane'), el('span', { text: 'Doe mee' })]);
     const error = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
-    const form = el('form', { className: 'improve__panel', attrs: { novalidate: true } }, [
-      el('div', { className: 'improve__head' }, [
-        el('span', { className: 'improve__icon', attrs: { 'aria-hidden': 'true' } }, [icon('plane')]),
-        el('div', {}, [
-          el('h2', { className: 'improve__title', attrs: { id: id + '-title' }, text: 'Doe mee met de AI-brevetten' }),
-          el('p', { className: 'improve__subject', text: 'Verdien AI-miles met wat je in de cockpit doet en deelt, en haal je brevetten: van Cadet tot Commander. Elk brevet geeft echte voordelen.' })
-        ])
+    const form = el('form', { className: 'improve__panel join__panel', attrs: { novalidate: true } }, [
+      el('div', { className: 'join__head' }, [
+        el('p', { className: 'join__eyebrow' }, [icon('plane'), el('span', { text: 'AI-brevetten' })]),
+        el('h2', { className: 'join__title', attrs: { id: id + '-title' }, text: 'Van Cadet tot Commander' }),
+        el('p', { className: 'join__lead', text: 'Verdien AI-miles met wat je in de cockpit doet en deelt. Met genoeg miles en de checkride promoveer je, en elk brevet geeft echte voordelen.' })
       ]),
       ladder(-1),
-      el('div', { className: 'join__privacy' }, [
-        el('h3', { className: 'join__label' }, [icon('shield'), el('span', { text: 'Wie ziet wat?' })]),
-        el('ul', { attrs: { role: 'list' } }, [
-          el('li', { text: 'Het AI-team (beheer) ziet je logboek: wat je gebruikt en wat je bijdraagt.' }),
-          el('li', { text: 'Collega\'s zien alleen wat jij kiest te delen: je brevet, nooit je gebruik.' }),
-          el('li', { text: 'Stoppen kan altijd, onder Mijn logboek. Dan wordt je logboek gewist.' })
+      earnings(),
+      el('div', { className: 'join__bottom' }, [
+        el('div', { className: 'join__privacy' }, [
+          el('h3', { className: 'join__label' }, [icon('shield'), el('span', { text: 'Wie ziet wat?' })]),
+          el('ul', { attrs: { role: 'list' } }, [
+            el('li', { text: 'Het AI-team ziet je logboek: wat je gebruikt en bijdraagt.' }),
+            el('li', { text: 'Collega\'s zien alleen je brevet, en alleen als jij dat aanzet.' }),
+            el('li', { text: 'Stoppen kan altijd; dan wordt je logboek gewist.' })
+          ])
+        ]),
+        el('div', { className: 'join__form' }, [
+          el('div', { className: 'field' }, [
+            el('label', { className: 'field__label', attrs: { for: id + '-name' }, text: 'Je naam' }),
+            name
+          ]),
+          el('label', { className: 'check', attrs: { for: id + '-share' } }, [share, el('span', { text: 'Collega\'s mogen mijn brevet zien' })]),
+          error,
+          el('div', { className: 'improve__actions' }, [cancel, send])
         ])
-      ]),
-      el('div', { className: 'field' }, [
-        el('label', { className: 'field__label', attrs: { for: id + '-name' }, text: 'Je naam' }),
-        el('p', { className: 'field__hint', text: 'Zo herkent het AI-team je, bijvoorbeeld als het je bijdrage overneemt.' }),
-        name
-      ]),
-      el('label', { className: 'check', attrs: { for: id + '-share' } }, [share, el('span', { text: 'Laat collega\'s mijn brevet zien (kan later nog aan of uit)' })]),
-      error,
-      el('div', { className: 'improve__actions' }, [cancel, send])
+      ])
     ]);
     const node = dialog('join', id + '-title', [form]);
     cancel.addEventListener('click', () => node.close());
@@ -424,5 +436,5 @@
     syncMeButton();
   }
 
-  ns.brevetUi = { init, insignia, ladder, checklist, promote, join, login, policyCheck, maybeInvite, syncMeButton, trainingButton, QUESTIONS };
+  ns.brevetUi = { init, insignia, ladder, earnings, checklist, promote, join, login, policyCheck, maybeInvite, syncMeButton, trainingButton, QUESTIONS };
 })(window.AIAudit);
