@@ -73,6 +73,24 @@
       .sort((a, b) => runLength(b, month) - runLength(a, month) || a.order - b.order);
   }
 
+  /**
+   * De fasen van wat nu speelt (Fasen bij dit seizoen), het belangrijkste seizoen eerst: [{ phase, season }].
+   * Alleen fasen die in deze cockpit bestaan. Die komen bovenaan bij prompts, usecases en agents & tools.
+   */
+  function nowPhases(config, day) {
+    const out = [];
+    active(seasons(config, ns.cockpit.activeId()), day || ns.content.today()).forEach((season) => season.phases.forEach((id) => {
+      const phase = ns.content.phaseById.get(id);
+      if (phase && !out.some((entry) => entry.phase === phase)) out.push({ phase, season });
+    }));
+    return out;
+  }
+
+  /** Label 'Nu in het seizoen: …' bij een uitgelichte groep. */
+  function badge(titles) {
+    return el('p', { className: 'p-group__season' }, [icon('compass'), el('span', { text: 'Nu in het seizoen: ' + [].concat(titles).join(' · ') })]);
+  }
+
   /** Wat er hierna begint (een seizoen dat nu nog niet speelt): { season, month } of null. */
   function next(list, day) {
     const month = monthOf(day);
@@ -266,5 +284,5 @@
     ]);
   }
 
-  ns.compass = { tidy, seasons, active, next, picks, monthsText, runLength, section, MONTHS, SHORT };
+  ns.compass = { tidy, seasons, active, next, nowPhases, badge, picks, monthsText, runLength, section, MONTHS, SHORT };
 })(window.AIAudit);

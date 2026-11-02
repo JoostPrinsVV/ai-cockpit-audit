@@ -44,14 +44,19 @@
   /* ---- Overzicht ------------------------------------------------------------- */
   function renderList() {
     const all = ns.content.usecases;
-    const grid = el('ul', { className: 'card-grid', attrs: { role: 'list' } });
+    const list = el('div', { className: 'p-list' });
     const count = B.resultCount();
     // Een lege catalogus (nieuwe discipline) is iets anders dan niets vinden met deze filters
     const empty = all.length
       ? emptyState('Geen usecases met deze filters', 'Kies een andere fase of zet de filters terug op Alle.')
       : emptyState('De eerste usecases komen eraan', `Hier verschijnen de usecases voor Copilot in ${ns.cockpit.active().label}, met een demo en de prompts erbij.`, null, 'play-circle');
-    const cardFor = B.cardCache((u) => card(u, 'h2'));
+    // Onder een tussenkop (seizoen en de rest) is de titel van een kaart een h3
+    const cardFor = B.cardCache((u, variant) => card(u, variant ? 'h3' : 'h2'));
+    const grid = (items, variant) => el('ul', { className: 'card-grid', attrs: { role: 'list' } }, items.map((u) => cardFor(u, variant)));
     const saved = B.savedFilter('usecase', filters, update, (id) => ns.content.usecaseById.has(id));
+    // De fasen van wat nu speelt (seizoenskompas): die usecases bovenaan, uitgelicht
+    const now = ns.compass.nowPhases(ns.app.config());
+    const seasonRank = (u) => now.findIndex((entry) => entry.phase === u.phase);
 
     function update() {
       const savedIds = saved.ids();
@@ -61,15 +66,40 @@
         (!filters.saved || savedIds.includes(u.id))
       );
       if (filters.sort === 'rating') items = ns.reviews.rank(items, 'usecase');
-      grid.replaceChildren(...items.map((u) => cardFor(u)));
+      // Alle fasen in de gewone volgorde: eerst die van het seizoen (zijn het alle usecases, dan geen tweedeling)
+      const seasonal = filters.phase === 'all' && filters.sort !== 'rating' ? items.filter((u) => seasonRank(u) >= 0) : [];
+      if (!seasonal.length || seasonal.length === items.length) {
+        list.replaceChildren(grid(items, ''));
+      } else {
+        seasonal.sort((a, b) => seasonRank(a) - seasonRank(b));
+        const rest = items.filter((u) => seasonRank(u) < 0);
+        const phases = now.filter((entry) => seasonal.some((u) => u.phase === entry.phase));
+        const seasons = Array.from(new Set(phases.map((entry) => entry.season.title)));
+        list.replaceChildren(
+          el('section', { className: 'p-group is-season ' + accentClass(phases[0].phase.accent), attrs: { 'aria-labelledby': 'uc-season' } }, [
+            el('div', { className: 'p-group__head' }, [
+              el('h2', { className: 'p-group__title', attrs: { id: 'uc-season' } }, [
+                el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(phases[0].phase.icon)]),
+                el('span', {}, [phases.map((entry) => entry.phase.label).join(' en ') + ' ', el('span', { className: 'p-group__count', text: String(seasonal.length) })])
+              ]),
+              ns.compass.badge(seasons)
+            ]),
+            grid(seasonal, 'seizoen')
+          ]),
+          el('section', { className: 'p-group', attrs: { 'aria-labelledby': 'uc-rest' } }, [
+            el('h2', { className: 'p-group__title', attrs: { id: 'uc-rest' } }, [el('span', {}, ['Alle andere usecases ', el('span', { className: 'p-group__count', text: String(rest.length) })])]),
+            grid(rest, 'rest')
+          ])
+        );
+      }
       count.textContent = B.countText(items.length, 'usecase', 'usecases');
       empty.hidden = items.length > 0;
-      grid.hidden = items.length === 0;
+      list.hidden = items.length === 0;
     }
-    const stopSaved = saved.watch(grid);
+    const stopSaved = saved.watch(list);
     // De gemiddelden komen later binnen: dan de kaarten opnieuw bouwen (met de sterren erop)
     ns.reviews.whenLoaded(() => {
-      if (!grid.isConnected) return;
+      if (!list.isConnected) return;
       cardFor.reset();
       update();
     });
@@ -86,7 +116,7 @@
         B.filterRow('Toon', B.licenseFilter(filters, update), B.extraFilters(saved.button), count),
         sort ? B.filterRow('Volgorde', sort) : null
       ]),
-      grid,
+      list,
       empty
     ]);
     update();

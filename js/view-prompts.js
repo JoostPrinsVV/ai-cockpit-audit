@@ -95,6 +95,12 @@
     // In een fasegroep een iets andere kaart (de fase staat dan al in de kop)
     const cardFor = B.cardCache((p, variant) => card(p, variant === 'groep' ? 'h3' : 'h2', variant === 'groep'));
     const saved = B.savedFilter('prompt', filters, update, (id) => ns.content.promptById.has(id));
+    // De fasen van wat nu speelt (seizoenskompas): die groepen bovenaan, uitgelicht
+    const now = ns.compass.nowPhases(ns.app.config());
+    const seasonRank = (phase) => {
+      const index = now.findIndex((entry) => entry.phase === phase);
+      return index < 0 ? now.length : index;
+    };
 
     function update() {
       const savedIds = saved.ids();
@@ -110,7 +116,7 @@
         items = ns.reviews.rank(items, 'prompt');
         list.replaceChildren(el('ul', { className: 'p-grid', attrs: { role: 'list' } }, items.map((p) => cardFor(p, 'lijst'))));
       } else {
-        // Per fase gegroepeerd, met een kop per fase
+        // Per fase gegroepeerd, met een kop per fase; de fasen van het seizoen eerst (de rest in de gewone volgorde)
         const groups = [];
         items.forEach((p) => {
           let group = groups[groups.length - 1];
@@ -120,15 +126,20 @@
           }
           group.items.push(p);
         });
-        list.replaceChildren(...groups.map((group) =>
-          el('section', { className: 'p-group ' + accentClass(group.phase.accent), attrs: { 'aria-labelledby': 'pg-' + group.phase.id } }, [
-            el('h2', { className: 'p-group__title', attrs: { id: 'pg-' + group.phase.id } }, [
-              el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase.icon)]),
-              el('span', {}, [group.phase.label + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
+        groups.sort((a, b) => seasonRank(a.phase) - seasonRank(b.phase));
+        list.replaceChildren(...groups.map((group) => {
+          const season = now.find((entry) => entry.phase === group.phase);
+          return el('section', { className: 'p-group ' + accentClass(group.phase.accent) + (season ? ' is-season' : ''), attrs: { 'aria-labelledby': 'pg-' + group.phase.id } }, [
+            el('div', { className: 'p-group__head' }, [
+              el('h2', { className: 'p-group__title', attrs: { id: 'pg-' + group.phase.id } }, [
+                el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase.icon)]),
+                el('span', {}, [group.phase.label + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
+              ]),
+              season ? ns.compass.badge(season.season.title) : null
             ]),
             el('ul', { className: 'p-grid', attrs: { role: 'list' } }, group.items.map((p) => cardFor(p, 'groep')))
-          ])
-        ));
+          ]);
+        }));
       }
       count.textContent = B.countText(items.length, 'prompt', 'prompts');
       empty.hidden = items.length > 0;

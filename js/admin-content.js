@@ -279,7 +279,7 @@
           { key: 'title', label: 'Wat speelt er', type: 'text', required: true, placeholder: 'bijv. Planning en interimcontroles' },
           { key: 'months', label: 'Maanden', type: 'months', required: true },
           { key: 'text', label: 'Waar draait het om', type: 'textarea', hint: 'Eén of twee zinnen.' },
-          { key: 'phases', label: 'Fasen bij dit seizoen', type: 'refs', ref: 'phase', hint: 'Daaruit kiest het kompas usecases en prompts, en zolang dit seizoen speelt staan deze fasen bovenaan bij Agents & tools, uitgelicht.' },
+          { key: 'phases', label: 'Fasen bij dit seizoen', type: 'refs', ref: 'phase', hint: 'Daaruit kiest het kompas usecases en prompts, en zolang dit seizoen speelt staan deze fasen bovenaan bij prompts, usecases en agents & tools, uitgelicht.' },
           { key: 'keywords', label: 'Zoekwoorden', type: 'list', hint: 'Eén per regel, bijv. voorraad. Wat de cockpit hiermee vindt, komt eerst.' },
           { key: 'accent', label: 'Kleur', type: 'select', options: kit.accentOptions, hint: 'Leeg = de kleur van de eerste fase.' }
         ] }

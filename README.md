@@ -368,6 +368,8 @@ elders; een agent kan er met `registerUrl` naar linken (afgeschermde omgeving).
 - **Uitgelicht in het seizoen:** de fasen van wat nu speelt in het seizoenskompas (Beheer → Inhoud → Teksten →
   Seizoenskompas, *Fasen bij dit seizoen*) staan bovenaan, in een eigen vlak met *Nu in het seizoen*. Bij Audit nu
   Interne beheersing en Planning (interimcontroles), in het voorjaar de fasen van risico-inschatting, controle en afronding.
+  Dat geldt ook bij de prompts (die groepen eerst) en de usecases (eerst die van het seizoen, dan *Alle andere
+  usecases*), zolang je op Alle fasen en de gewone volgorde staat.
 - **Nieuw:** een agent (net als alle andere inhoud) heeft het label *Nieuw* tot 45 dagen na *Toegevoegd op*
   (`newDays` in `js/config.js`); inhoud van vóór de lancering (`launchDate`) krijgt het niet.
 - **Niet gebruiken voor:** een paar korte punten; ze staan als waarschuwing op de pagina.

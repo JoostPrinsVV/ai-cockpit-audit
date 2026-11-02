@@ -23,17 +23,6 @@
   /** Hoort bij een fase (voor het filter): die fase gekozen, of in (bijna) elke fase. */
   const inPhase = (agent, phaseId) => broad(agent) || agent.phases.some((phase) => phase.id === phaseId);
 
-  /** De fasen van wat nu speelt (seizoenskompas), het belangrijkste seizoen eerst: [{ phase, season }]. */
-  function seasonPhases() {
-    const list = ns.compass.seasons(ns.app.config(), ns.cockpit.activeId());
-    const out = [];
-    ns.compass.active(list, ns.content.today()).forEach((season) => season.phases.forEach((id) => {
-      const phase = ns.content.phaseById.get(id);
-      if (phase && !out.some((entry) => entry.phase === phase)) out.push({ phase, season });
-    }));
-    return out;
-  }
-
   /**
    * De groepen bij 'Alle fasen': eerst de fasen van het seizoen (uitgelicht), dan 'In elke fase', dan de
    * andere fasen in de volgorde uit Beheer. Een agent met een paar fasen staat in elk daarvan.
@@ -148,7 +137,7 @@
     const list = el('div', { className: 'p-list' });
     const count = resultCount();
     const empty = emptyState('Geen agents of tools met deze filters', 'Kies een andere fase, soort of status.');
-    const season = seasonPhases();
+    const season = ns.compass.nowPhases(ns.app.config());
 
     // Een agent kan in meer groepen staan: per groep een eigen kaart (in een groep is de titel een h3)
     const cardFor = cardCache((agent, variant) => card(agent, variant ? 'h3' : 'h2'));
@@ -167,13 +156,13 @@
         list.replaceChildren(...groups(items, season).map((group) => {
           const key = group.phase ? group.phase.id : 'elke-fase';
           const titleId = 'ag-' + key;
-          return el('section', { className: 'p-group ag-group ' + accentClass(group.phase ? group.phase.accent : 'navy') + (group.season ? ' is-season' : ''), attrs: { 'aria-labelledby': titleId } }, [
-            el('div', { className: 'ag-group__head' }, [
+          return el('section', { className: 'p-group ' + accentClass(group.phase ? group.phase.accent : 'navy') + (group.season ? ' is-season' : ''), attrs: { 'aria-labelledby': titleId } }, [
+            el('div', { className: 'p-group__head' }, [
               el('h2', { className: 'p-group__title', attrs: { id: titleId } }, [
                 el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase ? group.phase.icon : 'grid')]),
                 el('span', {}, [(group.phase ? group.phase.label : 'In elke fase') + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
               ]),
-              group.season ? el('p', { className: 'ag-group__season' }, [icon('compass'), el('span', { text: 'Nu in het seizoen: ' + group.season.title })]) : null
+              group.season ? ns.compass.badge(group.season.title) : null
             ]),
             grid(group.items, key)
           ]);

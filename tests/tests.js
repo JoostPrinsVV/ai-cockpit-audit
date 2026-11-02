@@ -218,6 +218,23 @@
       equal([coming.season.title, coming.month], ['Voorraadinventarisaties', 12]);
       equal(ns.compass.next(auditSeasons, '2026-06-20').season.title, 'Planning en jaarovergang dossier');
     });
+    await test('fasen van nu: uit de seizoenen die spelen, het belangrijkste eerst, alleen bestaande fasen', () => {
+      const realCockpit = ns.cockpit;
+      const realPhases = ns.content.phaseById;
+      ns.cockpit = { activeId: () => 'audit' };
+      ns.content.phaseById = new Map(['planning', 'beheersing', 'gegevensgericht'].map((id) => [id, { id }]));
+      try {
+        const now = ns.compass.nowPhases({}, '2026-12-05');
+        equal(now.map((entry) => [entry.phase.id, entry.season.title]), [
+          ['beheersing', 'Planning en interimcontroles'],
+          ['planning', 'Planning en interimcontroles'],
+          ['gegevensgericht', 'Voorraadinventarisaties']
+        ]);
+      } finally {
+        ns.cockpit = realCockpit;
+        ns.content.phaseById = realPhases;
+      }
+    });
     await test('maanden als tekst: aaneengesloten als bereik, ook over de jaarwisseling', () => {
       equal([ns.compass.monthsText([11, 12, 1]), ns.compass.monthsText([1, 4, 7, 10]), ns.compass.monthsText([7, 8, 9]), ns.compass.monthsText([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])], ['nov – jan', 'jan, apr, jul, okt', 'jul – sep', 'het hele jaar']);
     });
