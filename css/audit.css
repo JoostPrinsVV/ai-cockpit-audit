@@ -2408,9 +2408,12 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .tour__buttons { display: flex; gap: var(--space-2); }
 
 /* Onderaan iedere pagina */
-.footer__tour { display: inline-flex; align-items: center; gap: 0.35em; padding: 0; border: 0; background: none; color: var(--color-on-dark); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.footer__tour .icon { color: var(--vv-teal); }
-.footer__links { align-items: center; gap: var(--space-2) var(--space-4); }
+/* Rondleiding (een knop) en Beheer (een link) zien er hetzelfde uit: icoon, onderstreepte tekst */
+.footer__tour { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
+.footer__tour, .footer__link { display: inline-flex; align-items: center; gap: 0.4em; color: var(--color-on-dark); text-decoration: none; }
+.footer__tour .icon, .footer__link .icon { flex: none; color: var(--vv-teal); }
+.footer__tour span, .footer__link span { text-decoration: underline; text-underline-offset: 3px; }
+.footer__slot { display: contents; }
 
 @media (prefers-reduced-motion: reduce) {
   .tour[open] { animation: none; }
@@ -2737,7 +2740,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .rules__item { display: grid; grid-template-columns: auto 1fr; gap: var(--space-3); font-size: var(--fs-sm); }
 .rules__number { width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--vv-teal); color: var(--vv-navy); font-size: var(--fs-xs); font-weight: var(--fw-bold); }
 .footer__meta { display: grid; align-content: start; gap: var(--space-3); font-size: var(--fs-sm); }
-.footer__links { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.footer__links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); }
 .footer a { color: var(--color-on-dark); }
 .footer__small { color: var(--color-on-dark-subtle); font-size: var(--fs-xs); }
 
