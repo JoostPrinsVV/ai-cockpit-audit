@@ -72,7 +72,7 @@ buiten staan alleen in de inhoud (bijv. de opname van een training of een agent)
 | `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk (snel: Ctrl+K op iedere pagina) |
 | `#/promptbouwer` | Zelf een prompt bouwen in zes stappen, met een meter en wat er nog beter kan |
 | `#/mijn` | Mijn gegevens: naam, functie, vestiging, team en boekjaar, voortaan ingevuld in iedere prompt |
-| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, ideeën in het portfolio zetten (AI Value Matrix), de nieuwsbrief maken, gebruik bekijken, het Copilot-gebruik per periode volgen, en het overzicht voor het bestuur |
+| `#/beheer` | Voor het AI-team: inhoud per discipline en de gedeelde basis beheren, disciplines openzetten of op slot houden, inzendingen en reviews beoordelen, ideeën in het portfolio zetten (AI Value Matrix), de nieuwsbrief maken, gebruik bekijken, het Copilot-gebruik per periode volgen, doelen per discipline bewaken (Doelkoers), en het overzicht voor het bestuur |
 
 Ieder adres is deelbaar, bijvoorbeeld in Teams: `https://joostprinsvv.github.io/ai-cockpit-audit/#/tip/facilitator`.
 Met `#/ideeen/vraag` (of `idee`, `verzoek`, `prompt`) staat de soort in de ideeënhub alvast goed.
@@ -590,6 +590,28 @@ database (`audit_copilot_usage`): aantallen personen en actieve gebruikers per l
 hoe vaak mensen actief zijn en het aandeel van de tien meest actieve personen samen. Geen PersonId's, geen cijfers per
 persoon en geen bestandsnaam. Is een groep heel klein (een licentie met een of twee personen), dan liggen de totalen
 dicht bij cijfers per persoon; houd daar rekening mee. Een echte export hoort nooit in deze (openbare) repository.
+
+## Doelkoers (Beheer → Doelkoers)
+
+Per discipline stel je doelen voor de Copilot-adoptie en het gebruik van de cockpit, en zie je of je op koers ligt.
+
+- **Een doel:** een kengetal, een doelwaarde, een einddatum en (optioneel) vanaf wanneer de koers loopt; leeg = vanaf
+  de eerste meting. De beginwaarde wordt bij het opslaan vastgelegd. Een toelichting kan erbij. Drie voorbeelden om mee
+  te beginnen.
+- **Kengetallen** (`METRICS` in `js/admin-goals.js`): uit Copilot-gebruik *Adoptie* (actief in de laatste 4 weken, per
+  import), *Wekelijks actief* (deel van de collega's per week, lopend gemiddelde over 4 weken), *Licenties benut*
+  (Premium, actief in 4 weken) en *Gebruik per actieve collega* (keer per week); uit de cockpit *Prompts gekopieerd* en
+  *Cockpit bekeken* (keer per week, lopend gemiddelde, alleen volle weken).
+- **De koers** is een rechte lijn van de beginwaarde naar het doel. De laatste meting tegenover de koers geeft de stand:
+  *Doel gehaald*, *Op koers*, *Iets achter* (binnen 10% van de weg), *Achter op koers*, *Niet gehaald* (einddatum
+  voorbij) of *Nog geen gegevens*. Het tempo is een rechte lijn door de laatste metingen (hooguit 8): "Bij dit tempo
+  haal je het doel rond …".
+- **Per doel:** het label met de stand, de laatste meting, een koersband (van begin naar doel, met een streepje waar de
+  koers nu ligt), één zin en een grafiek met de metingen, de koers, het doel, vandaag en het tempo (aanwijzen of de
+  pijltjes voor de cijfers, en als tabel).
+- **Ook in Overzicht** (alle doelen van alle disciplines, met de stand) **en op Start** ("2 van 3 doelen op koers").
+- **Opslag:** één rij per discipline in `audit_copilot_usage`, net als de momenten (stap 9, geen nieuwe SQL); alleen
+  voor hoofdbeheerders.
 
 ## Overzicht (Beheer → Overzicht)
 

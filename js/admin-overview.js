@@ -258,6 +258,22 @@
           }), (index) => index > 1 && index < 5));
       }
 
+      // ---- Doelkoers: de doelen per discipline en hun stand (Beheer → Doelkoers)
+      let goalSection = null;
+      if (copilot.status === 'fulfilled' && copilot.value) {
+        const G = ns.adminGoals;
+        const all = G.standings(copilot.value, events.status === 'fulfilled' ? events.value : [], ns.content.today());
+        if (all.length) {
+          const good = all.filter((entry) => ['op-koers', 'gehaald'].includes(entry.result.status)).length;
+          goalSection = section('Doelkoers', `${NUMBER.format(good)} van ${NUMBER.format(all.length)} doelen op koers of gehaald. Per doel de laatste meting, waar de koers nu ligt en het doel; de doelen stel je per discipline in bij Beheer → Doelkoers.`,
+            table(['Discipline', 'Kengetal', 'Nu', 'Koers nu', 'Doel', 'Stand'], all.map((entry) => {
+              const { metric, goal, result } = entry;
+              const known = result.status !== 'geen';
+              return { cells: [nameOf(entry.namespace), metric.label, known ? G.format(metric, result.current) : '–', known ? G.format(metric, result.planned) : '–', `${G.format(metric, Number(goal.target))} op ${formatDate(goal.deadline)}`, G.statusBadge(result.status)] };
+            }), (index) => index === 2 || index === 3));
+        }
+      }
+
       // ---- Ideeën: status en portfolio
       let ideaSection;
       if (ideaList) {
@@ -314,6 +330,7 @@
         usageSection,
         disciplineSection,
         copilotSection,
+        goalSection,
         ideaSection,
         trainingSection,
         el('p', { className: 'field__hint overview__source', text: 'Bronnen: wat live in de cockpit staat, de anonieme tellers van de cockpit, de ideeënhub (met de beoordelingen) en de totalen uit de Copilot-export. Geen gegevens per persoon.' })

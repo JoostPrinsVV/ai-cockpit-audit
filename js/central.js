@@ -625,6 +625,32 @@
     if (!response.ok) throw await failure(response, 'opslaan');
   }
 
+  /* ---- Beheer: doelkoers per discipline ------------------------------------------------- */
+  // Doelen voor het Copilot-gebruik en de cockpit (js/admin-goals.js), net als de momenten één rij per
+  // discipline in audit_copilot_usage, met een eigen vaste datum (geen nieuwe SQL nodig).
+  const GOALS_DAY = '1900-01-02';
+  const GOALS_SOURCE = 'doelen';
+
+  /** Doelen van alle disciplines: [{ namespace, goals: [...] }]; null zolang stap 9 niet is uitgevoerd. */
+  async function listGoals() {
+    const params = { select: 'namespace,summary', source: 'eq.' + GOALS_SOURCE, period_end: 'eq.' + GOALS_DAY, namespace: 'like.ai-*', limit: 100 };
+    const response = await request(tablePath(TABLES.copilot, params), { headers: await adminHeaders() });
+    if (await isMissingTable(response)) return null;
+    if (!response.ok) throw await failure(response, 'Doelen lezen');
+    return (await response.json()).map((row) => ({ namespace: row.namespace, goals: Array.isArray(row.summary && row.summary.goals) ? row.summary.goals : [] }));
+  }
+
+  /** De doelen van één discipline opslaan: de lijst vervangt de vorige. */
+  async function saveGoals(goals, namespace) {
+    const response = await request(tablePath(TABLES.copilot, { on_conflict: 'namespace,period_end', select: 'namespace' }), {
+      method: 'POST',
+      headers: await adminHeaders({ Prefer: 'resolution=merge-duplicates,return=representation' }),
+      body: JSON.stringify({ namespace: namespace || config.namespace, period_start: GOALS_DAY, period_end: GOALS_DAY, source: GOALS_SOURCE, summary: { version: GOALS_SOURCE, goals } })
+    });
+    if (await isMissingTable(response)) throw new Error('de tabel ontbreekt nog: voer setup/supabase-audit-copilot.sql (stap 9) uit');
+    if (!response.ok) throw await failure(response, 'opslaan');
+  }
+
   /* ---- Beheer: werkversies, publiceren, logboek, beheerders, media (stap 7) ------------------ */
   /** Staan de werkversies in de database (stap 7 uitgevoerd)? null = nog onbekend. */
   const draftingAvailable = () => drafting;
@@ -774,6 +800,8 @@
     saveCopilotUsage,
     deleteCopilotUsage,
     listMoments,
-    saveMoments
+    saveMoments,
+    listGoals,
+    saveGoals
   };
 })(window.AIAudit);

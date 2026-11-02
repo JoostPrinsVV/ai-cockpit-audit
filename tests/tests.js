@@ -701,6 +701,43 @@
       equal(chart.querySelectorAll('tbody tr')[7].lastElementChild.textContent, '28 okt. 2026: Licentie');
     });
 
+    /* ---- doelkoers ---- */
+    describe('Doelkoers (js/admin-goals.js)');
+    const G = ns.adminGoals;
+    const goal = { target: 70, deadline: '2027-07-01', start: '2026-07-01', baseline: 30 };
+    await test('de koers: een rechte lijn van de beginwaarde naar het doel', () => {
+      const r = G.progress(goal, [{ date: '2026-07-01', value: 30 }, { date: '2027-01-01', value: 50 }], '2027-01-10');
+      ok(Math.abs(r.at('2027-01-01') - (30 + 40 * (184 / 365))) < 0.01, 'halverwege de koers');
+      equal([r.at('2026-01-01'), r.at('2028-01-01')], [30, 70], 'voor het begin de beginwaarde, na het eind het doel');
+    });
+    await test('de stand: op koers, iets achter, achter, gehaald, niet gehaald, geen gegevens', () => {
+      const at = (value, today) => G.progress(goal, [{ date: '2026-07-01', value: 30 }, { date: '2027-01-01', value }], today || '2027-01-10').status;
+      equal([at(52), at(48), at(40), at(71), at(60, '2027-08-01')], ['op-koers', 'bijna', 'achter', 'gehaald', 'gemist']);
+      equal(G.progress(goal, [], '2027-01-10').status, 'geen');
+    });
+    await test('het tempo: bij dit tempo haal je het doel rond …; zonder groei geen datum', () => {
+      const up = G.progress(goal, [{ date: '2026-07-01', value: 30 }, { date: '2026-10-01', value: 40 }, { date: '2027-01-01', value: 50 }], '2027-01-10');
+      ok(up.slope > 0 && up.projected > '2027-01-01' && up.projected < '2027-12-31', 'datum: ' + up.projected);
+      ok(/Bij dit tempo haal je het doel rond/.test(G.sentence(G.metricOf('adoptie'), goal, up)), 'zin');
+      const flat = G.progress(goal, [{ date: '2026-07-01', value: 30 }, { date: '2027-01-01', value: 30 }], '2027-01-10');
+      equal(flat.projected, null);
+      ok(/niet bij het doel/.test(G.sentence(G.metricOf('adoptie'), goal, flat)), 'geen groei');
+    });
+    await test('kengetallen uit de imports en de tellers: adoptie per import, kopieën per volle week', () => {
+      const data = G.dataFor([
+        { period_start: '2026-08-31', period_end: '2026-09-27', summary: snapshot },
+        { period_start: '1900-01-02', period_end: '1900-01-02', source: 'doelen', summary: { version: 'doelen', goals: [] } }
+      ], [
+        { kind: 'copy_prompt', occurred_at: '2026-10-05T09:00:00Z' }, { kind: 'copy_prompt', occurred_at: '2026-10-06T09:00:00Z' },
+        { kind: 'view_tip', occurred_at: '2026-10-06T09:00:00Z' }, { kind: 'copy_tip', occurred_at: '2026-10-14T09:00:00Z' }
+      ], '2026-10-21');
+      equal(data.snapshots.length, 1, 'de rij met doelen is geen import');
+      const adoption = G.pointsOf(G.metricOf('adoptie'), data);
+      equal(adoption.length, 1);
+      ok(adoption[0].value > 0 && adoption[0].value <= 100, 'percentage');
+      equal(G.pointsOf(G.metricOf('kopieen'), data).map((p) => [p.date, p.value]), [['2026-10-05', 2], ['2026-10-12', 1.5]], 'per week, lopend gemiddelde, zonder de lopende week');
+    });
+
     /* ---- slot met pincode ---- */
     describe('Slot met pincode (js/lock.js)');
     await test('de vingerafdruk in de config hoort bij de pincode van de snackbar; spaties tellen niet', async () => {

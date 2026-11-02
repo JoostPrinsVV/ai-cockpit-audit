@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Beheer (#/beheer, /inhoud, /basis, /inzendingen, /reviews, /portfolio, /overzicht, /gebruik,
-   /copilot, /nieuwsbrief, /disciplines, /beheerders)
+   Beheer (#/beheer, /inhoud, /basis, /inzendingen, /reviews, /portfolio, /overzicht, /doelkoers,
+   /gebruik, /copilot, /nieuwsbrief, /disciplines, /beheerders)
    --------------------------------------------------------------------------
    Voor het AI-team: inloggen met een Supabase-gebruiker van wie het
    e-mailadres in audit_admins staat (zie setup/supabase-audit.sql).
@@ -25,6 +25,8 @@
    - Gebruik: anonieme tellers per usecase, demo, prompt, tip, training en agent.
    - Copilot-gebruik: de export van het Copilot-gebruik inlezen en vergelijken
      met de vorige periode; alleen totalen worden bewaard (js/admin-copilot.js).
+   - Doelkoers: doelen per discipline voor het Copilot-gebruik en de cockpit,
+     afgezet tegen de metingen: op koers of niet (js/admin-goals.js).
    De sessie blijft bewaard zolang dit tabblad open is.
    ========================================================================== */
 (function (ns) {
@@ -54,6 +56,7 @@
     { id: 'reviews', group: 'collegas', label: 'Reviews', icon: 'star', perDiscipline: true, lead: (name) => `Sterren en toelichtingen bij de usecases en prompts van ${name}. Een toelichting staat pas bij de usecase of prompt als jij hem publiceert.` },
     { id: 'portfolio', group: 'collegas', label: 'Portfolio', icon: 'flag', perDiscipline: true, lead: (name) => `De beoordeelde ideeën van ${name} in de AI Value Matrix, met de registerregels.` },
     { id: 'overzicht', group: 'cijfers', label: 'Overzicht', icon: 'grid', lead: () => 'De stand van zaken over alle disciplines, af te drukken als PDF voor het bestuur.' },
+    { id: 'doelkoers', group: 'cijfers', label: 'Doelkoers', icon: 'compass', perDiscipline: true, lead: (name) => `De doelen voor het Copilot-gebruik en de cockpit van ${name}, afgezet tegen hoe het nu gaat: liggen jullie op koers?` },
     { id: 'gebruik', group: 'cijfers', label: 'Gebruik van de cockpit', icon: 'chart', perDiscipline: true, lead: (name) => `Hoe vaak usecases, demo's, prompts, tips, trainingen en agents in ${name} worden bekeken en gekopieerd. Anoniem.` },
     { id: 'copilot', group: 'cijfers', label: 'Copilot-gebruik', icon: 'sparkle', perDiscipline: true, lead: (name) => `Het Copilot-gebruik van ${name} per import, met de belangrijke momenten erbij.` },
     { id: 'nieuwsbrief', group: 'communicatie', label: 'Nieuwsbrief', icon: 'mail', perDiscipline: true, lead: (name) => `Een weekupdate of maandnieuwsbrief over ${name}, als PDF of als e-mail.` },
@@ -670,6 +673,10 @@
         show(status, imports.length ? `Laatste import t/m ${formatDate(imports[imports.length - 1].period_end)}` : 'Nog geen import: lees de export in');
       }).catch(unreadable(status));
     }
+    if (has('doelkoers')) {
+      const status = task('doelkoers', `Doelkoers van ${name}`, 'Even kijken…');
+      ns.adminGoals.startStatus().then((result) => show(status, result.text, result.due)).catch(unreadable(status));
+    }
     if (has('overzicht')) task('overzicht', 'Stand van zaken voor het bestuur', 'Alle disciplines, af te drukken als PDF');
     if (reminder) tasks.forEach((item) => {
       const status = item.querySelector('[href="#/beheer/nieuwsbrief"] .admin-task__status');
@@ -766,6 +773,7 @@
     else if (tab === 'overzicht') panel.append(ns.adminOverview.render().node);
     else if (tab === 'portfolio') panel.append(ns.adminPortfolio.render().node);
     else if (tab === 'copilot') panel.append(ns.adminCopilot.render().node);
+    else if (tab === 'doelkoers') panel.append(ns.adminGoals.render().node);
     else if (tab === 'beheerders') adminsTab(panel);
     else if (tab === 'inzendingen') ideasTab(panel);
     else if (tab === 'reviews') reviewsTab(panel);

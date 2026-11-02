@@ -747,6 +747,77 @@
 .chart__table summary { color: var(--color-link); font-size: var(--fs-sm); font-weight: var(--fw-semibold); cursor: pointer; }
 .chart__table-scroll { max-height: 20rem; margin-top: var(--space-2); overflow: auto; }
 
+/* ---- Doelkoers (js/admin-goals.js) ---------------------------------------------------------- */
+.goals__body { display: grid; gap: var(--space-5); }
+.goals__intro { max-width: 46rem; margin: 0; }
+.goal-kpi { border-top: 4px solid var(--goal-tone, var(--color-border)); }
+.goal-kpi--good { --goal-tone: var(--color-success); }
+.goal-kpi--warn { --goal-tone: var(--color-warning); }
+.goal-kpi--bad { --goal-tone: var(--color-danger); }
+.goals__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 30rem), 1fr)); gap: var(--space-4); }
+
+/* Eén doel; de kleur van de stand zit in de rand bovenaan en in het label (met icoon en tekst) */
+.goal-card { --goal-tone: var(--color-border-strong); display: grid; align-content: start; gap: var(--space-3); min-width: 0; padding: var(--space-4) var(--space-5) var(--space-5); border: 1px solid var(--color-border); border-top: 4px solid var(--goal-tone); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.goal-card--good { --goal-tone: var(--color-success); }
+.goal-card--warn { --goal-tone: var(--color-warning); }
+.goal-card--bad { --goal-tone: var(--color-danger); }
+.goal-card__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.goal-card__source { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
+.goal-card__title { font-size: var(--fs-lg); }
+.goal-card__target { display: inline-flex; align-items: center; gap: 0.35em; color: var(--color-text-body); font-size: var(--fs-sm); }
+.goal-card__target .icon { color: var(--color-text-muted); }
+.goal-card__side { display: grid; justify-items: end; gap: var(--space-2); flex: none; }
+.goal-card__actions { display: inline-flex; gap: 2px; }
+.goal-card__body { display: grid; gap: var(--space-3); }
+.goal-card__now { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+.goal-card__value strong { color: var(--color-text); font-size: 2.1rem; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; line-height: 1; }
+.goal-card__value span { color: var(--color-text-muted); font-weight: var(--fw-semibold); }
+.goal-card__when { color: var(--color-text-muted); font-size: var(--fs-xs); }
+.goal-card__line { color: var(--color-text-body); }
+.goal-card__empty { color: var(--color-text-muted); }
+.goal-card__note { display: flex; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-sm); }
+.goal-card__note .icon { flex: none; margin-top: 0.15em; }
+
+.goal-status { display: inline-flex; align-items: center; gap: 0.35em; padding: 0.2rem 0.7rem; border-radius: var(--radius-pill); background: var(--color-surface-muted); color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); white-space: nowrap; }
+.goal-status .icon { width: 1em; height: 1em; }
+.goal-status--good { background: var(--badge-free-bg); color: var(--badge-free-ink); }
+.goal-status--warn { background: var(--color-warning-fill); color: var(--color-warning); }
+.goal-status--bad { background: var(--color-danger-fill); color: var(--color-danger); }
+
+/* De koersband: van begin naar doel, gevuld tot waar je bent, met een streepje waar de koers nu ligt */
+.goal-band { display: grid; gap: var(--space-1); }
+.goal-band__track { position: relative; height: 12px; border-radius: var(--radius-pill); background: var(--color-surface-sunken); }
+.goal-band__fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--to, 0) * 100%); border-radius: inherit; background: var(--series-1); }
+.goal-band__course { position: absolute; top: -5px; bottom: -5px; left: calc(var(--at, 0) * 100%); width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--color-text); }
+.goal-band__scale { display: flex; justify-content: space-between; color: var(--color-text-muted); font-size: var(--fs-xs); font-variant-numeric: tabular-nums; }
+
+/* De grafiek: gemeten (lijn), koers (streepjes), tempo (stippen), het doel en vandaag */
+.goal-chart { display: grid; gap: var(--space-2); min-width: 0; }
+.goal-key { display: inline-block; flex: none; width: 1.1rem; height: 0; border-top: 2px solid; }
+.goal-key--actual { border-color: var(--series-1); }
+.goal-key--course { border-top-style: dashed; border-color: var(--color-text); }
+.goal-key--trend { border-top-style: dotted; border-top-width: 3px; border-color: var(--series-1); }
+.goal-chart__course { stroke: var(--color-text); stroke-width: 1.5; stroke-dasharray: 6 5; }
+.goal-chart__trend { stroke: var(--series-1); stroke-width: 2.5; stroke-dasharray: 1 5; stroke-linecap: round; }
+.goal-chart__target { fill: var(--color-surface); stroke: var(--color-text); stroke-width: 2.5; }
+.goal-chart__today { stroke: var(--color-text-muted); stroke-width: 1; stroke-dasharray: 2 3; }
+.goal-chart__today-label { fill: var(--color-text-muted); font-size: 11px; font-weight: var(--fw-semibold); }
+
+/* Het formulier */
+.goals__form { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-5); border: 1px dashed var(--color-border-strong); border-radius: var(--radius); background: var(--color-surface); }
+.goals__fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.goals__field--wide { grid-column: 1 / -1; }
+.goals__with-unit { display: flex; align-items: center; gap: var(--space-2); }
+.goals__with-unit .field__input { flex: 1; min-width: 0; }
+.goals__unit { flex: none; color: var(--color-text-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.goals__examples { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.goals__examples .field__label { margin-right: var(--space-1); }
+@media (max-width: 720px) {
+  .goals__fields { grid-template-columns: minmax(0, 1fr); }
+  .goal-card__head { flex-direction: column; }
+  .goal-card__side { justify-items: start; }
+}
+
 /* Liggende balken: één reeks, de waarde direct achter de balk */
 .bars { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); margin-top: var(--space-3); }
 /* Iedere rij in dezelfde kolommen (subgrid): alle balken beginnen op dezelfde plek */
