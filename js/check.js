@@ -59,7 +59,8 @@
 
   /** Welke data er in een tool mag: wat het AI-team vastlegde, anders wat het beleid voor die soort zegt. */
   const levelOf = (tool) => (LEVELS[tool.dataLevel] ? tool.dataLevel : policyLevel(tool));
-  const DOUBT = 'Bij twijfel: niet gebruiken voordat je hebt afgestemd met je leidinggevende, de disciplinedirectie, Business IT, Legal & Risk of de CTO.';
+  // Het eerste aanspreekpunt (het beleid: één AI-aanspreekpunt per discipline); verder opschalen doen zij
+  const DOUBT = 'Bij twijfel: niet gebruiken voordat je het hebt nagevraagd bij de AI-specialist van je discipline, je leidinggevende of IT.';
   const DESTINATIONS = [
     { id: 'zelf', label: 'Alleen voor mezelf' },
     { id: 'intern', label: 'Intern of in het dossier' },

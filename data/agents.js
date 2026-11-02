@@ -89,8 +89,7 @@ Daarnaast werkt Copilot dan in de apps zelf: bijvoorbeeld in Excel om kolommen e
     link: 'https://m365.cloud.microsoft/chat',
     owner: 'ICT voor licenties en toegang, het AI-team voor vragen over het gebruik',
     notFor: [
-      'Mail, vergaderingen of bestanden laten doorzoeken die niet bij jouw opdracht horen',
-      'Informatie van verschillende klanten of opdrachten met elkaar combineren',
+      'Een antwoord gebruiken zonder te kijken welke bronnen Copilot erbij pakte: komt er informatie van een andere klant in terecht, dan klopt je antwoord niet',
       'Een bedrag of conclusie overnemen zonder het tegen de bron te controleren'
     ],
     usecases: ['weekplanning', 'cijferanalyse', 'klantoverleg'],
