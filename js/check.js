@@ -42,6 +42,23 @@
     { tool: 'Overige tools (tenzij goedgekeurd door CTO, Business IT en Legal & Risk)', cells: ['privé', 'nee', 'nee', 'nee'] }
   ];
   const CELL_TEXT = { ja: 'Toegestaan', nee: 'Niet toegestaan', cto: 'Alleen na afstemming met de CTO', privé: 'Alleen persoonlijk, niet voor je werk' };
+
+  /**
+   * Wat het AI-beleid zegt als het AI-team bij een tool niets apart heeft vastgelegd, naar de soort:
+   * - Microsoft-standaard: Copilot (ingelogd, in de Werk-modus; met of zonder licentie maakt niet uit): t/m klantdata;
+   * - eigen agent (Copilot Studio, binnen de beheerde omgeving): volgt Copilot; met webtoegang alleen algemene data;
+   * - extern product (overige tools): alleen algemene data, tenzij goedgekeurd (dan apart vastleggen).
+   */
+  function policyLevel(tool) {
+    if (tool.kind === 'Microsoft-standaard') return 'vertrouwelijk';
+    if (tool.kind === 'Eigen agent') return tool.web ? 'algemeen' : 'vertrouwelijk';
+    if (tool.kind === 'Extern product') return 'algemeen';
+    return '';
+  }
+  const POLICY_SOURCE = { 'Microsoft-standaard': 'Microsoft Copilot in de Werk-modus', 'Eigen agent': 'agents in Copilot Studio', 'Extern product': 'overige tools' };
+
+  /** Welke data er in een tool mag: wat het AI-team vastlegde, anders wat het beleid voor die soort zegt. */
+  const levelOf = (tool) => (LEVELS[tool.dataLevel] ? tool.dataLevel : policyLevel(tool));
   const DOUBT = 'Bij twijfel: niet gebruiken voordat je hebt afgestemd met je leidinggevende, de disciplinedirectie, Business IT, Legal & Risk of de CTO.';
   const DESTINATIONS = [
     { id: 'zelf', label: 'Alleen voor mezelf' },
@@ -89,7 +106,7 @@
         worse('mits');
         reasons.push(`${tool.title} is in pilot: alleen als je in de pilotgroep zit.`);
       }
-      const level = LEVELS[tool.dataLevel] ? tool.dataLevel : '';
+      const level = levelOf(tool);
       if (data === 'hoog') {
         if (level === 'hoog') {
           worse('mits');
@@ -112,7 +129,7 @@
           reasons.push(data === 'persoon'
             ? `Persoonsgegevens mogen in ${tool.title}, mits je alleen deelt wat nodig is voor de opdracht (dataminimalisatie) en anonimiseert waar het kan.`
             : `Vertrouwelijke klantgegevens mogen in ${tool.title}, binnen de beheerde omgeving van V&V en je eigen toegangsrechten. Deel niet meer dan nodig.`);
-          if (tool.kind === 'Microsoft-standaard') reasons.push('Gebruik Copilot in de Werk-modus (Work), niet met webbronnen (Web).');
+          if (tool.kind === 'Microsoft-standaard') reasons.push('Wel ingelogd met je zakelijke account (het schildje) en in de Werk-modus (Work), niet met webbronnen (Web). Met of zonder licentie maakt daarvoor geen verschil.');
           if (tool.web) reasons.push(`${tool.title} gebruikt ook webbronnen (Work + Web): deel alleen wat hiervoor uitdrukkelijk is toegestaan.`);
         }
       } else if (data === 'algemeen' && tone !== 'nee') {
@@ -253,9 +270,9 @@
 
   /** Labels op de kaart van een agent: welke data erin mag, en 'Work + Web' als hij ook webbronnen gebruikt. */
   function levelChip(agent) {
-    const level = LEVELS[agent.dataLevel];
+    const level = LEVELS[levelOf(agent)];
     return [
-      level ? el('span', { className: 'data-chip data-chip--' + agent.dataLevel, attrs: { title: level.text } }, [icon('shield'), level.short]) : null,
+      level ? el('span', { className: 'data-chip data-chip--' + levelOf(agent), attrs: { title: level.text } }, [icon('shield'), level.short]) : null,
       webChip(agent)
     ].filter(Boolean);
   }
@@ -267,17 +284,21 @@
 
   /** Op de pagina van een agent: 'Wat mag erin?', wel en niet geschikt voor, het beleid en de check. */
   function agentBlock(agent) {
-    const level = LEVELS[agent.dataLevel];
+    const key = levelOf(agent);
+    const level = LEVELS[key];
     const check = el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [icon('shield'), el('span', { text: 'Mag dit? Check het' })]);
     check.addEventListener('click', () => open({ tool: agent.id }));
-    const meter = el('ol', { className: 'data-meter', attrs: { 'aria-label': 'Welke gegevens erin mogen' } }, Object.entries(LEVELS).map(([key, info]) => el('li', {
-      className: 'data-meter__step' + (level && info.step <= level.step ? ' is-on' : '') + (key === agent.dataLevel ? ' is-current' : ''),
-      attrs: { 'aria-current': key === agent.dataLevel ? 'true' : null }
+    const meter = el('ol', { className: 'data-meter', attrs: { 'aria-label': 'Welke data erin mag' } }, Object.entries(LEVELS).map(([step, info]) => el('li', {
+      className: 'data-meter__step' + (level && info.step <= level.step ? ' is-on' : '') + (step === key ? ' is-current' : ''),
+      attrs: { 'aria-current': step === key ? 'true' : null }
     }, [el('span', { text: info.label })])));
+    // Waar het niveau vandaan komt: apart vastgelegd, of het beleid voor deze soort tool
+    const source = LEVELS[agent.dataLevel] ? 'Vastgelegd door het AI-team.' : POLICY_SOURCE[agent.kind] ? `Volgens het AI-beleid voor ${POLICY_SOURCE[agent.kind]}.` : '';
     return el('section', { className: 'policy-card ' + accentClass(agent.accent), attrs: { 'aria-labelledby': 'ag-policy' } }, [
       el('h2', { className: 'policy-card__title', attrs: { id: 'ag-policy' } }, [icon('shield'), el('span', { text: 'Wat mag erin?' })]),
       level ? meter : null,
       el('p', { className: 'policy-card__text', text: level ? level.text : 'Het AI-team heeft voor deze tool nog niet vastgelegd welke data erin mag. Gebruik hem voorlopig alleen met algemene data.' }),
+      level && source ? el('p', { className: 'policy-card__source', text: source + (agent.kind === 'Microsoft-standaard' ? ' Ingelogd met je zakelijke account en in de Werk-modus; met of zonder licentie maakt geen verschil.' : '') }) : null,
       agent.web ? el('p', { className: 'policy-card__web' }, [webChip(agent), el('span', { text: ' Deze tool gebruikt naast je werkgegevens ook webbronnen. Controleer de output altijd extra, en deel alleen wat hiervoor uitdrukkelijk is toegestaan.' })]) : null,
       agent.useFor.length ? el('div', { className: 'policy-card__list policy-card__list--yes' }, [
         el('h3', { className: 'policy-card__subtitle', text: 'Wel geschikt voor' }),
@@ -291,5 +312,5 @@
     ]);
   }
 
-  ns.check = { LEVELS, DATA, DESTINATIONS, POLICY_TABLE, OTHER, policyUrl, verdict, open, footerLinks, levelChip, agentBlock };
+  ns.check = { LEVELS, DATA, DESTINATIONS, POLICY_TABLE, OTHER, policyUrl, policyLevel, levelOf, verdict, open, footerLinks, levelChip, agentBlock };
 })(window.AIAudit);

@@ -2432,6 +2432,7 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .data-chip--vertrouwelijk, .data-chip--hoog { background: var(--badge-free-bg); color: var(--badge-free-ink); }
 .data-chip--web { background: var(--color-warning-fill); color: var(--color-warning); }
 .policy-card__web { color: var(--color-text-body); font-size: var(--fs-sm); }
+.policy-card__source { color: var(--color-text-muted); font-size: var(--fs-xs); }
 
 /* Op de pagina van een agent: 'Wat mag erin?' */
 .policy-card { display: grid; gap: var(--space-3); padding: var(--card-padding); border: 1px solid var(--color-border); border-top: 4px solid var(--color-chrome); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }

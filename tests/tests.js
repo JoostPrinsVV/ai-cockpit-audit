@@ -277,13 +277,20 @@
       equal(['algemeen', 'persoon', 'klant', 'hoog'].map((data) => ns.check.verdict(copilot, data).tone), ['ja', 'mits', 'ja', 'nee'], 'Copilot');
       equal(['algemeen', 'persoon', 'klant', 'hoog'].map((data) => ns.check.verdict(tool('hoog'), data).tone), ['ja', 'mits', 'ja', 'mits'], 'in-house');
       equal(['algemeen', 'persoon', 'klant'].map((data) => ns.check.verdict(tool('algemeen'), data).tone), ['ja', 'nee', 'nee'], 'alleen algemeen');
-      equal(['algemeen', 'klant'].map((data) => ns.check.verdict(tool(''), data).tone), ['ja', 'onbekend'], 'niet vastgesteld');
-      ok(ns.check.verdict(copilot, 'klant').reasons.some((line) => /Werk-modus/.test(line)), 'Copilot: de Werk-modus');
+      equal(['algemeen', 'klant'].map((data) => ns.check.verdict(tool('', { kind: '' }), data).tone), ['ja', 'onbekend'], 'geen soort en niets vastgelegd');
+      ok(ns.check.verdict(copilot, 'klant').reasons.some((line) => /Werk-modus/.test(line) && /licentie/.test(line)), 'Copilot: ingelogd en de Werk-modus, licentie maakt niet uit');
+    });
+    await test('niets vastgelegd: het beleid per soort (Copilot met of zonder licentie t/m klantdata, extern alleen algemeen)', () => {
+      const ms = tool('', { kind: 'Microsoft-standaard', title: 'Microsoft 365 Copilot (met licentie)' });
+      equal(['algemeen', 'persoon', 'klant', 'hoog'].map((data) => ns.check.verdict(ms, data).tone), ['ja', 'mits', 'ja', 'nee'], 'Microsoft-standaard');
+      equal(['klant', 'persoon'].map((data) => ns.check.verdict(tool('', { kind: 'Extern product' }), data).tone), ['nee', 'nee'], 'extern product');
+      equal([ns.check.verdict(tool(''), 'klant').tone, ns.check.verdict(tool('', { web: true }), 'klant').tone], ['ja', 'nee'], 'eigen agent, met webtoegang alleen algemeen');
+      equal(ns.check.verdict(tool('hoog', { kind: 'Extern product' }), 'klant').tone, 'ja', 'wat het AI-team vastlegt gaat voor');
     });
     await test('status, Work + Web en twijfel', () => {
       equal([ns.check.verdict(tool('vertrouwelijk', { status: 'Pilot' }), 'algemeen').tone, ns.check.verdict(tool('vertrouwelijk', { status: 'In ontwikkeling' }), 'algemeen').tone], ['mits', 'nee'], 'status');
       ok(ns.check.verdict(tool('vertrouwelijk', { web: true }), 'algemeen').reasons.some((line) => /webbronnen/.test(line)), 'webbronnen extra controleren');
-      ok(/Bij twijfel/.test(ns.check.verdict(tool(''), 'klant').doubt) && !ns.check.verdict(tool('vertrouwelijk'), 'klant').doubt, 'twijfel alleen bij mits of niet vastgesteld');
+      ok(/Bij twijfel/.test(ns.check.verdict(tool('', { kind: '' }), 'klant').doubt) && !ns.check.verdict(tool('vertrouwelijk'), 'klant').doubt, 'twijfel alleen bij mits of niet vastgesteld');
     });
     await test('naar de klant: harde feiten aan de bron, niet letterlijk overnemen, het oordeel blijft van jou (niet bij nee)', () => {
       ok(ns.check.verdict(tool('vertrouwelijk'), 'klant', 'klant').reasons.some((line) => /oordeel/.test(line) && /eigen woorden/.test(line)), 'advies');

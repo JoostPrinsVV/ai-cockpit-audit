@@ -464,8 +464,11 @@ Geen eigen pagina: het beleid staat waar je de vraag hebt.
 - **Per agent** (Beheer → Agents & tools): *Data in deze tool* (alleen algemene data; ook persoonsgegevens en
   klantdata; of ook hoog-risico-data na afstemming met de CTO), *Gebruikt ook webbronnen (Work + Web)*, *Wel geschikt
   voor* en *Niet gebruiken voor*. Het niveau (en *Work + Web*) staat als label op de kaart; op de pagina staat het blok
-  *Wat mag erin?* met de knop *Mag dit? Check het*. Zolang het niveau leeg is, zegt de check bij persoonsgegevens of
-  klantdata *Nog niet vastgesteld*.
+  *Wat mag erin?* met de knop *Mag dit? Check het*. Staat het niveau op *Volgens het AI-beleid* (de standaard), dan
+  volgt de cockpit het beleid per soort: *Microsoft-standaard* (Copilot, met of zonder licentie: ingelogd met je
+  zakelijke account en in de Werk-modus) en *Eigen agent* ook persoonsgegevens en klantdata, geen hoog-risico-data; een
+  eigen agent met webtoegang alleen algemene data; *Extern product* alleen algemene data. Kies alleen een ander niveau
+  als dat voor die tool apart is vastgesteld (bijv. Ilse, of een goedgekeurd extern product).
 
 ### Zo volgt de cockpit het AI-beleid
 
