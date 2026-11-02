@@ -2,10 +2,11 @@
    Radar: wat er nieuw is sinds je vorige bezoek (startpagina)
    --------------------------------------------------------------------------
    Op de kompasroos in de hero verschijnen stipjes bij het onderdeel waar iets
-   nieuws staat (een veeg van de radar 'vindt' ze bij het openen); onder het
-   zoekvak staat hetzelfde als lijstje met links (ook op een telefoon en voor
-   toetsenbord en schermlezer). Op een smal scherm, waar de roos niet staat,
-   draait er een klein radartje in die strook.
+   nieuws staat (een veeg van de radar 'vindt' ze bij het openen). Op een smal
+   scherm, waar de roos niet staat, staat hetzelfde als strook onder het
+   zoekvak, met een klein draaiend radartje. In 'Recent toegevoegd' onderaan de
+   startpagina krijgt wat nieuw voor je is een rood bolletje (ook voor
+   toetsenbord en schermlezer: de stipjes op de roos zijn versiering).
    Wat je kent, bewaart deze browser per discipline (lokale opslag
    'radar:<discipline>': alleen adressen van items). Dit bezoek houdt het
    beginpunt vast (sessionStorage), zodat de stipjes bij verversen blijven
@@ -158,8 +159,6 @@
     }
     const close = el('button', { className: 'radar-strip__close', attrs: { type: 'button', 'aria-label': 'Gezien: van de radar halen', title: 'Gezien' } }, [icon('close')]);
     const node = el('div', { className: 'radar-strip', attrs: { role: 'region', 'aria-label': state.first ? 'Nieuw in de cockpit' : 'Nieuw sinds je vorige bezoek' } }, [
-      // Lampje naast de kompasroos; op een smal scherm (zonder roos) het radartje
-      el('span', { className: 'radar-strip__lamp', attrs: { 'aria-hidden': 'true' } }),
       miniRadar(list.length),
       el('p', { className: 'radar-strip__label' }, [
         el('strong', { text: `${list.length} nieuw` }),

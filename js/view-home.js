@@ -187,13 +187,20 @@
     return node;
   }
 
-  function recent() {
+  /** radar: wat nieuw is voor jou (js/radar.js); dat krijgt hier een rood bolletje, net als de stipjes op de roos. */
+  function recent(radar) {
     const entries = ns.content.recent(6);
     if (!entries.length) return null;
+    const fresh = new Set(radar.list.map((entry) => entry.key));
+    const label = radar.first ? 'Nieuw' : 'Nieuw sinds je vorige bezoek';
     return el('section', { className: 'section container', attrs: { 'aria-labelledby': 'home-recent' } }, [
       sectionHead('Recent toegevoegd', 'home-recent'),
       el('ul', { className: 'recent', attrs: { role: 'list' } }, entries.map((entry) =>
-        itemRow(entry.kind, entry.item, [ns.kinds.label(entry.kind) + ' · ' + ns.ui.formatDate(entry.added)])
+        itemRow(entry.kind, entry.item, [
+          fresh.has(entry.kind + ':' + entry.item.id) ? el('span', { className: 'recent__new', attrs: { title: label } }) : null,
+          fresh.has(entry.kind + ':' + entry.item.id) ? el('span', { className: 'sr-only', text: label + ': ' }) : null,
+          ns.kinds.label(entry.kind) + ' · ' + ns.ui.formatDate(entry.added)
+        ])
       ))
     ]);
   }
@@ -227,7 +234,8 @@
     });
     // Seizoenskompas (js/compass.js): wat er nu speelt, met dezelfde regels als 'Recent toegevoegd'
     const compass = ns.compass.section(config, itemRow);
-    const node = el('div', { className: 'home' }, [hero(config, ns.radar.fresh()), tiles(), compass, mine, featuredUsecases(), colleagues(), featuredTips(), recent(), ideasCta()]);
+    const radar = ns.radar.fresh();
+    const node = el('div', { className: 'home' }, [hero(config, radar), tiles(), compass, mine, featuredUsecases(), colleagues(), featuredTips(), recent(radar), ideasCta()]);
     return { node, title: '', destroy: stopSaved };
   }
 

@@ -30,8 +30,10 @@ html.vt-theme::view-transition-old(root),
 html.vt-theme::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 html.vt-theme::view-transition-new(root) { z-index: 2; }
 
-/* ---- Opstarten: lampentest in het menu ---- */
+/* ---- Opstarten: lampentest in het menu, en op de koerspunten van de kompasroos ---- */
 .nav__link.lamp-test::before { background: var(--color-glow); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-teal) 25%, transparent), 0 0 10px color-mix(in srgb, var(--color-glow) 90%, transparent); }
+.rose__waypoint.lamp-test .rose__marker { fill: var(--color-glow); stroke: var(--vv-white); filter: drop-shadow(0 0 7px color-mix(in srgb, var(--color-glow) 90%, transparent)); }
+.rose__waypoint.lamp-test .rose__waypoint-label { fill: var(--color-glow); }
 
 /* ---- Uitklappers en panelen ---- */
 /* Alleen voor uitklappers: van 0 naar 'auto' kunnen animeren (niet voor de hele pagina) */

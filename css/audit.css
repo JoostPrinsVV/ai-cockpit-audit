@@ -571,7 +571,8 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
   .rose__blip-ping { animation: none; opacity: 0; }
 }
 
-/* Strook onder het zoekvak: hetzelfde als lijstje (ook op een telefoon, waar de roos niet staat) */
+/* Strook onder het zoekvak: alleen op een smal scherm, waar de roos niet staat (daar zijn het de stipjes,
+   en onderaan staat 'Recent toegevoegd' met een rood bolletje bij wat nieuw voor je is) */
 .radar-strip {
   display: flex;
   flex-wrap: wrap;
@@ -584,8 +585,6 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
   border-radius: var(--radius);
   background: var(--on-dark-fill);
 }
-.radar-strip__lamp { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--vv-crimson); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-crimson) 28%, transparent), 0 0 10px color-mix(in srgb, var(--vv-crimson) 80%, transparent); animation: lamp-blink 2.4s var(--ease-in-out) infinite; }
-@keyframes lamp-blink { 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--vv-crimson) 0%, transparent), 0 0 4px color-mix(in srgb, var(--vv-crimson) 50%, transparent); } }
 .radar-strip__label { color: var(--color-on-dark-muted); font-size: var(--fs-sm); }
 .radar-strip__label strong { color: var(--color-on-dark); }
 .radar-strip__list { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
@@ -611,8 +610,8 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .radar-strip__more { padding: 0 var(--space-3); text-decoration: underline; text-underline-offset: 3px; }
 .radar-strip__close { display: grid; place-items: center; width: 2.25rem; margin-left: auto; color: var(--color-on-dark-muted); }
 .radar-strip__close:hover { background: var(--on-dark-fill-strong); color: var(--color-on-dark); }
-/* Radartje in de strook: alleen op een smal scherm, waar de kompasroos niet staat (zelfde breekpunt) */
-.radar-mini { display: none; flex: none; width: 2.1rem; height: 2.1rem; overflow: visible; }
+/* Radartje vooraan in de strook */
+.radar-mini { display: block; flex: none; width: 2.1rem; height: 2.1rem; overflow: visible; }
 .radar-mini__ring { fill: none; stroke: rgba(255, 255, 255, 0.3); stroke-width: 1; }
 .radar-mini__sweep { transform-box: view-box; transform-origin: 0 0; animation: radar-mini-sweep 2.4s linear infinite; } /* (0, 0) = het midden */
 .radar-mini__fill { fill: color-mix(in srgb, var(--vv-crimson) 32%, transparent); }
@@ -621,19 +620,19 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .radar-mini__hub { fill: var(--vv-white); }
 @keyframes radar-mini-sweep { to { transform: rotate(360deg); } }
 @keyframes radar-mini-blip { 0% { opacity: 1; } 65%, 100% { opacity: 0.3; } }
-@media (max-width: 1239px) {
-  .radar-strip .radar-mini { display: block; }
-  .radar-strip .radar-strip__lamp { display: none; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .radar-strip__lamp { animation: none; }
   .radar-mini__sweep, .radar-mini__blip { animation: none; }
 }
 
-/* Alleen als er naast de tekst ruimte is */
+/* Rood bolletje bij 'Recent toegevoegd': nieuw voor jou (op de radar) */
+.recent__new { display: inline-block; width: 8px; height: 8px; margin-right: 0.4em; border-radius: 50%; background: var(--vv-crimson); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-crimson) 22%, transparent); vertical-align: 0.05em; }
+
+/* De roos alleen als er naast de tekst ruimte is; dan is de strook niet nodig */
 @media (max-width: 1239px) {
   .hero__rose { display: none; }
+}
+@media (min-width: 1240px) {
+  .radar-strip { display: none; }
 }
 
 .hero__eyebrow {

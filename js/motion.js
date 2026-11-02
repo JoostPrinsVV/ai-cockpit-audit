@@ -221,6 +221,17 @@
         window.setTimeout(() => link.classList.remove('lamp-test'), 260);
       }, 400 + i * 110);
     });
+    // En op de koerspunten van de roos: ze springen op (hierboven) en lichten dan even groen op. Op het moment
+    // zelf opgezocht: de startpagina kan intussen opnieuw zijn opgebouwd (inhoud uit de database).
+    const points = rose ? rose.querySelectorAll('.rose__waypoint').length : 0;
+    for (let i = 0; i < points; i++) {
+      window.setTimeout(() => {
+        const point = document.querySelectorAll('.hero__rose .rose__waypoint')[i];
+        if (!point) return;
+        point.classList.add('lamp-test');
+        window.setTimeout(() => point.classList.remove('lamp-test'), 480);
+      }, 1300 + i * 90);
+    }
   }
 
   /* ---- Filteren en sorteren: kaarten schuiven naar hun nieuwe plek ------------------------------ */

@@ -420,9 +420,10 @@ openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromp
   risico-inschatting, controle en afronding jan–jun; Accountancy: een voorstel). Aanpassen in Beheer → Inhoud →
   Teksten → Seizoenskompas (*Standaard overnemen om aan te passen*); dan is dat leidend.
 - **Radar**: wat er nieuw is sinds je vorige bezoek, als rode stipjes op de kompasroos (een veeg 'vindt' ze bij het
-  openen) en als strook onder het zoekvak. Wat je opent of met het kruisje wegklikt, verdwijnt. Wat je kent, onthoudt
-  je browser per discipline (`ai-snackbar-audit:radar:<discipline>`, alleen adressen); bij je allereerste bezoek staat
-  er wat recent is toegevoegd.
+  openen). Op een smal scherm (onder 1240 pixels), waar de roos niet staat, als strook onder het zoekvak met een klein
+  draaiend radartje. In *Recent toegevoegd* onderaan de startpagina krijgt wat nieuw voor je is een rood bolletje.
+  Wat je opent (of in de strook met het kruisje wegklikt), verdwijnt. Wat je kent, onthoudt je browser per discipline
+  (`ai-snackbar-audit:radar:<discipline>`, alleen adressen); bij je allereerste bezoek staat er wat recent is toegevoegd.
 - **Zoekvenster** (Ctrl+K, / buiten een tekstveld, of de zoekknop): zoek en kies met de pijltjes een usecase, prompt,
   tip, training, agent of actie (promptbouwer, Mijn gegevens, een vraag stellen, het thema). Enter opent, Ctrl+Enter
   kopieert een prompt meteen (met je gegevens erin).
