@@ -123,7 +123,10 @@
 
   /** Lichtbundel en kaartje naar het onderdeel (of naar het midden). */
   function place() {
-    if (!state) return;
+    // Onderweg naar een stap (scrollen) blijven bundel en kaartje staan. Anders gaat de bundel eerst naar waar
+    // het onderdeel op dat moment is (onder in beeld) en komt hij terug, en staat het kaartje eerst op de hoogte
+    // van de vorige tekst. Na het scrollen gaan ze in één beweging naar de nieuwe plek.
+    if (!state || state.moving) return;
     const { spot, card } = state;
     const step = state.list[state.index];
     const node = targetOf(step);
@@ -184,26 +187,41 @@
     const node = targetOf(step);
     const { card } = state;
     card.classList.add('is-changing');
+    state.moving = true;
     const show = () => {
+      if (!state) return;
+      state.moving = false;
       fill(step);
       card.classList.remove('is-changing');
       place();
       state.next.focus({ preventScroll: true });
     };
-    // Eerst het onderdeel rustig in beeld schuiven, dan pas de bundel erheen
+    // Eerst het onderdeel rustig in beeld schuiven (naar het midden, voor zover de pagina dat toelaat), dan pas
+    // de bundel erheen. Iets in de vaste kopbalk (de onderdelen, Mijn logboek) staat altijd in beeld, en valt
+    // er niets te scrollen, dan meteen: anders wacht de rondleiding op een scroll die niet komt.
     if (node) {
       const r = node.getBoundingClientRect();
-      const inView = r.top >= 70 && r.bottom <= window.innerHeight - 40;
-      if (!inView) {
-        node.scrollIntoView({ block: 'center', behavior: calm() ? 'auto' : 'smooth' });
-        afterScroll(show);
+      const header = document.getElementById('topbar');
+      const pinned = Boolean(header && header.contains(node));
+      const inView = r.top >= (pinned ? 0 : 70) && r.bottom <= window.innerHeight - 40;
+      const max = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const goal = Math.min(Math.max(0, Math.round(window.scrollY + r.top + r.height / 2 - window.innerHeight / 2)), max);
+      if (!inView && !pinned && Math.abs(goal - window.scrollY) > 2) {
+        // Zonder animatie staat de pagina meteen goed; met animatie wachten tot het scrollen klaar is
+        if (calm()) {
+          window.scrollTo({ top: goal, behavior: 'auto' });
+          window.setTimeout(show, 0);
+        } else {
+          window.scrollTo({ top: goal, behavior: 'smooth' });
+          afterScroll(show);
+        }
         return;
       }
     }
     window.setTimeout(show, calm() ? 0 : 160);
   }
 
-  /** Verder na het scrollen (of hooguit 0,7 seconde). */
+  /** Verder na het scrollen (of hooguit 0,8 seconde, voor browsers zonder scrollend). */
   function afterScroll(next) {
     let done = false;
     const finish = () => {
@@ -213,7 +231,7 @@
       next();
     };
     window.addEventListener('scrollend', finish);
-    window.setTimeout(finish, 700);
+    window.setTimeout(finish, 800);
   }
 
   /** De tekst en knoppen van een stap. */
