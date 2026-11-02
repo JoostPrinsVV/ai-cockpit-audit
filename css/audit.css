@@ -2611,12 +2611,36 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .meter__max { color: var(--color-on-dark-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
 .meter__label { color: var(--color-on-dark); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-instrument); text-transform: uppercase; }
 
-/* Op de promptdatabase: staat je prompt er niet bij? Aanvragen, delen of zelf bouwen */
-.prompt-help { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); margin: calc(var(--space-2) * -1) 0 var(--space-6); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border); border-left: 4px solid var(--accent-crimson); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+/* Op de promptdatabase: staat je prompt er niet bij? Aanvragen of delen, en ernaast zelf bouwen */
+.prompt-cta { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: var(--grid-gap); margin: calc(var(--space-2) * -1) 0 var(--space-6); }
+.prompt-help { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border); border-left: 4px solid var(--accent-crimson); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
 .prompt-help__icon { display: grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; border-radius: 0.9rem; background: var(--accent-crimson-tint); color: var(--vv-navy); }
 .prompt-help__text { flex: 1 1 18rem; color: var(--color-text-body); font-size: var(--fs-sm); }
 .prompt-help__title { color: var(--color-text); font-size: var(--fs-base); font-weight: var(--fw-bold); }
 .prompt-help__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* De kaart naar de promptbouwer: het donkere instrument van de bouwer in het klein */
+.builder-teaser { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-5); border: 1px solid var(--on-dark-line); border-radius: var(--radius); background: radial-gradient(130% 160% at 0% 0%, var(--vv-navy-800), var(--color-chrome) 60%, var(--color-chrome-deep)); color: var(--color-on-dark); text-decoration: none; box-shadow: var(--shadow-card); transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out); }
+.builder-teaser:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg, var(--shadow-card)); }
+.builder-teaser__meter { flex: none; width: 5.5rem; }
+.builder-teaser .meter__dial { width: 100%; }
+.builder-teaser .meter__fill { stroke-dasharray: 30 100; }
+.builder-teaser .meter__needle { transform: rotate(54deg); }
+.builder-teaser:hover .meter__fill, .builder-teaser:focus-visible .meter__fill { stroke-dasharray: 92 100; }
+.builder-teaser:hover .meter__needle, .builder-teaser:focus-visible .meter__needle { transform: rotate(166deg); }
+.builder-teaser__text { display: grid; gap: 0.1rem; min-width: 0; }
+.builder-teaser__eyebrow { color: var(--color-readout); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-instrument); text-transform: uppercase; }
+.builder-teaser__title { font-size: var(--fs-base); font-weight: var(--fw-bold); }
+.builder-teaser__lead { color: var(--color-on-dark-muted); font-size: var(--fs-sm); }
+.builder-teaser__go { display: inline-flex; align-items: center; gap: 0.4em; margin-top: var(--space-1); color: var(--color-readout); font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.builder-teaser__go .icon { transition: transform var(--duration-fast) var(--ease-out); }
+.builder-teaser:hover .builder-teaser__go .icon { transform: translateX(3px); }
+@media (max-width: 1019px) {
+  .prompt-cta { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .builder-teaser, .builder-teaser__go .icon { transition: none; }
+  .builder-teaser:hover { transform: none; }
+}
 .quick .field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 @media (max-width: 600px) {
   .quick .field-row { grid-template-columns: minmax(0, 1fr); }

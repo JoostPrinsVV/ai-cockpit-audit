@@ -308,6 +308,10 @@
       equal([ns.views.builder.score({}).score, ns.views.builder.score(full).score], [0, 100]);
       equal(ns.views.builder.score({ goal: 'Vat samen', context: 'Voor het team' }).score, 30);
     });
+    await test('kaart op de promptdatabase: een link naar de bouwer, met de meter als versiering', () => {
+      const teaser = ns.views.builder.teaser();
+      equal([teaser.tagName, teaser.getAttribute('href'), teaser.querySelector('.builder-teaser__meter').getAttribute('aria-hidden')], ['A', '#/promptbouwer', 'true']);
+    });
 
     /* ---- verbetervoorstel ---- */
     describe('Verbetervoorstel bij een prompt (js/improve.js)');

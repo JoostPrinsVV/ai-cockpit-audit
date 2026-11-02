@@ -441,8 +441,9 @@ openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromp
   tip, training, agent of actie (promptbouwer, Mijn gegevens, een vraag stellen, het thema). Enter opent, Ctrl+Enter
   kopieert een prompt meteen (met je gegevens erin).
 - **Prompt aanvragen of delen zonder naar de ideeënhub** (`ns.ideas.quick` in `js/view-ideas.js`): bovenaan de
-  promptdatabase staat *Staat jouw prompt er niet bij?* met *Vraag een prompt aan*, *Deel je prompt* en de
-  promptbouwer. Een venster op de pagina zelf; wat je al zocht en de fase die je koos staan er al in, je naam uit Mijn
+  promptdatabase staat *Staat jouw prompt er niet bij?* met *Vraag een prompt aan* en *Deel je prompt*, met
+  ernaast een eigen donkere kaart naar de promptbouwer (`teaser()` in `js/view-builder.js`, met een kleine meter
+  waarvan de naald bij hover uitslaat). Een venster op de pagina zelf; wat je al zocht en de fase die je koos staan er al in, je naam uit Mijn
   gegevens ook. Een aanvraag wordt een *Verzoek* met de titel "Prompt voor: …", een gedeelde prompt een *Prompt delen*,
   gewoon in Beheer → Inzendingen. Ook bij geen zoekresultaten (op de promptdatabase, de zoekpagina en in Ctrl+K:
   *Vraag een prompt aan: "…"*), met Ctrl+K (*Vraag een prompt aan*, *Deel je prompt*) en in de promptbouwer (*Deel je
