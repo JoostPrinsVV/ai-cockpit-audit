@@ -223,7 +223,7 @@
     data.addEventListener('change', update);
     where.addEventListener('change', update);
 
-    const closeButton = el('button', { className: 'btn btn--quiet btn--icon check__close', attrs: { type: 'button', 'aria-label': 'Sluiten' } }, [icon('close')]);
+    const closeButton = ns.ui.closeButton(() => close());
     const dialog = el('dialog', { className: 'check', attrs: { 'aria-labelledby': id + '-title' } }, [
       el('form', { className: 'check__panel', attrs: { novalidate: true } }, [
         el('div', { className: 'check__head' }, [
@@ -231,22 +231,21 @@
           el('div', {}, [
             el('h2', { className: 'check__title', attrs: { id: id + '-title' }, text: 'Mag dit?' }),
             el('p', { className: 'check__lead', text: 'Drie vragen, dan weet je of het mag. Volgens het AI-beleid van V&V en wat het AI-team per tool heeft vastgelegd.' })
-          ]),
-          closeButton
+          ])
         ]),
         el('div', { className: 'field' }, [el('label', { className: 'check__question', attrs: { for: id + '-tool' } }, [el('span', { className: 'check__number', text: '1' }), 'Welke tool wil je gebruiken?']), tool]),
         el('fieldset', { className: 'check__group' }, [el('legend', { className: 'check__question' }, [el('span', { className: 'check__number', text: '2' }), 'Welke data gaat erin? ', el('span', { className: 'field__optional', text: '(kies de zwaarste)' })]), data]),
         el('fieldset', { className: 'check__group' }, [el('legend', { className: 'check__question' }, [el('span', { className: 'check__number', text: '3' }), 'Waar komt de uitkomst terecht? ', el('span', { className: 'field__optional', text: '(optioneel)' })]), where]),
         result,
         policyTable()
-      ])
+      ]),
+      closeButton
     ]);
     dialog.querySelector('form').addEventListener('submit', (event) => event.preventDefault());
 
     function close() {
       if (dialog.open) dialog.close();
     }
-    closeButton.addEventListener('click', close);
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) close();
     });

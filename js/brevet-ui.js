@@ -91,6 +91,7 @@
   function dialog(className, labelId, children) {
     const opener = document.activeElement;
     const node = el('dialog', { className: 'improve brevet-dialog ' + className, attrs: { 'aria-labelledby': labelId } }, children);
+    node.append(ns.ui.closeButton(() => node.close()));
     node.addEventListener('close', () => {
       node.remove();
       if (opener && opener.isConnected) opener.focus({ preventScroll: true });

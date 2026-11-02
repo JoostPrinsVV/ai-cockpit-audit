@@ -689,6 +689,7 @@
       if (dialog.open) dialog.close();
     };
     cancel.addEventListener('click', close);
+    dialog.append(ns.ui.closeButton(close));
     dialog.addEventListener('close', () => {
       dialog.remove();
       if (opener && opener.isConnected) opener.focus({ preventScroll: true });

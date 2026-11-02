@@ -320,6 +320,17 @@
   }
 
   /**
+   * De rode sluitknop rechtsboven in een venster. Komt als laatste in het venster (dan krijgt het eerste veld
+   * nog steeds de focus bij openen) en staat met CSS rechtsboven, ook als de inhoud scrolt.
+   */
+  function closeButton(onClose, label) {
+    const text = label || 'Sluiten';
+    const button = el('button', { className: 'dialog-close', attrs: { type: 'button', 'aria-label': text, title: text } }, [icon('close')]);
+    button.addEventListener('click', onClose);
+    return button;
+  }
+
+  /**
    * Eigen bevestigingsvenster in de pagina (in plaats van window.confirm, dat sommige
    * browsers en ingebouwde vensters stil onderdrukken).
    * @returns {Promise<boolean>} true = bevestigd
@@ -340,6 +351,7 @@
           el('div', { className: 'confirm__actions' }, [cancel, ok])
         ])
       ]);
+      dialog.append(closeButton(() => close(false), opts.cancelLabel || 'Annuleren'));
       let done = false;
       function close(result) {
         if (done) return;
@@ -685,6 +697,7 @@
     saveButton,
     onSaved,
     toast,
+    closeButton,
     confirmDialog,
     announce,
     copyText,

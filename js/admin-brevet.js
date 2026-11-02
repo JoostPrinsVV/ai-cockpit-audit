@@ -263,6 +263,7 @@
         el('div', { className: 'improve__actions' }, [el('button', { className: 'btn btn--secondary', attrs: { type: 'button' }, on: { click: () => dialog.close() } }, [el('span', { text: 'Sluiten' })])])
       ])
     ]);
+    dialog.append(ns.ui.closeButton(() => dialog.close()));
     dialog.addEventListener('close', () => {
       dialog.remove();
       if (opener && opener.isConnected) opener.focus({ preventScroll: true });

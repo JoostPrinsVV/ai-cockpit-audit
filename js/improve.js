@@ -182,6 +182,7 @@
       if (opener && opener.isConnected) opener.focus();
     };
     cancel.addEventListener('click', close);
+    dialog.append(ns.ui.closeButton(close));
     dialog.addEventListener('cancel', (event) => {
       event.preventDefault();
       close();

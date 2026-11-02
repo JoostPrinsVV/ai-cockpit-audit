@@ -89,7 +89,7 @@
     const count = el('span', { className: 'tour__count' });
     const back = el('button', { className: 'btn btn--quiet btn--sm tour__back', attrs: { type: 'button' } }, [icon('arrow-left'), el('span', { text: 'Vorige' })]);
     const next = el('button', { className: 'btn btn--primary btn--sm tour__next', attrs: { type: 'button' } }, [el('span', { text: 'Volgende' }), icon('arrow-right')]);
-    const skip = el('button', { className: 'btn btn--quiet btn--icon tour__close', attrs: { type: 'button', 'aria-label': 'Rondleiding sluiten' } }, [icon('close')]);
+    const skip = el('button', { className: 'dialog-close tour__close', attrs: { type: 'button', 'aria-label': 'Rondleiding sluiten', title: 'Rondleiding sluiten' } }, [icon('close')]);
     const extra = el('div', { className: 'tour__extra' });
     const logo = el('img', { className: 'tour__logo', attrs: { src: 'assets/branding/logo.svg', alt: '', width: '56', height: '56' } });
     const body = el('div', { className: 'tour__body' }, [logo, eyebrow, title, text, extra]);
