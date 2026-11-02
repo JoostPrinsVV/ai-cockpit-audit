@@ -222,6 +222,31 @@
       equal([ns.compass.monthsText([11, 12, 1]), ns.compass.monthsText([1, 4, 7, 10]), ns.compass.monthsText([7, 8, 9]), ns.compass.monthsText([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])], ['nov – jan', 'jan, apr, jul, okt', 'jul – sep', 'het hele jaar']);
     });
 
+    /* ---- agents per fase ---- */
+    describe('Agents & tools per fase (js/view-agents.js)');
+    await test('groepen: eerst de fasen van het seizoen, dan "In elke fase", dan de rest in de volgorde van de fasen', () => {
+      const realPhases = ns.content.phases;
+      const [a, b, c, d] = ['planning', 'beheersing', 'gegevensgericht', 'afronding'].map((id) => ({ id, label: id }));
+      ns.content.phases = [a, b, c, d];
+      try {
+        const agents = [
+          { id: 'breed', phases: [a, b, c] }, // hooguit één fase niet: in elke fase
+          { id: 'geen', phases: [] },
+          { id: 'twee', phases: [a, c] },
+          { id: 'een', phases: [b] }
+        ];
+        const result = ns.views.agents.groups(agents, [{ phase: c, season: { title: 'Voorraad' } }]);
+        equal(result.map((g) => [g.phase ? g.phase.id : 'elke', g.items.map((x) => x.id), g.season ? g.season.title : '']), [
+          ['gegevensgericht', ['twee'], 'Voorraad'],
+          ['elke', ['breed', 'geen'], ''],
+          ['planning', ['twee'], ''],
+          ['beheersing', ['een'], '']
+        ]);
+      } finally {
+        ns.content.phases = realPhases;
+      }
+    });
+
     /* ---- promptbouwer ---- */
     describe('Promptbouwer (js/view-builder.js)');
     await test('opbouw: rol, doel, context, bron en verwachting, lege stappen vallen weg', () => {

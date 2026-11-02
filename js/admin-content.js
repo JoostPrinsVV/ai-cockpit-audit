@@ -234,7 +234,7 @@
         { key: 'link', label: 'Link om te openen', type: 'url', hint: 'Begint met https://. Opent in een nieuw tabblad.' },
         { key: 'owner', label: 'Aanspreekpunt', type: 'text', hint: 'Liever een afdeling of functie dan een naam, bijv. ICT of het AI-team.' },
         { key: 'notFor', label: 'Niet gebruiken voor', type: 'list', hint: 'Eén punt per regel' },
-        { key: 'phases', label: 'Fasen', type: 'refs', ref: 'phase' },
+        { key: 'phases', label: 'Fasen', type: 'refs', ref: 'phase', hint: 'Bij welke fasen hij staat op de pagina Agents & tools. In (bijna) alle fasen: één keer, bij "In elke fase". Namen en volgorde van de fasen: Fasen.' },
         { key: 'usecases', label: 'Usecases hierbij', type: 'refs', ref: 'usecase' },
         { key: 'trainings', label: 'Trainingen hierover', type: 'refs', ref: 'training' },
         { key: 'tips', label: 'Tips hierbij', type: 'refs', ref: 'tip' },
@@ -244,7 +244,7 @@
     },
     phase: {
       meta: (data) => data.short || '',
-      note: 'De volgorde van de fasen is de volgorde van de filters. Een fase die nog gebruikt wordt, kun je niet verwijderen.',
+      note: 'De volgorde van de fasen is de volgorde van de filters en van de groepen bij prompts en agents & tools. Een fase die nog gebruikt wordt, kun je niet verwijderen.',
       fields: [
         { key: 'label', label: 'Naam', type: 'text', required: true },
         { key: 'id', label: 'Code (id)', type: 'id', titleKey: 'label' },
@@ -279,7 +279,7 @@
           { key: 'title', label: 'Wat speelt er', type: 'text', required: true, placeholder: 'bijv. Planning en interimcontroles' },
           { key: 'months', label: 'Maanden', type: 'months', required: true },
           { key: 'text', label: 'Waar draait het om', type: 'textarea', hint: 'Eén of twee zinnen.' },
-          { key: 'phases', label: 'Fasen waaruit de cockpit usecases en prompts kiest', type: 'refs', ref: 'phase' },
+          { key: 'phases', label: 'Fasen bij dit seizoen', type: 'refs', ref: 'phase', hint: 'Daaruit kiest het kompas usecases en prompts, en zolang dit seizoen speelt staan deze fasen bovenaan bij Agents & tools, uitgelicht.' },
           { key: 'keywords', label: 'Zoekwoorden', type: 'list', hint: 'Eén per regel, bijv. voorraad. Wat de cockpit hiermee vindt, komt eerst.' },
           { key: 'accent', label: 'Kleur', type: 'select', options: kit.accentOptions, hint: 'Leeg = de kleur van de eerste fase.' }
         ] }
@@ -533,7 +533,7 @@
           return el('label', { className: 'check check--compact', attrs: { for: boxId } }, [box, el('span', { text: (item.title || item.label) + (item.locked ? ' (op slot)' : '') })]);
         });
         if (!boxes.length) boxes.push(el('p', { className: 'field__hint', text: 'Nog niets om te kiezen.' }));
-        const group = el('fieldset', { className: 'field field--wide refs' }, [el('legend', { className: 'field__label', text: field.label }), el('div', { className: 'refs__list' }, boxes)]);
+        const group = el('fieldset', { className: 'field field--wide refs' }, [el('legend', { className: 'field__label', text: field.label }), hint, el('div', { className: 'refs__list' }, boxes)]);
         return {
           node: group,
           get: () => {

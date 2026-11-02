@@ -1499,6 +1499,13 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
 .p-group__icon { width: 2.5rem; height: 2.5rem; border-radius: 0.8rem; background: var(--accent); color: var(--accent-on); }
 .p-group__count { margin-left: 0.15em; color: var(--color-text-muted); font-size: var(--fs-md); font-weight: var(--fw-semibold); }
 
+/* Agents & tools per fase; de fase van het seizoen (seizoenskompas) bovenaan, in een eigen vlak */
+.ag-group__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); margin-bottom: var(--space-4); }
+.ag-group__head .p-group__title { margin-bottom: 0; }
+.ag-group.is-season { padding: var(--card-padding); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--color-border)); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--accent) 7%, var(--color-surface)); }
+.ag-group__season { display: inline-flex; align-items: center; gap: 0.45em; padding: 0.3rem 0.9rem; border-radius: var(--radius-pill); background: var(--color-chrome); color: var(--color-on-dark); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.ag-group__season .icon { color: var(--color-glow); }
+
 .p-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));

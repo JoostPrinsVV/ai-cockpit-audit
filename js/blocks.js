@@ -157,11 +157,13 @@
 
   /**
    * De fasen als route (01 Planning, 02 …) op een stippellijn, met aantallen. Een fase die er na
-   * een wijziging niet meer is: terug naar Alle fasen. items: alles op de pagina (met .phase).
+   * een wijziging niet meer is: terug naar Alle fasen. items: alles op de pagina (met .phase);
+   * has(item, phaseId): hoort het bij die fase (standaard: item.phase, bij agents een lijst fasen).
    */
-  function phaseFilter(items, filters, update) {
+  function phaseFilter(items, filters, update, has) {
+    const inPhase = has || ((item, id) => item.phase.id === id);
     const options = ns.content.phases
-      .map((phase, index) => ({ value: phase.id, label: phase.short, accent: phase.accent, step: String(index + 1).padStart(2, '0'), count: items.filter((item) => item.phase.id === phase.id).length }))
+      .map((phase, index) => ({ value: phase.id, label: phase.short, accent: phase.accent, step: String(index + 1).padStart(2, '0'), count: items.filter((item) => inPhase(item, phase.id)).length }))
       .filter((option) => option.count > 0);
     if (filters.phase !== 'all' && !options.some((option) => option.value === filters.phase)) filters.phase = 'all';
     return toggleGroup('Filter op fase', [{ value: 'all', label: 'Alle fasen', count: items.length }].concat(options), filters.phase, (value) => {

@@ -360,7 +360,16 @@ elders; een agent kan er met `registerUrl` naar linken (afgeschermde omgeving).
   onderaan en heeft geen knop 'Openen'.
 - **Licentie:** bij Microsoft en eigen agents de Microsoft 365 Copilot-licentie; bij een extern product een eigen
   licentie of account.
-- **Link:** de knop 'Openen' opent hem in een nieuw tabblad (alleen `https://`).
+- **Link:** de knop 'Openen' opent hem in een nieuw tabblad (alleen `https://`). Een Copilot-agent moet in Copilot zelf
+  met collega's gedeeld zijn, anders krijgen ze geen toegang.
+- **Fasen:** de overzichtspagina is ingedeeld naar de fasen, net als de prompts: bovenaan een filter per fase, daaronder
+  een groep per fase. Een agent met een paar fasen staat in elk daarvan; een agent in (bijna) alle fasen staat één
+  keer, bij *In elke fase*. Namen, kleuren en volgorde van de fasen pas je aan bij Beheer → Inhoud → Fasen.
+- **Uitgelicht in het seizoen:** de fasen van wat nu speelt in het seizoenskompas (Beheer → Inhoud → Teksten →
+  Seizoenskompas, *Fasen bij dit seizoen*) staan bovenaan, in een eigen vlak met *Nu in het seizoen*. Bij Audit nu
+  Interne beheersing en Planning (interimcontroles), in het voorjaar de fasen van risico-inschatting, controle en afronding.
+- **Nieuw:** een agent (net als alle andere inhoud) heeft het label *Nieuw* tot 45 dagen na *Toegevoegd op*
+  (`newDays` in `js/config.js`); inhoud van vóór de lancering (`launchDate`) krijgt het niet.
 - **Niet gebruiken voor:** een paar korte punten; ze staan als waarschuwing op de pagina.
 - Alle velden staan uitgelegd bovenin `data/agents.js`; in Beheer → Inhoud → Agents & tools vul je dezelfde velden in.
 

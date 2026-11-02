@@ -4,15 +4,55 @@
    Catalogus van AI-agents en -producten, vanuit de gebruiker bekeken: wat
    is het, waarvoor gebruik je het (en waarvoor niet) en hoe krijg je
    toegang. De formele registratie staat in het AI-register (registerUrl).
+   Ingedeeld naar de fasen (Beheer → Inhoud → Fasen: namen en volgorde), net
+   als de prompts: een filter bovenaan en een groep per fase. Een agent in
+   (bijna) alle fasen staat één keer, bij 'In elke fase'. De fasen van wat nu
+   speelt in het seizoenskompas komen bovenaan, uitgelicht.
    ========================================================================== */
 (function (ns) {
   'use strict';
 
   const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, emptyState } = ns.ui;
-  const { detailHeader, relatedList, itemLinks, warningList, askCard, notice, linkButton, statusPanel, openButton, filterRow, resultCount, countText, cardCache } = ns.blocks;
+  const { detailHeader, relatedList, itemLinks, warningList, askCard, notice, linkButton, statusPanel, openButton, filterRow, resultCount, countText, cardCache, phaseFilter } = ns.blocks;
 
   // Filters blijven staan zolang de pagina open is
-  const filters = { kind: 'all', status: 'all' };
+  const filters = { kind: 'all', status: 'all', phase: 'all' };
+
+  /** In (bijna) elke fase: geen fasen, of hooguit één fase niet. Die staat één keer, niet in iedere groep. */
+  const broad = (agent) => !agent.phases.length || agent.phases.length >= Math.max(2, ns.content.phases.length - 1);
+  /** Hoort bij een fase (voor het filter): die fase gekozen, of in (bijna) elke fase. */
+  const inPhase = (agent, phaseId) => broad(agent) || agent.phases.some((phase) => phase.id === phaseId);
+
+  /** De fasen van wat nu speelt (seizoenskompas), het belangrijkste seizoen eerst: [{ phase, season }]. */
+  function seasonPhases() {
+    const list = ns.compass.seasons(ns.app.config(), ns.cockpit.activeId());
+    const out = [];
+    ns.compass.active(list, ns.content.today()).forEach((season) => season.phases.forEach((id) => {
+      const phase = ns.content.phaseById.get(id);
+      if (phase && !out.some((entry) => entry.phase === phase)) out.push({ phase, season });
+    }));
+    return out;
+  }
+
+  /**
+   * De groepen bij 'Alle fasen': eerst de fasen van het seizoen (uitgelicht), dan 'In elke fase', dan de
+   * andere fasen in de volgorde uit Beheer. Een agent met een paar fasen staat in elk daarvan.
+   * [{ phase (null = in elke fase), items, season }]
+   */
+  function groups(items, season) {
+    const now = season || [];
+    const order = now.map((entry) => entry.phase).concat(ns.content.phases.filter((phase) => !now.some((entry) => entry.phase === phase)));
+    const out = [];
+    order.forEach((phase) => {
+      const members = items.filter((agent) => !broad(agent) && agent.phases.includes(phase));
+      if (!members.length) return;
+      const match = now.find((entry) => entry.phase === phase);
+      out.push({ phase, items: members, season: match ? match.season : null });
+    });
+    const wide = items.filter(broad);
+    if (wide.length) out.splice(out.filter((group) => group.season).length, 0, { phase: null, items: wide, season: null });
+    return out;
+  }
 
   const KIND_INFO = {
     'Microsoft-standaard': 'Onderdeel van Microsoft 365, gemaakt door Microsoft.',
@@ -105,30 +145,53 @@
     if (!all.some((agent) => agent.kind === filters.kind)) filters.kind = 'all';
     if (!all.some((agent) => agent.status === filters.status)) filters.status = 'all';
 
-    const grid = el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } });
+    const list = el('div', { className: 'p-list' });
     const count = resultCount();
-    const empty = emptyState('Geen agents of tools met deze filters', 'Kies een andere soort of status.');
+    const empty = emptyState('Geen agents of tools met deze filters', 'Kies een andere fase, soort of status.');
+    const season = seasonPhases();
 
-    const cardFor = cardCache((agent) => card(agent));
+    // Een agent kan in meer groepen staan: per groep een eigen kaart (in een groep is de titel een h3)
+    const cardFor = cardCache((agent, variant) => card(agent, variant ? 'h3' : 'h2'));
+    const grid = (items, variant) => el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } }, items.map((agent) => cardFor(agent, variant)));
 
     function update() {
       const items = all.filter((agent) =>
+        (filters.phase === 'all' || inPhase(agent, filters.phase)) &&
         (filters.kind === 'all' || agent.kind === filters.kind) &&
         (filters.status === 'all' || agent.status === filters.status)
       );
-      grid.replaceChildren(...items.map((agent) => cardFor(agent)));
+      if (filters.phase !== 'all') {
+        // Eén fase gekozen: gewoon de kaarten
+        list.replaceChildren(grid(items, ''));
+      } else {
+        list.replaceChildren(...groups(items, season).map((group) => {
+          const key = group.phase ? group.phase.id : 'elke-fase';
+          const titleId = 'ag-' + key;
+          return el('section', { className: 'p-group ag-group ' + accentClass(group.phase ? group.phase.accent : 'navy') + (group.season ? ' is-season' : ''), attrs: { 'aria-labelledby': titleId } }, [
+            el('div', { className: 'ag-group__head' }, [
+              el('h2', { className: 'p-group__title', attrs: { id: titleId } }, [
+                el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase ? group.phase.icon : 'grid')]),
+                el('span', {}, [(group.phase ? group.phase.label : 'In elke fase') + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
+              ]),
+              group.season ? el('p', { className: 'ag-group__season' }, [icon('compass'), el('span', { text: 'Nu in het seizoen: ' + group.season.title })]) : null
+            ]),
+            grid(group.items, key)
+          ]);
+        }));
+      }
       count.textContent = countText(items.length, 'agent of tool', 'agents en tools');
       empty.hidden = items.length > 0;
-      grid.hidden = items.length === 0;
+      list.hidden = items.length === 0;
     }
 
     const node = el('div', { className: 'page container' }, [
       head,
       el('div', { className: 'filters' }, [
+        filterRow('Fase', phaseFilter(all, filters, update, inPhase)),
         filterRow('Soort', facet('soort', ns.content.AGENT_KINDS, all, 'kind', update)),
         filterRow('Status', facet('status', ns.content.AGENT_STATUSES, all, 'status', update), count)
       ]),
-      grid,
+      list,
       empty,
       el('div', { className: 'section' }, [questionCta()])
     ]);
@@ -224,5 +287,5 @@
   }
 
   ns.views = ns.views || {};
-  ns.views.agents = { renderList, renderDetail, card };
+  ns.views.agents = { renderList, renderDetail, card, groups, broad };
 })(window.AIAudit);
