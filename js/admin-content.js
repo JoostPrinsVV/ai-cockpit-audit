@@ -137,6 +137,7 @@
         { key: 'license', label: 'Licentie', type: 'license', half: true },
         { key: 'added', label: 'Toegevoegd op', type: 'date', half: true },
         { key: 'featured', label: 'Uitlichten bij "Begin hier" en op de startpagina', type: 'bool' },
+        { key: 'builder', label: 'Verwijs naar de promptbouwer (bovenaan de tip)', type: 'bool', hint: 'Voor tips over prompts schrijven. De tip "prompt-opbouw" heeft de verwijzing altijd.' },
         { key: 'why', label: 'Waarom handig in de praktijk', type: 'textarea' },
         { key: 'steps', label: 'Zo doe je het', type: 'list', required: true, hint: 'Eén stap per regel' },
         { key: 'example', label: 'Voorbeeld om te kopiëren', type: 'object', fields: [

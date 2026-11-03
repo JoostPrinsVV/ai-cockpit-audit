@@ -186,6 +186,12 @@
           newBadge(tip.added)
         ]
       }),
+      // Een tip over prompts schrijven: meteen door naar de promptbouwer (js/view-builder.js)
+      tip.builder ? ns.views.builder.teaser({
+        className: 'builder-teaser--tip',
+        title: 'Probeer het meteen in de promptbouwer',
+        lead: 'Doel, context, bron en verwachting stap voor stap. Je prompt groeit mee, en de meter laat zien wat er nog beter kan.'
+      }) : null,
       tip.why ? el('section', { className: 'why', attrs: { 'aria-labelledby': 'tip-why' } }, [
         el('h2', { className: 'why__title', attrs: { id: 'tip-why' } }, [icon('sparkle'), el('span', { text: `Waarom handig in ${ns.cockpit.active().label}` })]),
         el('p', { text: tip.why })

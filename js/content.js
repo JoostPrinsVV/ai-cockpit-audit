@@ -268,6 +268,8 @@
   }
 
   /* ---- Tips ----------------------------------------------------------------------- */
+  const BUILDER_TIPS = ['prompt-opbouw'];
+
   function loadTips(raw) {
     const categories = new Map();
     (Array.isArray(raw) ? raw : []).forEach((item, index) => {
@@ -293,6 +295,9 @@
         icon: text(item.icon) || 'bulb',
         license: bool(item.license),
         featured: item.featured === true,
+        // Verwijzing naar de promptbouwer op de tip-pagina (Beheer: 'Verwijs naar de promptbouwer'); de tip over
+        // de opbouw van een prompt heeft hem altijd
+        builder: item.builder === true || BUILDER_TIPS.includes(id),
         minutes: text(item.minutes),
         why: text(item.why),
         steps: list(item.steps),

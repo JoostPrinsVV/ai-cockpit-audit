@@ -71,14 +71,16 @@
       date.setHours(hour, minute || 0, 0, 0);
       return date.toISOString();
     };
-    // De echte prompts, usecases en trainingen (zodat het logboek titels toont); alleen zonder inhoud verzonnen
-    const ids = (items, count, prefix) => {
+    // De echte prompts, usecases en trainingen (zodat het logboek titels toont); alleen aangevuld tot het
+    // minimum dat de checkrides van de demo-collega's nodig hebben
+    const ids = (items, min, prefix) => {
       const found = (items || []).map((item) => item.id);
-      return found.length ? found : Array.from({ length: count }, (_, n) => prefix + '-demo-' + (n + 1));
+      while (found.length < min) found.push(prefix + '-demo-' + (found.length + 1));
+      return found;
     };
-    const prompts = ids(ns.content.prompts, 40, 'prompt');
-    const usecases = ids(ns.content.usecases, 12, 'usecase');
-    const trainings = ids(ns.content.trainings, 4, 'training');
+    const prompts = ids(ns.content.prompts, 30, 'prompt');
+    const usecases = ids(ns.content.usecases, 4, 'usecase');
+    const trainings = ids(ns.content.trainings, 3, 'training');
     const accounts = [];
     const facts = [];
     let id = 0;

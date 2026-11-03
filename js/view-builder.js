@@ -118,16 +118,17 @@
   }
 
   /**
-   * Kaart naar de promptbouwer (op de promptdatabase): donker, met een kleine meter waarvan de
-   * naald bij hover of focus uitslaat (alleen CSS).
+   * Kaart naar de promptbouwer (op de promptdatabase en bij een tip over prompts): donker, met een
+   * kleine meter waarvan de naald bij hover of focus uitslaat (alleen CSS). options: { title, lead }.
    */
-  function teaser() {
-    return el('a', { className: 'builder-teaser', attrs: { href: '#/promptbouwer' } }, [
+  function teaser(options) {
+    const opts = options || {};
+    return el('a', { className: 'builder-teaser' + (opts.className ? ' ' + opts.className : ''), attrs: { href: '#/promptbouwer' } }, [
       el('span', { className: 'builder-teaser__meter', attrs: { 'aria-hidden': 'true' } }, [gauge().node]),
       el('span', { className: 'builder-teaser__text' }, [
         el('span', { className: 'builder-teaser__eyebrow', text: 'Promptbouwer' }),
-        el('span', { className: 'builder-teaser__title', text: 'Liever zelf schrijven?' }),
-        el('span', { className: 'builder-teaser__lead', text: 'Bouw je prompt in zes stappen. De meter laat zien wat er nog beter kan.' }),
+        el('span', { className: 'builder-teaser__title', text: opts.title || 'Liever zelf schrijven?' }),
+        el('span', { className: 'builder-teaser__lead', text: opts.lead || 'Bouw je prompt in zes stappen. De meter laat zien wat er nog beter kan.' }),
         el('span', { className: 'builder-teaser__go' }, [el('span', { text: 'Open de promptbouwer' }), icon('arrow-right')])
       ])
     ]);
