@@ -44,6 +44,13 @@
   const FIRST = ['Anouk', 'Bram', 'Charlotte', 'Dennis', 'Emma', 'Floris', 'Hanna', 'Jesse', 'Kim', 'Lars', 'Mila', 'Niels', 'Olivia', 'Pieter', 'Roos', 'Sven', 'Tess', 'Victor', 'Wouter', 'Yara', 'Zoë', 'Joris', 'Iris', 'Koen'];
   const LAST = ['Postma', 'Hoekstra', 'Dijkstra', 'Kuipers', 'Veenstra', 'Brouwer', 'Wierda', 'Hendriks', 'Peters', 'Bosma', 'Schouten', 'Kramer', 'Prins', 'Boer', 'Vos', 'Haan', 'Bos', 'Wolters', 'Huisman', 'Jonker', 'Koster', 'Smits', 'Sijbesma', 'Zwart'];
   const PLACES = ['Groningen', 'Rotterdam', 'Leeuwarden', 'Zwolle', 'Assen', 'Drachten'];
+  // Verzonnen titels voor overgenomen bijdragen
+  const TITLES = {
+    prompt: ['Prompt: openstaande punten uit de mailbox', 'Prompt: huurcontract samenvatten', 'Prompt: vragen bij de voorraadtelling'],
+    idee: ['Idee: checklist voor de jaarafsluiting', 'Idee: notulen koppelen aan het dossier'],
+    verbetering: ['Verbetering: vragenlijst voor een walkthrough', 'Verbetering: cijferanalyse met grafiek'],
+    usecase: ['Usecase: bevestigingsbrieven voorbereiden', 'Usecase: managementletter in huisstijl']
+  };
 
   const slug = (name) => name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]+/g, '.').replace(/^\.|\.$/g, '');
 
@@ -64,10 +71,10 @@
       date.setHours(hour, minute || 0, 0, 0);
       return date.toISOString();
     };
+    // De echte prompts, usecases en trainingen (zodat het logboek titels toont); alleen zonder inhoud verzonnen
     const ids = (items, count, prefix) => {
       const found = (items || []).map((item) => item.id);
-      while (found.length < count) found.push(prefix + '-demo-' + (found.length + 1));
-      return found;
+      return found.length ? found : Array.from({ length: count }, (_, n) => prefix + '-demo-' + (n + 1));
     };
     const prompts = ids(ns.content.prompts, 40, 'prompt');
     const usecases = ids(ns.content.usecases, 12, 'usecase');
@@ -101,12 +108,14 @@
       }
       days.forEach((daysAgo) => add(email, 'active_day', ns.brevet.dayOf(at(daysAgo, 9)), at(daysAgo, 9, 1)));
       const order = days.slice().reverse(); // oudste eerst
-      for (let n = 0; n < info.prompts; n++) add(email, 'prompt_used', prompts[(index * 7 + n) % prompts.length], at(order[Math.floor(n / 4) % order.length], 10 + (n % 4), n % 60));
-      for (let n = 0; n < info.demos; n++) add(email, 'demo_watched', usecases[(index * 3 + n) % usecases.length], at(order[(n * 2 + 1) % order.length], 14, n));
-      for (let n = 0; n < Math.min(info.prompts, 6); n++) if (roll() > 0.4) add(email, 'prompt_rated', 'prompt:' + prompts[(index * 7 + n) % prompts.length], at(order[n % order.length], 15, n));
-      for (let n = 0; n < info.recordings; n++) add(email, 'recording_watched', trainings[(index + n) % trainings.length], at(order[Math.min(order.length - 1, 3 + n)], 16));
-      for (let n = 0; n < info.live; n++) add(email, 'training_attended', trainings[(index + n + 2) % trainings.length], at(order[Math.min(order.length - 1, 6 + n * 3)], 13), null, 'ai-team@demo.cockpit');
-      info.adopted.forEach((kind, n) => add(email, 'contribution_adopted', 'demo-' + index + '-' + n, at(order[Math.min(order.length - 1, 8 + n * 5)], 11), { kind, title: 'Bijdrage (demo)' }, 'ai-team@demo.cockpit'));
+      // Verspreid over de hele periode, zodat ook de laatste weken gevuld zijn
+      const spread = (n, count) => order[Math.min(order.length - 1, Math.floor(((n + 0.5) * order.length) / Math.max(1, count)))];
+      for (let n = 0; n < info.prompts; n++) add(email, 'prompt_used', prompts[(index * 7 + n) % prompts.length], at(spread(n, info.prompts), 10 + (n % 4), n % 60));
+      for (let n = 0; n < info.demos; n++) add(email, 'demo_watched', usecases[(index * 3 + n) % usecases.length], at(spread(n, info.demos), 14, n));
+      for (let n = 0; n < Math.min(info.prompts, 6); n++) if (roll() > 0.4) add(email, 'prompt_rated', 'prompt:' + prompts[(index * 7 + n) % prompts.length], at(spread(n * 2 + 1, 12), 15, n));
+      for (let n = 0; n < info.recordings; n++) add(email, 'recording_watched', trainings[(index + n) % trainings.length], at(spread(n + 1, info.recordings + 2), 16));
+      for (let n = 0; n < info.live; n++) add(email, 'training_attended', trainings[(index + n + 2) % trainings.length], at(spread(n * 2 + 1, info.live * 2 + 1), 13), null, 'ai-team@demo.cockpit');
+      info.adopted.forEach((kind, n) => add(email, 'contribution_adopted', 'demo-' + index + '-' + n, at(spread(n, info.adopted.length), 11), { kind, title: TITLES[kind][(index + n) % TITLES[kind].length] }, 'ai-team@demo.cockpit'));
       for (let n = 0; n < (info.authorOf || 0); n++) {
         const prompt = prompts[(index * 11 + n * 5 + 3) % prompts.length];
         add(email, 'prompt_author', prompt, at(first - 10, 12, n), null, 'ai-team@demo.cockpit');
