@@ -5,7 +5,9 @@
    bezig bent. Een plaatshouder met dezelfde naam ([NAAM], [FUNCTIE], [JAAR],
    [VORIG JAAR], …) staat daarmee al ingevuld: in het promptblok, bij kopiëren
    en 'Kopieer en open Copilot' op de kaarten, in de promptbouwer en in het
-   zoekvenster (Ctrl+K). Je naam staat ook al bij een inzending.
+   zoekvenster (Ctrl+K). Je naam staat ook al bij een inzending. Je rol
+   (assistent, senior, manager, partner; anders afgeleid uit je functie) zet
+   trainingen voor jouw rol bovenaan, met 'Voor jou'.
    Alleen in deze browser (lokale opslag 'profiel'), nooit verstuurd. Geen
    klantgegevens: die vul je per prompt in, en die worden niet bewaard.
    ========================================================================== */
@@ -27,6 +29,27 @@
     // Alleen voor de promptbouwer (als achtergrond): een soort klanten, nooit een naam
     { id: 'klanten', label: 'Soort klanten', hint: 'Bijv. mkb in de bouw en de groothandel', autocomplete: 'off', placeholders: [] }
   ];
+  /* Rol: voor wie een training (of later iets anders) bedoeld is. Kies je hem niet, dan leidt de cockpit
+     hem af uit je functie ('Senior auditor' → senior). Volgorde van de woorden telt: 'Senior manager' is een manager. */
+  const ROLES = [
+    { id: 'assistent', label: 'Assistent', plural: 'assistenten' },
+    { id: 'senior', label: 'Senior', plural: 'seniors' },
+    { id: 'manager', label: 'Manager', plural: 'managers' },
+    { id: 'partner', label: 'Partner', plural: 'partners' }
+  ];
+  const ROLE_IDS = ROLES.map((role) => role.id);
+  const ROLE_WORDS = [
+    ['partner', /partner|directeur|director|vennoot/i],
+    ['manager', /manager|supervisor/i],
+    ['senior', /senior|teamleider|ervaren/i],
+    ['assistent', /assistent|junior|trainee|stagiair|starter/i]
+  ];
+  /** De rol bij een functie ('' als die er niet uit te halen is). */
+  function roleOf(functie) {
+    const found = ROLE_WORDS.find(([, pattern]) => pattern.test(String(functie || '')));
+    return found ? found[0] : '';
+  }
+
   // Boekjaar: '' (niet invullen), 'auto' of een jaartal
   const YEAR_PLACEHOLDERS = ['JAAR', 'BOEKJAAR'];
   const PREVIOUS_YEAR_PLACEHOLDERS = ['VORIG JAAR', 'VORIG BOEKJAAR'];
@@ -37,7 +60,7 @@
   const clean = (value) => (typeof value === 'string' ? value.trim().slice(0, 120) : '');
   let cache = null;
 
-  /** Je gegevens: { naam, functie, vestiging, team, klanten, boekjaar } (lege tekst als het leeg is). */
+  /** Je gegevens: { naam, functie, vestiging, team, klanten, boekjaar, rol } (lege tekst als het leeg is). */
   function get() {
     if (!cache) {
       const saved = storage.get(KEY, null);
@@ -48,8 +71,15 @@
       });
       const year = clean(source.boekjaar);
       cache.boekjaar = year === 'auto' || /^\d{4}$/.test(year) ? year : '';
+      cache.rol = ROLE_IDS.includes(source.rol) ? source.rol : '';
     }
     return Object.assign({}, cache);
+  }
+
+  /** Je rol: gekozen in Mijn gegevens, anders afgeleid uit je functie ('' als die onbekend is). */
+  function role() {
+    const values = get();
+    return values.rol || roleOf(values.functie);
   }
 
   /** Bewaren (alleen wat je meegeeft verandert) en iedereen die meekijkt laten weten. */
@@ -60,6 +90,7 @@
       if (clean(next[field.id])) tidy[field.id] = clean(next[field.id]);
     });
     if (next.boekjaar === 'auto' || /^\d{4}$/.test(String(next.boekjaar || ''))) tidy.boekjaar = String(next.boekjaar);
+    if (ROLE_IDS.includes(next.rol)) tidy.rol = next.rol;
     if (Object.keys(tidy).length) storage.set(KEY, tidy);
     else storage.remove(KEY);
     cache = null;
@@ -68,13 +99,13 @@
   }
 
   function clear() {
-    return set(Object.assign(Object.fromEntries(FIELDS.map((field) => [field.id, ''])), { boekjaar: '' }));
+    return set(Object.assign(Object.fromEntries(FIELDS.map((field) => [field.id, ''])), { boekjaar: '', rol: '' }));
   }
 
   /** Iets ingevuld? */
   function filled() {
     const values = get();
-    return FIELDS.some((field) => values[field.id]) || Boolean(values.boekjaar);
+    return FIELDS.some((field) => values[field.id]) || Boolean(values.boekjaar) || Boolean(values.rol);
   }
 
   /** Het boekjaar bij 'automatisch': januari tot en met juni het vorige jaar, daarna dit jaar. */
@@ -185,5 +216,5 @@
     onChange(syncButton);
   }
 
-  ns.profile = { FIELDS, init, get, set, clear, filled, year, autoYear, valueFor, values, fill, canFill, source, firstName, initials, onChange };
+  ns.profile = { FIELDS, ROLES, ROLE_IDS, roleOf, role, init, get, set, clear, filled, year, autoYear, valueFor, values, fill, canFill, source, firstName, initials, onChange };
 })(window.AIAudit);

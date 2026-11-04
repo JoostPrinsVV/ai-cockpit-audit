@@ -1106,3 +1106,36 @@ ul.launch__list { display: grid; gap: var(--space-2); margin: 0; padding: 0; lis
 @media (prefers-reduced-motion: reduce) {
   .launch__chevron { transition: none; }
 }
+/* Formulier: een paar vaste keuzes om aan te vinken (bijv. 'Voor wie' bij een training) */
+.choices__list { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); }
+/* Onder een groep: 'toevoegen' en eventueel 'alles in één keer uploaden' */
+.repeater__buttons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); justify-self: start; }
+
+/* Training: naslagwerk maken met Copilot (js/admin-naslag.js) */
+.naslag-import { margin-bottom: var(--space-5); border: 1px solid var(--color-border); border-left: 4px solid var(--vv-teal); border-radius: var(--radius); background: var(--color-surface); }
+.naslag-import__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); cursor: pointer; list-style: none; }
+.naslag-import__head::-webkit-details-marker { display: none; }
+.naslag-import__head:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: -2px; border-radius: var(--radius); }
+.naslag-import__icon { display: grid; flex: none; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: var(--radius-sm); background: var(--color-chrome); color: var(--vv-teal); }
+.naslag-import__heading { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.naslag-import__title { font-weight: var(--fw-bold); }
+.naslag-import__lead { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.naslag-import__chevron { flex: none; color: var(--color-text-muted); transition: transform var(--duration-fast) var(--ease-out); }
+.naslag-import[open] .naslag-import__chevron { transform: rotate(180deg); }
+.naslag-import__steps { display: grid; gap: var(--space-4); margin: 0; padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + 1.3rem); }
+.naslag-import__steps > li { display: grid; gap: var(--space-2); justify-items: start; }
+.naslag-import__steps > li > * { max-width: 72ch; }
+.naslag-import__steps > li > .naslag-import__answer { width: 100%; max-width: none; font-family: var(--font-mono, ui-monospace, monospace); font-size: var(--fs-sm); }
+.naslag-import__steps > li:last-child { justify-items: stretch; }
+.naslag-import__actions { display: flex; gap: var(--space-2); }
+.naslag-import__result:empty { display: none; }
+.naslag-import__ok, .naslag-import__error, .naslag-import__warnings li { display: flex; align-items: flex-start; gap: var(--space-2); font-size: var(--fs-sm); }
+.naslag-import__ok .icon { flex: none; margin-top: 0.15em; color: var(--color-success); }
+.naslag-import__error { color: var(--color-danger); }
+.naslag-import__error .icon, .naslag-import__warnings .icon { flex: none; margin-top: 0.15em; }
+ul.naslag-import__warnings { display: grid; gap: var(--space-1); margin: var(--space-2) 0 0; padding: 0; list-style: none; color: var(--color-warning); }
+.naslag-import > .field__hint { display: flex; gap: var(--space-2); padding: 0 var(--space-4) var(--space-4); }
+.naslag-import > .field__hint .icon { flex: none; margin-top: 0.15em; color: var(--color-success); }
+@media (prefers-reduced-motion: reduce) {
+  .naslag-import__chevron { transition: none; }
+}

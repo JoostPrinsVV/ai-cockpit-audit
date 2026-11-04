@@ -3453,3 +3453,7 @@ html::-webkit-scrollbar-corner,
 @media (forced-colors: active) {
   .tw-ask, .tw-card, .ks__panel, .ks-step, .ks-extras { border: 1px solid CanvasText; }
 }
+/* Trainingen: voor wie (rollen uit Mijn gegevens) */
+.chip--audience { background: var(--color-surface-muted); }
+.chip--you { background: color-mix(in srgb, var(--vv-teal) 22%, var(--color-surface)); color: var(--color-text); font-weight: var(--fw-bold); }
+.chip--you .icon { color: var(--color-success); }

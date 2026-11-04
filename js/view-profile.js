@@ -58,6 +58,20 @@
     year.value = values.boekjaar;
     inputs.boekjaar = year;
 
+    // Rol: kiezen, of laten afleiden uit je functie (trainingen voor jouw rol staan dan bovenaan)
+    const roleLabel = (id) => (ns.profile.ROLES.find((r) => r.id === id) || {}).label || '';
+    const derivedOption = el('option', { attrs: { value: '' } });
+    const role = el('select', { className: 'field__input', attrs: { id: 'mine-rol', 'aria-describedby': 'mine-rol-hint' } }, [
+      derivedOption,
+      ...ns.profile.ROLES.map((r) => el('option', { attrs: { value: r.id }, text: r.label }))
+    ]);
+    const syncDerived = () => {
+      const derived = ns.profile.roleOf(inputs.functie ? inputs.functie.value : values.functie);
+      derivedOption.textContent = derived ? `Uit je functie (${roleLabel(derived)})` : 'Niet opgeven';
+    };
+    role.value = values.rol;
+    inputs.rol = role;
+
     let timer = 0;
     function store() {
       window.clearTimeout(timer);
@@ -67,8 +81,6 @@
         showSample();
       }, 250);
     }
-    Object.values(inputs).forEach((input) => input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', store));
-
     const wipe = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('trash'), el('span', { text: 'Gegevens wissen' })]);
     wipe.addEventListener('click', async () => {
       if (!(await ns.ui.confirmDialog('Je naam, functie en de rest worden van dit apparaat gewist. Prompts tonen dan weer de plaatshouders.', { title: 'Gegevens wissen?', confirmLabel: 'Wissen', danger: true }))) return;
@@ -86,6 +98,11 @@
       el('div', { className: 'mine__fields' }, [
         ...ns.profile.FIELDS.map(field),
         el('div', { className: 'field' }, [
+          el('label', { className: 'field__label', attrs: { for: 'mine-rol' } }, ['Je rol ', el('span', { className: 'field__optional', text: '(optioneel)' })]),
+          role,
+          el('p', { className: 'field__hint', attrs: { id: 'mine-rol-hint' }, text: 'Trainingen voor jouw rol staan bovenaan, met "Voor jou". Je ziet de andere gewoon ook.' })
+        ]),
+        el('div', { className: 'field' }, [
           el('label', { className: 'field__label', attrs: { for: 'mine-boekjaar' }, text: 'Boekjaar waar je mee bezig bent' }),
           year,
           el('p', { className: 'field__hint', attrs: { id: 'mine-boekjaar-hint' }, text: 'Vult [JAAR] en [VORIG JAAR] in. Automatisch: tot en met juni het vorige jaar, daarna dit jaar.' })
@@ -94,6 +111,10 @@
       el('div', { className: 'mine__foot' }, [status, wipe])
     ]);
     form.addEventListener('submit', (event) => event.preventDefault());
+    // Pas nu bestaan alle velden (de tekstvelden ontstaan bij het opbouwen van het formulier)
+    Object.values(inputs).forEach((input) => input.addEventListener(input.tagName === 'SELECT' ? 'change' : 'input', store));
+    syncDerived();
+    inputs.functie.addEventListener('input', syncDerived);
 
     const reach = coverage();
     const aside = el('aside', { className: 'mine__aside', attrs: { 'aria-labelledby': 'mine-sample-title' } }, [

@@ -554,6 +554,62 @@
       equal([L.savesState({ filled: 3, total: 4 }), L.savesState({ filled: 4, total: 5 }), L.savesState({ filled: 0, total: 0 })], ['todo', 'done', 'optional']);
       equal(L.STEPS.map((step) => step.id), ['step13', 'step14', 'step12']);
     });
+    /* ---- Trainingen: voor wie, en naslagwerk met Copilot ---- */
+    await test('rol: gekozen in Mijn gegevens, anders afgeleid uit je functie', () => {
+      const P = ns.profile;
+      equal(['Senior manager', 'Assistent-accountant', 'Senior auditor', 'Supervisor', 'Partner', 'Fiscalist', ''].map(P.roleOf), ['manager', 'assistent', 'senior', 'manager', 'partner', '', '']);
+      const saved = ns.ui.storage.get('profiel', null);
+      try {
+        P.set({ functie: 'Junior auditor', rol: '' });
+        equal(P.role(), 'assistent', 'afgeleid');
+        P.set({ rol: 'manager' });
+        equal([P.role(), P.get().rol], ['manager', 'manager'], 'gekozen gaat voor');
+        P.set({ rol: 'directie' });
+        equal(P.get().rol, '', 'een onbekende rol wordt niet bewaard');
+      } finally {
+        // Eerst alles leeg (ook het geheugen van profile.js), dan wat er stond terug
+        P.clear();
+        if (saved) P.set(saved);
+      }
+    });
+    await test('training: voor wie alleen bekende rollen; leeg = voor iedereen', () => {
+      // load() vervangt alle inhoud: daarna alles terugzetten zoals het was
+      const saved = Object.assign({}, ns.content);
+      try {
+        ns.content.load({ phase: [], usecase: [], prompt: [], tip: [], agent: [], setting: {}, training: [
+          { id: 't1', title: 'Voor managers', date: '2026-10-01', audience: ['manager', 'directie'] },
+          { id: 't2', title: 'Voor iedereen', date: '2026-10-02' }
+        ] });
+        equal([ns.content.trainingById.get('t1').audience, ns.content.trainingById.get('t2').audience], [['manager'], []]);
+      } finally {
+        Object.assign(ns.content, saved);
+      }
+    });
+    await test('naslagwerk uit Copilot: JSON uit het antwoord, alleen bekende velden, met waarschuwingen', () => {
+      const N = ns.adminNaslag;
+      const answer = 'Hier is het naslagwerk:\n```json\n' + JSON.stringify({
+        title: 'Copilot voor managers',
+        takeaways: [{ title: 'Review blijft nodig', text: 'Controleer de output.', warning: true }, { title: 'Geef context', text: 'Meer context, beter antwoord.', warning: false }],
+        actions: [{ title: 'Stel instructies in', text: 'Scheelt herhalen.', slide: 4, howto: [{ title: 'Zo doe je het', steps: ['Open Copilot', 'Kies Instellingen'] }], prompts: [{ label: 'Sjabloon', text: 'Ik ben [FUNCTIE].' }, { label: 'Leeg', text: '' }] }, { text: 'zonder titel' }],
+        chapters: [{ time: '02:15', title: 'Introductie' }, { time: 'begin', title: 'Fout' }],
+        questions: ['Mag dit met klantdata?', ''],
+        ideas: [{ title: 'Idee', text: 'Mail naar jan@voorbeeld.nl' }],
+        onbekend: 'weg'
+      }) + '\n```\nSucces!';
+      const result = N.parse(answer);
+      equal(Object.keys(result.data).sort(), ['actions', 'chapters', 'ideas', 'questions', 'takeaways', 'title']);
+      equal(result.data.takeaways, [{ title: 'Review blijft nodig', text: 'Controleer de output.', warning: true }, { title: 'Geef context', text: 'Meer context, beter antwoord.' }]);
+      equal(result.data.actions, [{ title: 'Stel instructies in', text: 'Scheelt herhalen.', slide: '4', howto: [{ title: 'Zo doe je het', steps: ['Open Copilot', 'Kies Instellingen'] }], prompts: [{ label: 'Sjabloon', text: 'Ik ben [FUNCTIE].' }] }]);
+      equal([result.data.chapters, result.data.questions], [[{ time: '02:15', title: 'Introductie' }], ['Mag dit met klantdata?']]);
+      equal(result.summary, { takeaways: 2, actions: 1, chapters: 1, ideas: 1, questions: 1 });
+      ok(result.warnings.some((w) => /kernpunten/.test(w)) && result.warnings.some((w) => /hoofdstuk/.test(w)) && result.warnings.some((w) => /e-mailadres/.test(w)), 'waarschuwingen: te weinig kernpunten, hoofdstuk zonder tijd, e-mailadres');
+      let message = '';
+      try { N.parse('Sorry, dat kan ik niet.'); } catch (error) { message = error.message; }
+      ok(/geen JSON/.test(message), 'zonder JSON een uitleg');
+      try { N.parse('{ "title": "half'); } catch (error) { message = error.message; }
+      ok(/geen JSON|geldige JSON/.test(message), 'kapotte JSON: een uitleg');
+      ok(/takeaways/.test(N.PROMPT) && /Noem geen namen/.test(N.PROMPT), 'de prompt vraagt de velden en zegt: geen namen');
+    });
     await test('kickstart afgerond: één keer AI-miles (instelbaar bij de regels)', () => {
       const facts = [fact('kickstart_done', '', '2026-11-04'), fact('kickstart_done', '', '2026-11-05')];
       equal(B.compute(facts, { today: '2026-11-05' }).miles, 50);

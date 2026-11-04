@@ -149,7 +149,8 @@
         ? `Deze week terugverdiend: ${format(total.week)} (schatting).`
         : 'Het AI-team ziet welke prompts beter kunnen.' })
     );
-    actions.replaceChildren(yes ? el('a', { className: 'btn btn--quiet btn--sm', attrs: { href: '#/mijn' }, on: { click: hide } }, [el('span', { text: 'Mijn logboek' }), icon('arrow-right')]) : null);
+    // Zonder 'null' als tekst: replaceChildren maakt van null de tekst "null"
+    actions.replaceChildren(...(yes ? [el('a', { className: 'btn btn--quiet btn--sm', attrs: { href: '#/mijn' }, on: { click: hide } }, [el('span', { text: 'Mijn logboek' }), icon('arrow-right')])] : []));
     ns.ui.announce(yes ? `Genoteerd. Deze week terugverdiend: ${format(total.week)}.` : 'Dank je.');
     window.clearInterval(current.timer);
     window.setTimeout(() => {

@@ -14,9 +14,29 @@
 
   const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, formatDate, storage, emptyState } = ns.ui;
   const { detailHeader, relatedList, itemLinks, stepsList, askCard, notice, linkButton, statusPanel, openButton, filterRow, resultCount, countText } = ns.blocks;
-  const filters = { category: 'all' };
+  const filters = { category: 'all', audience: 'all' };
 
   const isUpcoming = (training) => !training.available && training.date >= ns.content.today();
+
+  /* ---- Voor wie: rollen uit Mijn gegevens (js/profile.js) ---- */
+  const roleById = (id) => ns.profile.ROLES.find((role) => role.id === id);
+  /** 'Voor managers', 'Voor assistenten en seniors' (of '' voor iedereen). */
+  function audienceText(training) {
+    const names = training.audience.map((id) => (roleById(id) || {}).plural).filter(Boolean);
+    if (!names.length || names.length === ns.profile.ROLES.length) return '';
+    return 'Voor ' + (names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' en ' + names[names.length - 1]);
+  }
+  /** Is deze training voor jou gemaakt (je rol staat erbij)? */
+  const forYou = (training) => Boolean(ns.profile.role()) && training.audience.includes(ns.profile.role());
+  /** Bij het filter 'voor rol X': de trainingen voor die rol, en die voor iedereen. */
+  const matchesAudience = (training, role) => role === 'all' || !training.audience.length || training.audience.includes(role);
+  function audienceChips(training) {
+    const text = audienceText(training);
+    return [
+      forYou(training) ? el('span', { className: 'chip chip--you' }, [icon('user'), 'Voor jou']) : null,
+      text ? chip(text, { icon: 'users', className: 'chip--audience' }) : null
+    ];
+  }
   const scrollBehavior = () => (ns.motion.calm() ? 'auto' : 'smooth'); // minder beweging: direct springen
   const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 
@@ -55,6 +75,7 @@
         el('div', { className: 'chips' }, [
           ns.ui.draftBadge(training),
           ns.cockpit.sharedBadge(training),
+          ...audienceChips(training),
           training.hasNaslag ? chip('Naslagwerk', { icon: 'book' }) : null,
           training.level ? chip(training.level, { icon: 'sparkle' }) : null,
           licenseBadge(training.license, { short: true }),
@@ -96,7 +117,12 @@
     const count = resultCount();
 
     function update() {
-      const items = archive.filter((training) => filters.category === 'all' || training.category === filters.category);
+      // Voor jou eerst (je rol uit Mijn gegevens), verder de gewone volgorde
+      const items = archive
+        .filter((training) => (filters.category === 'all' || training.category === filters.category) && matchesAudience(training, filters.audience))
+        .map((training, index) => ({ training, index }))
+        .sort((a, b) => Number(forYou(b.training)) - Number(forYou(a.training)) || a.index - b.index)
+        .map((entry) => entry.training);
       grid.replaceChildren(...items.map((training) => el('li', {}, [card(training)])));
       count.textContent = countText(items.length, 'training', 'trainingen');
     }
@@ -104,13 +130,24 @@
     const categories = ns.content.trainingCategories.filter((category) => archive.some((training) => training.category === category));
     // Een soort die er niet meer is, of geen filterbalk (één soort): dan alles tonen
     if (categories.length < 2 || !categories.includes(filters.category)) filters.category = 'all';
-    const filterBlock = categories.length > 1 ? el('div', { className: 'filters' }, [
-      filterRow('Soort', toggleGroup('Filter op soort training', [{ value: 'all', label: 'Alles', count: archive.length }].concat(
+    // Voor wie: alleen de rollen waarvoor een training bestaat
+    const roles = ns.profile.ROLES.filter((role) => archive.some((training) => training.audience.includes(role.id)));
+    if (!roles.some((role) => role.id === filters.audience)) filters.audience = 'all';
+    const audienceFilter = roles.length ? filterRow('Voor wie', toggleGroup('Filter op voor wie de training is', [{ value: 'all', label: 'Iedereen' }].concat(
+      roles.map((role) => ({ value: role.id, label: role.plural.charAt(0).toUpperCase() + role.plural.slice(1), count: archive.filter((training) => matchesAudience(training, role.id)).length }))
+    ), filters.audience, (value) => {
+      filters.audience = value;
+      update();
+    })) : null;
+    const filterBlock = categories.length > 1 || audienceFilter ? el('div', { className: 'filters' }, [
+      categories.length > 1 ? filterRow('Soort', toggleGroup('Filter op soort training', [{ value: 'all', label: 'Alles', count: archive.length }].concat(
         categories.map((category) => ({ value: category, label: category, count: archive.filter((training) => training.category === category).length }))
       ), filters.category, (value) => {
         filters.category = value;
         update();
-      }), count)
+      }), audienceFilter ? null : count) : null,
+      audienceFilter,
+      audienceFilter ? count : null
     ]) : null;
 
     const node = el('div', { className: 'page container' }, [
@@ -523,6 +560,7 @@
         title: training.title,
         subtitle: training.subtitle,
         chips: [
+          ...audienceChips(training),
           chip(formatDate(training.date), { icon: 'calendar' }),
           training.duration ? chip(training.duration, { icon: 'clock' }) : null,
           training.trainer ? chip(training.trainer, { icon: 'users' }) : null,

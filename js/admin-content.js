@@ -163,6 +163,7 @@
         { key: 'category', label: 'Soort', type: 'text', half: true, suggestions: () => unique(['Basistraining', 'Verdieping', 'Lunchsessie', 'Webinar'].concat(ns.content.trainingCategories)) },
         { key: 'level', label: 'Niveau', type: 'select', options: LEVELS, half: true },
         { key: 'license', label: 'Licentie', type: 'license', half: true },
+        { key: 'audience', label: 'Voor wie', type: 'choices', options: () => ns.profile.ROLES.map((role) => ({ value: role.id, label: role.plural.charAt(0).toUpperCase() + role.plural.slice(1) })), hint: 'Leeg = voor iedereen. Staat als "Voor managers" op de kaart; wie die rol heeft (Mijn gegevens), ziet hem bovenaan met "Voor jou". Iedereen kan hem openen.' },
         { key: 'description', label: 'Omschrijving', type: 'textarea' },
         { key: 'link', label: 'Link naar de opname (Stream/SharePoint/Teams)', type: 'url', hint: 'Aanbevolen. Begint met https://. Opent in een nieuw tabblad; Microsoft 365 regelt wie hem mag zien.' },
         { key: 'video', label: 'Of: korte MP4 op de site', type: 'path', hint: 'Alleen openbaar materiaal; de site is openbaar bereikbaar.' },
@@ -183,7 +184,7 @@
         { key: 'added', label: 'Toegevoegd op', type: 'date', hint: 'Leeg = de datum van de training.' },
         // Naslagwerk (allemaal optioneel; uitleg per veld in data/trainings.js)
         { key: '_naslag', label: 'Naslagwerk', type: 'heading', hint: 'Alles hieronder is optioneel. Afbeeldingen van slides upload je met de knop bij ieder veld, of je zet ze via de repository in assets/trainingen/<adres van de training>/ (zie README.md). De site is openbaar bereikbaar: geen interne of klantinformatie, geen namen van deelnemers.' },
-        { key: 'slides', label: 'Slides', type: 'group', itemLabel: 'Slide', fields: [
+        { key: 'slides', label: 'Slides', type: 'group', itemLabel: 'Slide', bulk: { key: 'image', accept: 'image/png,image/jpeg,image/webp', label: 'Alle slides in één keer uploaden', hint: 'In PowerPoint: Bestand → Exporteren → Bestandstype wijzigen → JPEG, alle dia\'s. Selecteer de afbeeldingen allemaal; ze komen op volgorde van de bestandsnaam (Dia1, Dia2, … of slide-01, slide-02, …).' }, fields: [
           { key: 'image', label: 'Afbeelding', type: 'path', placeholder: 'assets/trainingen/…/slide-01.jpg', half: true },
           { key: 'title', label: 'Titel', type: 'text', half: true }
         ] },
@@ -411,6 +412,51 @@
     return el('span', { className: 'field__upload-wrap' }, [button, file]);
   }
 
+  /** Bestanden op de volgorde van hun naam, met getallen als getal: Dia2 vóór Dia10. */
+  const byFileName = (a, b) => a.name.localeCompare(b.name, 'nl', { numeric: true, sensitivity: 'base' });
+
+  /**
+   * Knop bij een groep (bijv. de slides van een training): veel bestanden tegelijk kiezen. Ieder bestand
+   * wordt geüpload en wordt een nieuw item (onFile(adres)), op volgorde van de bestandsnaam.
+   */
+  function bulkUploadButton(spec, namespace, onFile) {
+    const file = el('input', { className: 'sr-only', attrs: { type: 'file', accept: spec.accept, multiple: true, tabindex: '-1' } });
+    const label = el('span', { text: spec.label });
+    const button = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('upload'), label]);
+    button.addEventListener('click', () => file.click());
+    file.addEventListener('change', async () => {
+      const chosen = Array.from(file.files || []).sort(byFileName);
+      file.value = '';
+      if (!chosen.length) return;
+      const usable = chosen.filter((item) => accepts(spec.accept, item) && item.size <= UPLOAD_MAX);
+      const skipped = chosen.length - usable.length;
+      if (!usable.length) {
+        toast('Geen van deze bestanden is hier te gebruiken: kies PNG-, JPG- of WebP-afbeeldingen van hooguit 50 MB.', { tone: 'warning', duration: 7000 });
+        return;
+      }
+      if (!(await confirm(`${usable.length} ${usable.length === 1 ? 'afbeelding wordt' : 'afbeeldingen worden'} openbaar: iedereen met de link kan ze zien. Alleen slides zonder klant- of interne informatie.${skipped ? ` ${skipped} ${skipped === 1 ? 'bestand slaat' : 'bestanden slaan'} de cockpit over (geen afbeelding of te groot).` : ''}`, { title: 'Openbaar uploaden?', confirmLabel: 'Uploaden' }))) return;
+      const restore = kit.busy(button);
+      const month = new Date().toISOString().slice(0, 7);
+      const batch = Date.now().toString(36);
+      let done = 0;
+      try {
+        for (const item of usable) {
+          label.textContent = `Uploaden… ${done + 1} van ${usable.length}`;
+          const address = await ns.central.upload(item, `${namespace}/${month}/${batch}-${String(done + 1).padStart(2, '0')}-${kit.fileName(item.name)}`);
+          onFile(address, item);
+          done += 1;
+        }
+        toast(`${done} ${done === 1 ? 'slide' : 'slides'} toegevoegd. Geef ze een titel en sla op.`, { tone: 'success', duration: 6000 });
+      } catch (error) {
+        kit.failed(`Uploaden (${done} van ${usable.length} gelukt)`, error, 9000);
+      } finally {
+        label.textContent = spec.label;
+        restore();
+      }
+    });
+    return el('span', { className: 'field__upload-wrap repeater__bulk' }, [button, file]);
+  }
+
   /**
    * Onder een prompttekst: welke plaatshouders de cockpit herkent, en wat collega's ermee krijgen
    * (invulveld, voorbeeld, keuzelijst, groot tekstvak of uit Mijn gegevens). Ook wat niet wordt
@@ -602,6 +648,27 @@
           }
         };
       }
+      case 'choices': {
+        // Een paar vaste keuzes om aan te vinken (bijv. voor wie een training is); bewaard als ['manager', …]
+        const options = typeof field.options === 'function' ? field.options(ctx) : field.options || [];
+        const selected = new Set(Array.isArray(value) ? value : []);
+        const boxes = options.map((option) => {
+          const boxId = nextId();
+          return el('label', { className: 'check check--compact', attrs: { for: boxId } }, [
+            el('input', { attrs: { id: boxId, type: 'checkbox', value: option.value, checked: selected.has(option.value) } }),
+            el('span', { text: option.label })
+          ]);
+        });
+        const group = el('fieldset', { className: 'field field--wide choices' }, [el('legend', { className: 'field__label', text: field.label }), hint, el('div', { className: 'choices__list' }, boxes)]);
+        return {
+          node: group,
+          get: () => {
+            const values = Array.from(group.querySelectorAll('input:checked')).map((box) => box.value);
+            return values.length ? values : undefined;
+          },
+          validate: () => null
+        };
+      }
       case 'refs': {
         const items = ns.content[REF_LISTS[field.ref]] || [];
         const selected = new Set(Array.isArray(value) ? value : []);
@@ -722,8 +789,14 @@
           });
           syncFill();
         }
+        // Veel bestanden tegelijk (bijv. alle slides): ieder bestand wordt een nieuw item
+        const bulk = field.bulk && canUpload() ? bulkUploadButton(field.bulk, ctx.where.namespace, (address) => {
+          addItem({ [field.bulk.key]: address });
+          syncFill();
+        }) : null;
+        const bulkHint = bulk && field.bulk.hint ? el('p', { className: 'field__hint', text: field.bulk.hint }) : null;
         return {
-          node: el('fieldset', { className: 'field field--wide repeater' }, [el('legend', { className: 'field__label', text: field.label }), listNode, add, fill, groupError]),
+          node: el('fieldset', { className: 'field field--wide repeater' }, [el('legend', { className: 'field__label', text: field.label }), listNode, el('div', { className: 'repeater__buttons' }, [add, bulk]), bulkHint, fill, groupError]),
           get: () => {
             const result = items.map((item) => {
               const obj = {};
@@ -882,7 +955,8 @@
     const canEdit = may('bewerken', type);
     const canDelete = may('verwijderen', type);
     const canPublish = drafting() && ns.rights.can('publiceren', scope.namespace, type);
-    const fields = schemaForm({ type, data, where: scope, ownId: existing ? existing.id : '', isNew });
+    // let: 'Naslagwerk maken met Copilot' bouwt de velden opnieuw op met wat Copilot gaf
+    let fields = schemaForm({ type, data, where: scope, ownId: existing ? existing.id : '', isNew });
     let saving = false;
 
     // Zonder werkversies kies je hier de status; met werkversies regelt Publiceren wat live staat
@@ -911,6 +985,29 @@
       el('div', { className: 'cms-form__actions' }, [saveAndPublish, save, cancel, viewLink, el('span', { className: 'cms-form__spacer' }), trash])
     ]);
     if (!canEdit) form.querySelectorAll('input, textarea, select, button[type="button"]').forEach((input) => { input.disabled = true; });
+
+    /**
+     * Training: wat Copilot gaf over het formulier heen (js/admin-naslag.js). Alleen de onderdelen die
+     * Copilot invulde, worden vervangen; slides, datum, links en de rest blijven staan.
+     */
+    async function importNaslag(imported) {
+      const current = fields.collect();
+      const labels = SCHEMAS.training.fields.filter((field) => imported[field.key] !== undefined && !isEmpty(current[field.key])).map((field) => field.label);
+      if (labels.length && !(await confirm(`Dit vervangt wat er nu staat bij: ${labels.join(', ')}.`, { title: 'Overschrijven?', confirmLabel: 'Vervangen' }))) return false;
+      const idNow = fields.newId();
+      const next = schemaForm({
+        type,
+        data: Object.assign({}, current, imported, { id: idNow || (isNew && imported.title ? kit.slug(imported.title, 60) : idNow) }),
+        where: scope,
+        ownId: existing ? existing.id : '',
+        isNew
+      });
+      fields.grid.replaceWith(next.grid);
+      fields.formError.replaceWith(next.formError);
+      fields = next;
+      return true;
+    }
+    const naslagImport = type === 'training' && canEdit && ns.adminNaslag ? ns.adminNaslag.panel(importNaslag) : null;
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -987,6 +1084,7 @@
       }) : null,
       unsaved ? notice({ title: 'Met je niet-opgeslagen wijzigingen', text: 'Hieronder staat ook wat je op de pagina hebt aangepast maar nog niet hebt opgeslagen. Opslaan bewaart alles samen.' }) : null,
       warningNotice(schema),
+      naslagImport,
       form
     ]);
     // Melding als een andere beheerder dit item ook open heeft

@@ -285,6 +285,10 @@ Een training toevoegen: kopieer het voorbeeld onderaan `data/trainings.js` en vu
   bereikbaar en GitHub accepteert geen bestanden boven 100 MB: zet hier nooit een opname met interne of klantinformatie.
 - **Nog geen opname:** laat `link` en `video` leeg. Ligt de datum in de toekomst, dan staat de training onder
   'Binnenkort'; daarna onder 'Terugkijken' met 'Opname volgt' (met een naslagwerk staan daar de slides).
+- **Voor wie** (`audience`: `assistent`, `senior`, `manager`, `partner`; leeg = voor iedereen). Op de kaart staat dan
+  "Voor managers". Wie die rol heeft, ziet de training bovenaan met "Voor jou". De rol komt uit Mijn gegevens: gekozen,
+  of afgeleid uit de functie ("Senior manager" → manager). Boven 'Terugkijken' staat een filter *Voor wie*; daarbij
+  staan ook de trainingen voor iedereen. Niets wordt verborgen: iedereen kan elke training openen.
 
 ### Naslagwerk na een training
 
@@ -309,7 +313,23 @@ staan dezelfde velden onder de kop **Naslagwerk**.
 > QR-codes en deelnamecodes, foto's van collega's), en noem geen namen of uitspraken van deelnemers. Geen persoonlijke
 > instructies of systeemprompts, geen klantinformatie. Twijfel je? Laat het weg.
 
-**Zo voeg je na een training een naslagwerk toe:**
+**De snelle route, helemaal in Beheer (zonder bestanden of ontwikkelaar):**
+
+1. Beheer → Inhoud → Trainingen → **Nieuwe training**: titel, datum en eventueel *Voor wie*.
+2. Open bovenaan **Naslagwerk maken met Copilot** (`js/admin-naslag.js`).
+   - Kopieer de prompt en plak hem in Copilot Chat (werkaccount), met de PowerPoint of PDF en het transcript van de
+     Teams-opname erbij.
+   - Plak het hele antwoord terug en klik op **Invullen**. De cockpit haalt eruit wat hij kent: titel, ondertitel,
+     omschrijving, kernpunten, acties met stappen en prompts, hoofdstukken met tijden, ideeën en vragen uit de zaal.
+   - Wat er al stond bij die onderdelen wordt vervangen (na een vraag). Slides, datum, links en *Voor wie* blijven.
+   - De cockpit waarschuwt bij een e-mailadres, iets wat op een BSN of rekeningnummer lijkt, en hoofdstukken zonder
+     geldige tijd.
+3. Bij **Slides**: **Alle slides in één keer uploaden**. Exporteer in PowerPoint alle dia's als JPEG en selecteer ze
+   allemaal. Ze komen op volgorde van de bestandsnaam (Dia1, Dia2, … Dia10). Laat slides die niet openbaar mogen eerst
+   weg.
+4. Lees alles na, geef de slides een titel, sla op en publiceer.
+
+**De uitgebreide route (bestanden en repository):**
 
 1. **Slides als afbeeldingen.** In PowerPoint: *Bestand → Exporteren → Bestandstype wijzigen → JPEG*, alle dia's.
    Laat de slides weg die niet openbaar mogen. Noem de bestanden `slide-01.jpg`, `slide-02.jpg`, … (twee cijfers) in
@@ -429,7 +449,8 @@ openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromp
 
 ## Persoonlijk en slim
 
-- **Mijn gegevens** (`#/mijn`, de knop met je initialen rechtsboven): je naam, functie, vestiging, team, soort klanten
+- **Mijn gegevens** (`#/mijn`, de knop met je initialen rechtsboven): je naam, functie, rol (assistent, senior, manager
+  of partner; leeg = afgeleid uit je functie, voor "Voor jou" bij trainingen), vestiging, team, soort klanten
   en het boekjaar waar je mee bezig bent (niet invullen, automatisch of een vast jaar; automatisch = tot en met juni
   het vorige jaar). Plaatshouders met precies die naam (`[NAAM]`, `[FUNCTIE]`, `[VESTIGING]`, `[TEAM]`, `[JAAR]`,
   `[VORIG JAAR]`, …) staan daarmee al ingevuld: in het promptblok (groen, per prompt te overschrijven), bij Kopieer en

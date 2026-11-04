@@ -473,6 +473,8 @@
           .filter((material) => material.label && material.href),
         usecases: list(item.usecases),
         tips: list(item.tips),
+        // Voor wie (rollen uit js/profile.js); leeg = voor iedereen
+        audience: list(item.audience).filter((role) => !ns.profile || ns.profile.ROLE_IDS.includes(role)),
         added: text(item.added) || text(item.date),
         draft: item._draft === true,
         change: item._change || '',
