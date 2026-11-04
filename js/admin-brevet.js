@@ -389,48 +389,225 @@
     ]);
   }
 
-  /* ---- Regels ----------------------------------------------------------------------- */
-  function rulesPart(data) {
-    const r = data.rules;
-    const m = r.miles;
-    const rows = [
-      ['Een prompt voor het eerst gebruiken', m.prompt_used, 'elke prompt één keer'],
-      ['Een demo bekijken', m.demo_watched, 'per usecase één keer; een video pas als hij helemaal is bekeken'],
-      ['Een prompt of usecase beoordelen', m.prompt_rated, 'per item één keer'],
-      ['Een sterke prompt bouwen (90+)', m.builder_strong, 'hoogstens één keer per dag'],
-      ['Rondleiding, Mijn gegevens, check "Veilig vliegen"', `${m.tour_done} / ${m.profile_done} / ${m.policy_check}`, 'één keer'],
-      ['Insturen in de ideeënhub', m.idea_sent, `hoogstens ${r.caps.sentPerWeek} keer per week`],
-      ['Opname van een training bekeken', m.recording_watched, 'per training één keer (zelf aangegeven)'],
-      ['Live training bijgewoond', m.training_attended, 'legt het AI-team vast'],
-      ['Prompt overgenomen', m.adopted.prompt, 'bij Gerealiseerd in Inzendingen'],
-      ['Verbetervoorstel overgenomen', m.adopted.verbetering, 'ook gedeeltelijk'],
-      ['Idee gerealiseerd', m.adopted.idee, ''],
-      ['Usecase of demo aangeleverd', m.adopted.usecase, 'met een bonus vast te leggen'],
-      ['Sessie gegeven in je team', m.session_given, 'legt het AI-team vast'],
-      ['Royalty: een collega gebruikt jouw prompt', m.royalty, `per collega één keer; hoogstens ${r.caps.royaltyPerMonth} per maand`],
-      ['Vliegritme: 3 dagen actief in een week', m.rhythm, 'per week']
-    ];
-    return el('div', { className: 'bv-part' }, [
-      el('ol', { className: 'bv-levels', attrs: { role: 'list' } }, r.levels.map((level, index) => el('li', { className: 'bv-level' }, [
-        ns.brevetUi.insignia(index, 'md', { rules: r }),
-        el('div', {}, [
-          el('h3', { className: 'bv-level__name', text: `${level.name} · ${index === 0 ? 'de eerste stappen' : NUMBER.format(level.miles) + ' AI-miles'}` }),
-          el('p', { className: 'bv-level__label', text: 'Checkride' }),
-          el('ul', { attrs: { role: 'list' } }, (r.checks[level.id] || []).map((check) => el('li', { text: (check.need > 1 ? check.need + ' ' : '') + check.label }))),
-          el('p', { className: 'bv-level__label', text: 'Voordelen' }),
-          el('ul', { attrs: { role: 'list' } }, level.perks.map((perk) => el('li', { text: perk })))
-        ])
-      ]))),
-      el('div', { className: 'usage-table' }, [el('table', { className: 'table' }, [
-        el('caption', { className: 'sr-only', text: 'AI-miles per actie' }),
+  /* ---- Regels: aanpassen voor alle disciplines, of alleen voor deze ------------------------- */
+  // De acties met miles: [plek in de regels, wat, spelregel]
+  const ACTIONS = [
+    ['prompt_used', 'Een prompt voor het eerst gebruiken', 'elke prompt één keer'],
+    ['demo_watched', 'Een demo bekijken', 'per usecase één keer; een video pas als hij helemaal is bekeken'],
+    ['prompt_rated', 'Een prompt of usecase beoordelen', 'per item één keer'],
+    ['builder_strong', 'Een sterke prompt bouwen (90+)', 'hoogstens één keer per dag'],
+    ['tour_done', 'De rondleiding gedaan', 'één keer'],
+    ['profile_done', 'Mijn gegevens ingevuld', 'één keer'],
+    ['policy_check', 'Check "Veilig vliegen" gehaald', 'één keer'],
+    ['idea_sent', 'Insturen in de ideeënhub', 'tot het plafond per week'],
+    ['recording_watched', 'Opname van een training bekeken', 'per training één keer (zelf aangegeven)'],
+    ['training_attended', 'Live training bijgewoond', 'legt het AI-team vast'],
+    ['session_given', 'Sessie gegeven in je team', 'legt het AI-team vast'],
+    ['royalty', 'Royalty: een collega gebruikt jouw prompt', 'per collega één keer, tot het plafond per maand'],
+    ['rhythm', 'Vliegritme: 3 dagen actief in een week', 'per week'],
+    ['adopted.prompt', 'Prompt overgenomen', 'bij Gerealiseerd in Inzendingen'],
+    ['adopted.verbetering', 'Verbetervoorstel overgenomen', 'ook gedeeltelijk'],
+    ['adopted.idee', 'Idee gerealiseerd', ''],
+    ['adopted.usecase', 'Usecase aangeleverd', ''],
+    ['adopted.verzoek', 'Verzoek gerealiseerd', 'het AI-team maakte iets op jouw verzoek']
+  ];
+  const LIMITS = [
+    ['caps.usagePerDay', 'Plafond: miles uit gebruik per dag', 'prompts, demo\'s, beoordelen en de promptbouwer samen'],
+    ['caps.sentPerWeek', 'Plafond: keer insturen per week', 'daarboven levert insturen geen miles op'],
+    ['caps.royaltyPerMonth', 'Plafond: royalty\'s per maand', 'in miles'],
+    ['recencyDays', 'Actief = de laatste … dagen', 'zoals piloten: wie zo lang niet is geweest, staat op niet actief']
+  ];
+  // Onderdelen van een checkride die maar één keer kunnen (geen aantal om in te stellen)
+  const ONCE = ['tour', 'profile', 'policy', 'nominated'];
+  const pick = (obj, path) => path.split('.').reduce((o, key) => (o == null ? undefined : o[key]), obj);
+  function put(obj, path, value) {
+    const keys = path.split('.');
+    let target = obj;
+    keys.slice(0, -1).forEach((key) => {
+      target = target[key] = target[key] || {};
+    });
+    target[keys[keys.length - 1]] = value;
+  }
+  // Leeg (geen enkele waarde) weghalen, zodat alleen wat je invult wordt bewaard
+  function prune(value) {
+    if (Array.isArray(value)) return value.length ? value : undefined;
+    if (value && typeof value === 'object') {
+      const result = {};
+      Object.entries(value).forEach(([key, inner]) => {
+        const kept = prune(inner);
+        if (kept !== undefined) result[key] = kept;
+      });
+      return Object.keys(result).length ? result : undefined;
+    }
+    return value === '' || value == null ? undefined : value;
+  }
+
+  /**
+   * Brevetten, voordelen, checkrides en miles aanpassen. Twee niveaus: voor alle disciplines (de
+   * gedeelde basis) en alleen voor de discipline die bovenin de zijbalk gekozen is; wat je bij de
+   * discipline leeg laat, komt van alle disciplines (en anders de standaard). Bewaard als instelling
+   * 'brevet' per naamruimte (js/content.js), direct live.
+   */
+  function rulesEditor(onSaved) {
+    const discipline = ns.cockpit.active();
+    const scope = view.rulesScope === 'own' ? 'own' : 'basis';
+    const stored = (ns.content.brevetRules || {})[scope] || {};
+    // Wat geldt als je hier niets invult (grijs in de velden)
+    const inherited = scope === 'own' ? ns.brevet.rules(null, { basisOnly: true }) : ns.brevet.rules((ns.content.settings || {}).brevet || {});
+    const namespace = scope === 'own' ? ns.cockpit.namespace(discipline.id) : ns.cockpit.GENERAL_NAMESPACE;
+    const inputs = [];
+    let uid = 0;
+    // Wat nu geldt voor een veld (in de regels zijn de brevetten en checkrides lijsten, in een laag op naam)
+    const current = (path) => {
+      const [head, id, key] = path.split('.');
+      if (head === 'levels') return (inherited.levels.find((level) => level.id === id) || {})[key];
+      if (head === 'checks') return ((inherited.checks[id] || []).find((check) => check.stat === key) || {}).need;
+      return pick(inherited, path);
+    };
+
+    const number = (path, label, max) => {
+      const id = 'bvr-' + (++uid);
+      const now = current(path);
+      const input = el('input', { className: 'field__input field__input--sm', attrs: { id, type: 'number', min: path.startsWith('checks.') ? '1' : '0', max: max ? String(max) : null, step: '1', inputmode: 'numeric', placeholder: now == null ? '' : String(now), 'aria-label': label } });
+      const own = pick(stored, path);
+      input.value = own == null || own === '' ? '' : String(own);
+      inputs.push({ path, input, kind: 'number' });
+      return input;
+    };
+    const scopeNav = toggleGroup('Voor wie', [
+      { value: 'basis', label: 'Alle disciplines', icon: 'globe' },
+      { value: 'own', label: 'Alleen ' + discipline.name, icon: 'layers' }
+    ], scope, (value) => {
+      view.rulesScope = value;
+      onSaved();
+    }, { animate: false, resetValue: scope });
+
+    // Brevetten: naam, drempel, voordelen en de checkride
+    const levelCards = inherited.levels.map((level, index) => {
+      const name = el('input', { className: 'field__input', attrs: { type: 'text', maxlength: '40', placeholder: level.name, 'aria-label': 'Naam van brevet ' + (index + 1) } });
+      name.value = pick(stored, `levels.${level.id}.name`) || '';
+      inputs.push({ path: `levels.${level.id}.name`, input: name, kind: 'text' });
+      const perks = el('textarea', { className: 'field__input field__textarea', attrs: { rows: '4', maxlength: '600', placeholder: level.perks.join('\n'), 'aria-label': 'Voordelen van ' + level.name + ', één per regel' } });
+      perks.value = (pick(stored, `levels.${level.id}.perks`) || []).join('\n');
+      inputs.push({ path: `levels.${level.id}.perks`, input: perks, kind: 'list' });
+      // Wat je kunt tellen, heeft een aantal; wat maar één keer kan (rondleiding, voordracht), niet
+      const checks = (inherited.checks[level.id] || []).map((check) => (ONCE.includes(check.stat)
+        ? el('p', { className: 'bvr-check bvr-check--once' }, [icon('check'), el('span', { text: check.label })])
+        : el('label', { className: 'bvr-check' }, [number(`checks.${level.id}.${check.stat}`, check.label + ' (' + level.name + ')', 999), el('span', { text: check.label })])));
+      return el('section', { className: 'bvr-level', attrs: { 'aria-label': level.name } }, [
+        el('div', { className: 'bvr-level__head' }, [ns.brevetUi.insignia(index, 'md', { rules: inherited }), name]),
+        level.id === 'cadet'
+          ? el('p', { className: 'bvr-level__miles', text: 'Na de eerste stappen (geen drempel)' })
+          : el('label', { className: 'bvr-level__miles' }, [number(`levels.${level.id}.miles`, 'AI-miles voor ' + level.name, 100000), el('span', { text: 'AI-miles nodig' })]),
+        el('p', { className: 'bv-level__label', text: 'Voordelen (één per regel)' }),
+        perks,
+        el('p', { className: 'bv-level__label', text: 'Checkride' }),
+        el('div', { className: 'bvr-checks' }, checks)
+      ]);
+    });
+
+    const actionRows = ACTIONS.map(([path, label, rule]) => el('tr', {}, [
+      el('th', { attrs: { scope: 'row' }, text: label }),
+      el('td', { className: 'num' }, [number('miles.' + path, 'Miles: ' + label, 1000)]),
+      el('td', { className: 'bvr-rule', text: rule })
+    ]));
+    const limitRows = LIMITS.map(([path, label, rule]) => el('tr', {}, [
+      el('th', { attrs: { scope: 'row' }, text: label }),
+      el('td', { className: 'num' }, [number(path, label, path === 'recencyDays' ? 365 : 10000)]),
+      el('td', { className: 'bvr-rule', text: rule })
+    ]));
+
+    const status = el('p', { className: 'bvr-status', attrs: { role: 'status' } });
+    const formError = kit.formError();
+    const save = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('check'), el('span', { text: 'Opslaan' })]);
+    const reset = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: scope === 'own' ? 'Alles zoals bij alle disciplines' : 'Alles terug naar de standaard' })]);
+
+    function collect() {
+      const layer = {};
+      inputs.forEach(({ path, input, kind }) => {
+        const raw = input.value.trim();
+        if (!raw) return;
+        if (kind === 'number') put(layer, path, Math.round(Number(raw)));
+        else if (kind === 'list') put(layer, path, raw.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 8));
+        else put(layer, path, raw.slice(0, 40));
+      });
+      return prune(layer) || {};
+    }
+
+    save.addEventListener('click', async () => {
+      formError.hide();
+      const layer = collect();
+      const bad = inputs.find(({ input, kind }) => kind === 'number' && input.value.trim() && !(Number(input.value) >= 0));
+      if (bad) {
+        formError.show('Gebruik alleen hele getallen van 0 of meer.');
+        bad.input.focus();
+        return;
+      }
+      // Na opslaan moeten de drempels oplopen (brevet 2 < 3 < 4)
+      const after = preview(layer).levels;
+      const thresholds = after.map((level) => level.miles);
+      if (!(thresholds[1] < thresholds[2] && thresholds[2] < thresholds[3])) {
+        const [, two, three, four] = after.map((level) => `${level.name} (${level.miles})`);
+        formError.show(`De drempels moeten oplopen: nu ${two}, ${three}, ${four}. Elk brevet vraagt meer AI-miles dan het vorige.`);
+        return;
+      }
+      const where = scope === 'own' ? discipline.name : 'alle disciplines';
+      if (!(await ns.ui.confirmDialog(`De regels gelden direct voor ${where}. Miles en brevetten worden opnieuw berekend; wie hierdoor promoveert, krijgt het promotievenster.`, { title: 'Regels opslaan?', confirmLabel: 'Opslaan' }))) return;
+      save.disabled = true;
+      try {
+        await ns.central.saveContent([{ type: 'setting', id: ns.content.BREVET_RULES_ID, data: layer, position: 0, status: 'published' }], namespace);
+        await ns.app.reloadContent();
+        toast('Regels opgeslagen voor ' + where, { tone: 'success' });
+        onSaved();
+      } catch (error) {
+        formError.show('Opslaan mislukt: ' + error.message);
+        save.disabled = false;
+      }
+    });
+    reset.addEventListener('click', async () => {
+      if (!Object.keys(stored).length) {
+        toast(scope === 'own' ? 'Er staan geen eigen regels voor ' + discipline.name : 'Er staan al de standaardregels');
+        return;
+      }
+      if (!(await ns.ui.confirmDialog(scope === 'own' ? `${discipline.name} volgt dan weer de regels van alle disciplines.` : 'Alle disciplines volgen dan weer de standaardregels (eigen regels van een discipline blijven staan).', { title: 'Terugzetten?', confirmLabel: 'Terugzetten' }))) return;
+      reset.disabled = true;
+      try {
+        await ns.central.deleteContent('setting', ns.content.BREVET_RULES_ID, namespace);
+        await ns.app.reloadContent();
+        toast('Teruggezet', { tone: 'success' });
+        onSaved();
+      } catch (error) {
+        kit.failed('Terugzetten', error);
+        reset.disabled = false;
+      }
+    });
+
+    /** De regels zoals ze in deze cockpit worden na opslaan (deze laag in plaats van de bewaarde). */
+    function preview(layer) {
+      const saved = ns.content.brevetRules;
+      ns.content.brevetRules = Object.assign({ basis: null, own: null }, saved, { [scope]: layer });
+      try {
+        return ns.brevet.rules();
+      } finally {
+        ns.content.brevetRules = saved;
+      }
+    }
+
+    status.textContent = Object.keys(stored).length
+      ? (scope === 'own' ? 'Eigen regels voor ' + discipline.name + '. Lege velden volgen alle disciplines.' : 'Eigen regels voor alle disciplines. Lege velden volgen de standaard.')
+      : (scope === 'own' ? discipline.name + ' volgt nu de regels van alle disciplines.' : 'Nu gelden de standaardregels.');
+
+    return el('div', { className: 'bv-part bvr' }, [
+      el('div', { className: 'bvr-scope' }, [scopeNav, status]),
+      el('p', { className: 'field__hint', text: 'Grijs in een veld is wat nu geldt als je het leeg laat. Deelnemers en hun logboek rekenen met de regels van de cockpit waarin ze kijken.' }),
+      el('div', { className: 'bvr-levels' }, levelCards),
+      el('div', { className: 'usage-table' }, [el('table', { className: 'table bvr-table' }, [
+        el('caption', { className: 'bvr-caption', text: 'AI-miles per actie' }),
         el('thead', {}, [el('tr', {}, [el('th', { attrs: { scope: 'col' }, text: 'Actie' }), el('th', { className: 'num', attrs: { scope: 'col' }, text: 'Miles' }), el('th', { attrs: { scope: 'col' }, text: 'Spelregel' })])]),
-        el('tbody', {}, rows.map(([label, value, rule]) => el('tr', {}, [el('th', { attrs: { scope: 'row' }, text: label }), el('td', { className: 'num', text: String(value) }), el('td', { text: rule })])))
+        el('tbody', {}, actionRows.concat(limitRows))
       ])]),
-      el('p', { className: 'field__hint' }, [
-        `Gebruik telt samen hoogstens ${r.caps.usagePerDay} miles per dag. Actief = de laatste ${r.recencyDays} dagen in de cockpit geweest. Namen, drempels, voordelen en de belangrijkste miles pas je aan in `,
-        el('a', { attrs: { href: '#/beheer/basis' }, text: 'Gedeelde basis → Teksten' }),
-        ', bij AI-brevetten.'
-      ])
+      formError.node,
+      el('div', { className: 'cms-form__actions' }, [save, reset])
     ]);
   }
 
@@ -447,7 +624,7 @@
     function draw() {
       if (!data) return;
       const redraw = (keep) => load(keep);
-      body.replaceChildren(view.part === 'trainingen' ? trainings(data, redraw) : view.part === 'regels' ? rulesPart(data) : participants(data, redraw));
+      body.replaceChildren(view.part === 'trainingen' ? trainings(data, redraw) : view.part === 'regels' ? rulesEditor(redraw) : participants(data, redraw));
     }
 
     async function load() {

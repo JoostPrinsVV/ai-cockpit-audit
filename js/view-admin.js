@@ -56,7 +56,7 @@
     { id: 'inzendingen', group: 'collegas', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true, lead: (name) => `Ideeën, vragen en verzoeken uit de ideeënhub van ${name}: beantwoorden, publiceren en beoordelen.` },
     { id: 'reviews', group: 'collegas', label: 'Reviews', icon: 'star', perDiscipline: true, lead: (name) => `Sterren en toelichtingen bij de usecases en prompts van ${name}. Een toelichting staat pas bij de usecase of prompt als jij hem publiceert.` },
     { id: 'portfolio', group: 'collegas', label: 'Portfolio', icon: 'flag', perDiscipline: true, lead: (name) => `De beoordeelde ideeën van ${name} in de AI Value Matrix, met de registerregels.` },
-    { id: 'brevetten', group: 'collegas', label: 'AI-brevetten', icon: 'cap', lead: () => 'Wie meedoet met de AI-brevetten: brevetten, AI-miles en logboeken, trainingen vullen en miles toekennen.' },
+    { id: 'brevetten', group: 'collegas', label: 'AI-brevetten', icon: 'cap', lead: () => 'Wie meedoet met de AI-brevetten: brevetten, AI-miles en logboeken, trainingen vullen, miles toekennen, en de regels (ook per discipline).' },
     { id: 'overzicht', group: 'cijfers', label: 'Overzicht', icon: 'grid', lead: () => 'De stand van zaken over alle disciplines, af te drukken als PDF voor het bestuur.' },
     { id: 'doelkoers', group: 'cijfers', label: 'Doelkoers', icon: 'compass', perDiscipline: true, lead: (name) => `De doelen voor het Copilot-gebruik en de cockpit van ${name}, afgezet tegen hoe het nu gaat: liggen jullie op koers?` },
     { id: 'gebruik', group: 'cijfers', label: 'Gebruik van de cockpit', icon: 'chart', perDiscipline: true, lead: (name) => `Hoe vaak usecases, demo's, prompts, tips, trainingen en agents in ${name} worden bekeken en gekopieerd. Anoniem.` },

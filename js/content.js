@@ -652,6 +652,8 @@
   // Teksten die je in Beheer kunt aanpassen (de rest van de instellingen blijft in js/config.js;
   // de naam van de discipline komt uit Beheer → Disciplines; de standaardroute van een idee uit data/disciplines.js;
   // de standaardseizoenen van het seizoenskompas uit data/seizoenen.js)
+  // Eigen instelling per naamruimte met de regels van de AI-brevetten (Beheer → AI-brevetten → Regels)
+  const BREVET_RULES_ID = 'brevet';
   const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules', 'policyUrl', 'routeIntro', 'route', 'routeRoles', 'routeLink', 'seasons', 'brevet'];
   // Bij het samenvoegen: eigen fasen, usecases en prompts vóór die van de basis; tips, trainingen en agents erna
   const OWN_FIRST = { phase: true, usecase: true, prompt: true };
@@ -736,6 +738,8 @@
         if (row.status === 'trash') return;
         if (row.type === 'setting') {
           if (row.id === 'site' && row.status === 'published') source.setting = row.data || {};
+          // De regels van de AI-brevetten (Beheer → AI-brevetten → Regels; js/brevet.js)
+          if (row.id === BREVET_RULES_ID && row.status === 'published') source.brevet = row.data || null;
           return;
         }
         if (!TYPES.includes(row.type)) return;
@@ -754,6 +758,8 @@
     if (!general) return own;
     const source = {
       setting: Object.assign({}, general.setting, own.setting),
+      // Brevetten: de regels voor alle disciplines en die van de discipline, apart (js/brevet.js legt ze op elkaar)
+      brevetRules: { basis: general.brevet || null, own: own.brevet || null },
       updatedAt: general.updatedAt > own.updatedAt ? general.updatedAt : own.updatedAt
     };
     TYPES.forEach((type) => {
@@ -798,6 +804,7 @@
     const src = source || fromFiles();
     reset();
     state.settings = src.setting || {};
+    state.brevetRules = src.brevetRules || { basis: null, own: src.brevet || null };
     state.updatedAt = src.updatedAt || '';
     loadPhases(src.phase);
     loadUsecases(src.usecase);
@@ -810,7 +817,7 @@
     return state;
   }
 
-  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, AGENT_KINDS, AGENT_STATUSES, DATA_LEVELS,
+  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, BREVET_RULES_ID, AGENT_KINDS, AGENT_STATUSES, DATA_LEVELS,
     // Dezelfde controles in Beheer (js/admin-content.js)
     patterns: { ID_PATTERN, LOCAL_PATH, HTTPS_URL, LEGACY_ASSETS } });
 })(window.AIAudit);

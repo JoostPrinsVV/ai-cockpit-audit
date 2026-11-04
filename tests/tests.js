@@ -359,6 +359,26 @@
       equal([r.levels[1].name, r.levels[1].miles, r.miles.prompt_used, r.levels[2].miles, r.levels[0].perks], ['First Officer', 300, 7, 1000, ['Eigen logboek']]);
       equal(B.compute([fact('prompt_used', 'a', '2026-10-01')], { rules: r, today: '2026-10-01' }).miles, 7);
     });
+    await test('regels in lagen: standaard, dan alle disciplines, dan de eigen discipline (leeg = de laag eronder)', () => {
+      const saved = { settings: ns.content.settings, brevetRules: ns.content.brevetRules };
+      try {
+        ns.content.settings = {};
+        ns.content.brevetRules = {
+          basis: { levels: { copilot: { name: 'First Officer', miles: 300, perks: ['Voorrang op een licentie'] } }, miles: { prompt_used: 6, adopted: { idee: 200 } }, checks: { copilot: { prompts: 12 } } },
+          own: { levels: { copilot: { miles: 200 } }, miles: { prompt_used: 8 }, caps: { usagePerDay: 40 }, checks: { copilot: { prompts: '' } } }
+        };
+        const r = B.rules();
+        equal([r.levels[1].name, r.levels[1].miles, r.levels[1].perks, r.miles.prompt_used, r.miles.adopted.idee, r.caps.usagePerDay, r.checks.copilot[0].need],
+          ['First Officer', 200, ['Voorrang op een licentie'], 8, 200, 40, 12]);
+        const basisOnly = B.rules(null, { basisOnly: true });
+        equal([basisOnly.levels[1].miles, basisOnly.miles.prompt_used, basisOnly.caps.usagePerDay], [300, 6, 25], 'zonder de eigen laag');
+        equal(B.rules({ checks: { copilot: { prompts: 0 } } }).checks.copilot[0].need, 1, 'een checkride vraagt minstens 1');
+        equal(B.defaults().checks.copilot[0].need, 10, 'de standaard verandert niet mee');
+      } finally {
+        ns.content.settings = saved.settings;
+        ns.content.brevetRules = saved.brevetRules;
+      }
+    });
     await test('actief = de laatste 90 dagen; ISO-weken', () => {
       equal(B.compute(cadetFacts('2026-06-01'), { today: '2026-10-01' }).active, false);
       equal(B.compute(cadetFacts('2026-08-01'), { today: '2026-10-01' }).active, true);

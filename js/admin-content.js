@@ -288,31 +288,7 @@
           { key: 'keywords', label: 'Zoekwoorden', type: 'list', hint: 'Eén per regel, bijv. voorraad. Wat de cockpit hiermee vindt, komt eerst.' },
           { key: 'accent', label: 'Kleur', type: 'select', options: kit.accentOptions, hint: 'Leeg = de kleur van de eerste fase.' }
         ] },
-        { key: '_brevet', label: 'AI-brevetten', type: 'heading', scope: 'basis', hint: 'Voor alle disciplines. Leeg = de standaard (js/brevet.js). De checkrides liggen vast; alles op een rij in Beheer → AI-brevetten → Regels.' },
-        { key: 'brevet', label: 'Brevetten, voordelen en AI-miles', type: 'object', scope: 'basis', fields: [
-          { key: 'cadetName', label: 'Naam van brevet 1', type: 'text', placeholder: 'Cadet', half: true },
-          { key: 'cadetPerks', label: 'Voordelen van brevet 1', type: 'list', hint: 'Eén per regel' },
-          { key: 'copilotName', label: 'Naam van brevet 2', type: 'text', placeholder: 'Co-pilot', half: true },
-          { key: 'copilotMiles', label: 'AI-miles voor brevet 2', type: 'number', placeholder: '250', half: true },
-          { key: 'copilotPerks', label: 'Voordelen van brevet 2', type: 'list', hint: 'Eén per regel' },
-          { key: 'captainName', label: 'Naam van brevet 3', type: 'text', placeholder: 'CaptAIn', half: true },
-          { key: 'captainMiles', label: 'AI-miles voor brevet 3', type: 'number', placeholder: '1000', half: true },
-          { key: 'captainPerks', label: 'Voordelen van brevet 3', type: 'list', hint: 'Eén per regel' },
-          { key: 'commanderName', label: 'Naam van brevet 4', type: 'text', placeholder: 'Commander', half: true },
-          { key: 'commanderMiles', label: 'AI-miles voor brevet 4', type: 'number', placeholder: '2500', half: true },
-          { key: 'commanderPerks', label: 'Voordelen van brevet 4', type: 'list', hint: 'Eén per regel' },
-          { key: 'milesPrompt', label: 'Miles: prompt voor het eerst gebruikt', type: 'number', placeholder: '5', half: true },
-          { key: 'milesDemo', label: 'Miles: demo bekeken', type: 'number', placeholder: '10', half: true },
-          { key: 'milesTraining', label: 'Miles: live training bijgewoond', type: 'number', placeholder: '25', half: true },
-          { key: 'milesRoyalty', label: 'Miles: royalty per collega', type: 'number', placeholder: '5', half: true },
-          { key: 'milesAdoptedPrompt', label: 'Miles: prompt overgenomen', type: 'number', placeholder: '100', half: true },
-          { key: 'milesAdoptedImprovement', label: 'Miles: verbetervoorstel overgenomen', type: 'number', placeholder: '50', half: true },
-          { key: 'milesAdoptedIdea', label: 'Miles: idee gerealiseerd', type: 'number', placeholder: '150', half: true },
-          { key: 'milesAdoptedUsecase', label: 'Miles: usecase aangeleverd', type: 'number', placeholder: '250', half: true },
-          { key: 'usagePerDay', label: 'Plafond: miles uit gebruik per dag', type: 'number', placeholder: '25', half: true },
-          { key: 'royaltyPerMonth', label: 'Plafond: royalty\'s per maand', type: 'number', placeholder: '100', half: true },
-          { key: 'recencyDays', label: 'Actief = de laatste … dagen', type: 'number', placeholder: '90', half: true, max: 365 }
-        ] }
+        { key: '_brevet', label: 'AI-brevetten', type: 'heading', hint: 'Brevetten, voordelen, checkrides en AI-miles pas je aan in Beheer → AI-brevetten → Regels: voor alle disciplines, of alleen voor deze.' }
       ]
     }
   };

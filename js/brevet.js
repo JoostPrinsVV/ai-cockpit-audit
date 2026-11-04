@@ -3,8 +3,9 @@
    --------------------------------------------------------------------------
    Wie meedoet (opt-in), bouwt een logboek op met feiten: "gebruikte prompt X",
    "het AI-team nam je voorstel over", "was bij training Y". Miles en brevetten
-   worden daaruit berekend (compute), met de regels hieronder. Namen, drempels
-   en miles pas je aan in Beheer → Gedeelde basis → Teksten (instelling 'brevet').
+   worden daaruit berekend (compute), met de regels hieronder. Namen, drempels,
+   voordelen, checkrides en miles pas je aan in Beheer → AI-brevetten → Regels:
+   voor alle disciplines en per discipline (rules legt die lagen op elkaar).
    Een brevet = genoeg miles én de checkride van dat brevet (en van de vorige),
    zoals een piloot vlieguren én een examen nodig heeft.
 
@@ -99,34 +100,86 @@
   };
   const list = (value) => (Array.isArray(value) && value.some((line) => text(line)) ? value.map(text).filter(Boolean) : null);
 
-  /** De regels: de standaard hierboven, met de instelling 'brevet' uit Beheer (of custom) eroverheen. */
-  function rules(custom) {
-    const c = custom || (ns.content && ns.content.settings && ns.content.settings.brevet) || {};
-    const levels = LEVELS.map((level) => Object.assign({}, level, {
-      name: text(c[level.id + 'Name']) || level.name,
-      miles: level.id === 'cadet' ? 0 : num(c[level.id + 'Miles'], level.miles),
-      perks: list(c[level.id + 'Perks']) || level.perks.slice()
-    }));
-    const adopted = Object.assign({}, MILES.adopted, {
-      prompt: num(c.milesAdoptedPrompt, MILES.adopted.prompt),
-      verbetering: num(c.milesAdoptedImprovement, MILES.adopted.verbetering),
-      idee: num(c.milesAdoptedIdea, MILES.adopted.idee),
-      usecase: num(c.milesAdoptedUsecase, MILES.adopted.usecase)
-    });
-    const miles = Object.assign({}, MILES, {
-      prompt_used: num(c.milesPrompt, MILES.prompt_used),
-      demo_watched: num(c.milesDemo, MILES.demo_watched),
-      training_attended: num(c.milesTraining, MILES.training_attended),
-      royalty: num(c.milesRoyalty, MILES.royalty),
-      adopted
+  /** De standaard (de waarden hierboven), als regels. */
+  function defaults() {
+    return {
+      levels: LEVELS.map((level) => Object.assign({}, level, { perks: level.perks.slice() })),
+      miles: Object.assign({}, MILES, { adopted: Object.assign({}, MILES.adopted) }),
+      caps: Object.assign({}, CAPS),
+      checks: Object.fromEntries(Object.entries(CHECKS).map(([id, list]) => [id, list.map((check) => Object.assign({}, check))])),
+      recencyDays: RECENCY_DAYS
+    };
+  }
+
+  /**
+   * Een instelling in de oude, platte vorm (Beheer → Teksten: cadetName, copilotMiles, milesPrompt …)
+   * in de vorm van een regellaag hieronder.
+   */
+  function fromFlat(c) {
+    const levels = {};
+    LEVELS.forEach((level) => {
+      levels[level.id] = { name: c[level.id + 'Name'], miles: c[level.id + 'Miles'], perks: c[level.id + 'Perks'] };
     });
     return {
       levels,
-      miles,
-      caps: { usagePerDay: num(c.usagePerDay, CAPS.usagePerDay), sentPerWeek: CAPS.sentPerWeek, royaltyPerMonth: num(c.royaltyPerMonth, CAPS.royaltyPerMonth) },
-      checks: CHECKS,
-      recencyDays: num(c.recencyDays, RECENCY_DAYS) || RECENCY_DAYS
+      miles: {
+        prompt_used: c.milesPrompt, demo_watched: c.milesDemo, training_attended: c.milesTraining, royalty: c.milesRoyalty,
+        adopted: { prompt: c.milesAdoptedPrompt, verbetering: c.milesAdoptedImprovement, idee: c.milesAdoptedIdea, usecase: c.milesAdoptedUsecase }
+      },
+      caps: { usagePerDay: c.usagePerDay, royaltyPerMonth: c.royaltyPerMonth },
+      recencyDays: c.recencyDays
     };
+  }
+  const isFlat = (layer) => Object.keys(layer).some((key) => /^(cadet|copilot|captain|commander)(Name|Miles|Perks)$|^miles[A-Z]/.test(key));
+
+  /**
+   * Eén laag over de regels heen: alleen wat ingevuld en geldig is, telt (leeg = de laag eronder).
+   * layer: { levels: { <id>: { name, miles, perks } }, miles: { <soort>: n, adopted: { <soort>: n } },
+   * caps: { usagePerDay, sentPerWeek, royaltyPerMonth }, checks: { <id>: { <stat>: n } }, recencyDays }.
+   */
+  function apply(r, raw) {
+    if (!raw || typeof raw !== 'object') return r;
+    const layer = isFlat(raw) ? fromFlat(raw) : raw;
+    const levels = layer.levels || {};
+    r.levels.forEach((level) => {
+      const own = levels[level.id] || {};
+      level.name = text(own.name) || level.name;
+      if (level.id !== 'cadet') level.miles = num(own.miles, level.miles);
+      level.perks = list(own.perks) || level.perks;
+    });
+    const miles = layer.miles || {};
+    Object.keys(MILES).forEach((kind) => {
+      if (kind !== 'adopted') r.miles[kind] = num(miles[kind], r.miles[kind]);
+    });
+    Object.keys(MILES.adopted).forEach((kind) => {
+      r.miles.adopted[kind] = num((miles.adopted || {})[kind], r.miles.adopted[kind]);
+    });
+    Object.keys(CAPS).forEach((cap) => {
+      r.caps[cap] = num((layer.caps || {})[cap], r.caps[cap]);
+    });
+    Object.keys(r.checks).forEach((id) => {
+      const own = (layer.checks || {})[id] || {};
+      r.checks[id].forEach((check) => {
+        check.need = Math.max(1, num(own[check.stat], check.need));
+      });
+    });
+    r.recencyDays = num(layer.recencyDays, r.recencyDays) || r.recencyDays;
+    return r;
+  }
+
+  /**
+   * De regels die nu gelden: de standaard, dan de oude instelling uit Beheer → Teksten, dan de regels
+   * voor alle disciplines en dan die van de discipline waarin je zit (Beheer → AI-brevetten → Regels;
+   * js/content.js: brevetRules). Met custom alleen die ene laag over de standaard (tests, Beheer).
+   */
+  function rules(custom, options) {
+    const opts = options || {};
+    if (custom) return apply(defaults(), custom);
+    const content = ns.content || {};
+    const stored = content.brevetRules || {};
+    const layers = [content.settings && content.settings.brevet, stored.basis];
+    if (!opts.basisOnly) layers.push(stored.own);
+    return layers.reduce(apply, defaults());
   }
 
   /* ---- Datums ------------------------------------------------------------------------ */
@@ -496,6 +549,10 @@
 
   ns.brevet = {
     LEVELS,
+    MILES,
+    CAPS,
+    RECENCY_DAYS,
+    defaults,
     SELF_KINDS,
     ADMIN_KINDS,
     LABELS,

@@ -563,8 +563,16 @@ miles toekennen met een reden, een sessie vastleggen, voordragen als Commander, 
 de royalty's, een feit weghalen; CSV), *Trainingen* (per training wie is aangemeld en wie er was; alleen deelnemers
 toe te voegen; *aanwezig* levert miles op en telt voor de checkride) en *Regels*. Een inzending op **Gerealiseerd**
 zetten (ook via *Overnemen in de cockpit* bij een verbetervoorstel) kent automatisch miles toe als de indiener
-meedoet (op e-mailadres; in de demo op naam). Namen, drempels, voordelen en de belangrijkste miles pas je aan in
-**Gedeelde basis → Teksten → AI-brevetten** (leeg = de standaard).
+meedoet (op e-mailadres; in de demo op naam).
+
+**Regels aanpassen** (*Regels*): per brevet de naam, de drempel in AI-miles, de voordelen (één per regel) en de
+aantallen van de checkride; de AI-miles per actie; de plafonds (per dag, per week insturen, royalty's per maand) en
+hoe lang iemand "actief" telt. Twee niveaus: **Alle disciplines** (de gedeelde basis) en **Alleen <discipline>** (de
+discipline bovenin de zijbalk). Een leeg veld volgt de laag eronder: bij een discipline de regels van alle
+disciplines, daar de standaard (`js/brevet.js`); grijs in het veld is wat dan geldt. Opslaan gaat direct live (een
+instelling `brevet` per naamruimte); miles en brevetten worden opnieuw berekend, en de drempels moeten oplopen.
+Deelnemers rekenen met de regels van de cockpit waarin ze kijken. Een discipline zonder eigen inhoud in de database
+volgt de regels van alle disciplines.
 
 **Demo of echt** (`js/config.js`, `brevet.mode`):
 - `'demo'` (nu): jij plus ruim dertig verzonnen collega's (adressen op `@demo.cockpit`), alles alleen in deze browser.
