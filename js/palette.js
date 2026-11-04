@@ -37,6 +37,7 @@
       { label: 'Deel een idee', meta: 'Ideeënhub', icon: 'bulb', href: '#/ideeen/idee', words: 'idee ideeenhub voorstel' },
       { label: 'Vraag een prompt aan', meta: 'Het AI-team maakt hem', icon: 'flag', run: () => ns.ideas.quick({ kind: 'verzoek' }), words: 'prompt aanvragen verzoek mis zoek nodig' },
       { label: 'Deel je prompt', meta: 'Voor in de cockpit', icon: 'chat', run: () => ns.ideas.quick({ kind: 'prompt' }), words: 'prompt delen ideeenhub voorstel' },
+      { label: 'AI-specialist invliegen', meta: 'Voor een klantcasus', icon: 'plane', run: () => ns.specialist.open(), words: 'specialist invliegen klant casus hulp meekijken advies ai-team copilot inzetten', quick: true },
       { label: 'Rondleiding door de cockpit', meta: 'In een minuut waar alles staat', icon: 'plane', run: () => ns.tour.restart(), words: 'rondleiding uitleg tour help hulp begin wegwijs' },
       { label: 'Wissel tussen licht en donker', meta: 'Thema', icon: 'moon', run: () => document.getElementById('theme-button').click(), words: 'thema donker licht dark mode' },
       { label: 'Startpagina', meta: 'Pagina', icon: 'plane', href: '#/', words: 'home start begin' },

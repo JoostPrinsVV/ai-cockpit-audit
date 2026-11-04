@@ -22,7 +22,12 @@
     { key: 'description', label: 'Korte omschrijving', hint: 'In de wisselaar, onder de naam.', half: true },
     { key: 'eyebrow', label: 'Regel boven de titel', hint: 'Op de startpagina, na "Visser & Visser ·". Bijv. Copilot in de controlepraktijk.' },
     { key: 'label', label: 'In lopende tekst', hint: 'Bijv. "de audit" geeft "Waarom handig in de audit".', half: true },
-    { key: 'phases', label: 'Fasen van …', hint: 'Bijv. "de controle" geeft "Per fase van de controle".', half: true }
+    { key: 'phases', label: 'Fasen van …', hint: 'Bijv. "de controle" geeft "Per fase van de controle".', half: true },
+    // AI-specialist invliegen (js/specialist.js)
+    { key: 'specialist', label: 'AI-specialist (naam)', hint: 'Die teams kunnen "invliegen" bij een klantcasus. Leeg = "de AI-specialist", zonder naam.', half: true },
+    { key: 'specialistEmail', label: 'E-mailadres voor Teams', hint: 'Voor de knop "Chat in Teams". Zichtbaar voor iedereen die de cockpit kan openen.', half: true, type: 'email' },
+    { key: 'specialistResponse', label: 'Reactietijd', hint: 'Bijv. "meestal binnen één werkdag".', half: true },
+    { key: 'specialistAvailability', label: 'Beschikbaar', hint: 'Bijv. "maandag tot en met donderdag".', half: true }
   ];
 
   let uid = 0;
@@ -63,7 +68,7 @@
       // Details: naam, teksten, icoon en kleur
       const inputs = {};
       const fields = FIELDS.map((f) => {
-        const input = el('input', { className: 'field__input', attrs: { type: 'text', autocomplete: 'off' } });
+        const input = el('input', { className: 'field__input', attrs: { type: f.type || 'text', autocomplete: 'off', spellcheck: f.type === 'email' ? 'false' : null } });
         input.value = discipline[f.key] || '';
         input.addEventListener('input', () => {
           discipline[f.key] = input.value;
@@ -107,7 +112,7 @@
       });
 
       const details = el('details', { className: 'disc__details', attrs: { open: openDetails === discipline._key ? true : null } }, [
-        el('summary', { className: 'disc__summary' }, [icon('pencil-line'), el('span', { text: 'Naam, teksten en kleur' })]),
+        el('summary', { className: 'disc__summary' }, [icon('pencil-line'), el('span', { text: 'Naam, teksten, kleur en AI-specialist' })]),
         el('div', { className: 'form-grid' }, fields),
         remove ? el('div', { className: 'cms-form__actions' }, [remove]) : null
       ]);
@@ -187,7 +192,7 @@
     function clean() {
       return list.map((discipline) => {
         const result = {};
-        ['id', 'name', 'description', 'status', 'icon', 'accent', 'eyebrow', 'label', 'phases'].forEach((key) => {
+        ['id', 'name', 'description', 'status', 'icon', 'accent', 'eyebrow', 'label', 'phases', 'specialist', 'specialistEmail', 'specialistResponse', 'specialistAvailability'].forEach((key) => {
           const value = typeof discipline[key] === 'string' ? discipline[key].trim() : discipline[key];
           if (value) result[key] = value;
         });

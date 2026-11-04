@@ -991,3 +991,31 @@
   .bv-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .bv-actions { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ==========================================================================
+   Beheer → Invliegen (js/admin-specialist.js)
+   ========================================================================== */
+.flyin-admin { display: grid; gap: var(--space-4); }
+.flyin-list { display: grid; gap: var(--space-4); }
+.flyin-item { display: grid; gap: var(--space-3); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border); border-left: 4px solid var(--vv-teal); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.flyin-item.is-urgent { border-left-color: var(--accent-crimson); }
+.flyin-item.is-done { border-left-color: var(--color-border-strong); opacity: 0.85; }
+.flyin-item__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.flyin-item__badges { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.flyin-item__when { display: inline-flex; align-items: center; gap: 0.35em; padding: 0.1rem 0.6rem; border-radius: var(--radius-pill); background: var(--color-surface-muted); color: var(--color-text-body); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.flyin-item__when.is-urgent { background: var(--accent-crimson-tint); color: var(--accent-crimson); }
+.flyin-item__planned { color: var(--color-text-body); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.flyin-item__date { color: var(--color-text-muted); font-size: var(--fs-xs); }
+.flyin-item__title { font-size: var(--fs-lg); }
+.flyin-item__chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.flyin-item__body { color: var(--color-text-body); white-space: pre-wrap; }
+.flyin-item__who { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--color-text-body); font-size: var(--fs-sm); }
+.flyin-item__who .icon { color: var(--color-text-muted); }
+.flyin-item__actions, .flyin-item__buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.flyin-item__manage { padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.flyin-item__manage summary { color: var(--color-text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); cursor: pointer; }
+.flyin-item__form { display: grid; grid-template-columns: minmax(0, 12rem) minmax(0, 12rem) minmax(0, 1fr); gap: var(--space-3); margin: var(--space-3) 0; }
+.flyin-item__form .field[hidden] { display: none; }
+@media (max-width: 760px) {
+  .flyin-item__form { grid-template-columns: minmax(0, 1fr); }
+}

@@ -52,6 +52,7 @@
     { id: 'start', group: 'start', label: 'Start', icon: 'plane', lead: () => 'Wat er te doen is, en waar je alles vindt.' },
     { id: 'inhoud', group: 'inhoud', label: 'Inhoud', icon: 'pencil-line', perDiscipline: true, lead: (name) => `Usecases, prompts, tips, trainingen, agents en teksten die alleen in de cockpit van ${name} staan.` },
     { id: 'basis', group: 'inhoud', label: 'Gedeelde basis', icon: 'globe', lead: () => 'Wat in iedere cockpit staat: wat je hier aanpast, zien alle disciplines.' },
+    { id: 'invliegen', group: 'collegas', label: 'Invliegen', icon: 'plane', perDiscipline: true, lead: (name) => `Teams in ${name} die de AI-specialist willen invliegen bij een klantcasus: op urgentie, met status en contact.` },
     { id: 'inzendingen', group: 'collegas', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true, lead: (name) => `Ideeën, vragen en verzoeken uit de ideeënhub van ${name}: beantwoorden, publiceren en beoordelen.` },
     { id: 'reviews', group: 'collegas', label: 'Reviews', icon: 'star', perDiscipline: true, lead: (name) => `Sterren en toelichtingen bij de usecases en prompts van ${name}. Een toelichting staat pas bij de usecase of prompt als jij hem publiceert.` },
     { id: 'portfolio', group: 'collegas', label: 'Portfolio', icon: 'flag', perDiscipline: true, lead: (name) => `De beoordeelde ideeën van ${name} in de AI Value Matrix, met de registerregels.` },
@@ -243,7 +244,7 @@
     statusFilter.value = view.status;
     const kindFilter = el('select', { className: 'field__input field__input--sm', attrs: { id: 'adm-kind' } }, [
       el('option', { attrs: { value: 'all' }, text: 'Alle soorten' }),
-      ...ns.ideas.ALL_KINDS.map((kind) => el('option', { attrs: { value: kind.id }, text: kind.label }))
+      ...ns.ideas.ALL_KINDS.filter((kind) => kind.id !== ns.specialist.KIND).map((kind) => el('option', { attrs: { value: kind.id }, text: kind.label }))
     ]);
     kindFilter.value = view.kind;
 
@@ -275,7 +276,8 @@
     async function load() {
       list.replaceChildren(el('p', { className: 'loading', text: 'Inzendingen laden…' }));
       try {
-        items = await ns.central.adminListIdeas();
+        // Verzoeken om de AI-specialist in te vliegen hebben een eigen onderdeel (js/admin-specialist.js)
+        items = (await ns.central.adminListIdeas()).filter((item) => item.kind !== ns.specialist.KIND);
         update();
       } catch (error) {
         list.replaceChildren(loadFailed(error));
@@ -653,11 +655,23 @@
 
     if (has('inzendingen')) {
       const status = task('inzendingen', 'Inzendingen beantwoorden', 'Even kijken…');
-      ns.central.adminListIdeas().then((items) => {
+      ns.central.adminListIdeas().then((all) => {
+        const items = all.filter((item) => item.kind !== ns.specialist.KIND);
         const fresh = items.filter((item) => item.status === 'nieuw').length;
         const busy = items.filter((item) => item.status === 'in-behandeling').length;
         if (fresh) show(status, `${fresh} nieuw${busy ? `, ${busy} in behandeling` : ''}`, true);
         else show(status, busy ? `${busy} in behandeling` : 'Niets openstaand');
+      }).catch(unreadable(status));
+    }
+    // Teams die de AI-specialist willen invliegen: bovenaan als er iets openstaat
+    if (has('invliegen')) {
+      const status = task('invliegen', 'AI-specialist invliegen', 'Even kijken…');
+      ns.central.adminListIdeas().then((all) => {
+        const items = all.filter((item) => item.kind === ns.specialist.KIND);
+        const fresh = items.filter((item) => item.status === 'nieuw').length;
+        const planned = items.filter((item) => item.status === 'gepland').length;
+        if (fresh) show(status, `${fresh} ${fresh === 1 ? 'team wil' : 'teams willen'} je invliegen${planned ? `, ${planned} ingepland` : ''}`, true);
+        else show(status, planned ? `${planned} ingepland` : 'Niets openstaand');
       }).catch(unreadable(status));
     }
     if (has('reviews')) {
@@ -777,6 +791,7 @@
     else if (tab === 'overzicht') panel.append(ns.adminOverview.render().node);
     else if (tab === 'portfolio') panel.append(ns.adminPortfolio.render().node);
     else if (tab === 'brevetten') panel.append(ns.adminBrevet.render().node);
+    else if (tab === 'invliegen') panel.append(ns.adminSpecialist.render().node);
     else if (tab === 'copilot') panel.append(ns.adminCopilot.render().node);
     else if (tab === 'doelkoers') panel.append(ns.adminGoals.render().node);
     else if (tab === 'beheerders') adminsTab(panel);

@@ -382,6 +382,24 @@
       equal(ns.account.emailOfToken('x.' + part + '.y'), 'jan.jansen@visser-visser.nl');
       equal([ns.account.allowed('jan@visser-visser.nl'), ns.account.allowed('jan@gmail.com'), ns.account.allowed('geen adres')], [true, false, false]);
     });
+    /* ---- AI-specialist invliegen ---- */
+    describe('AI-specialist invliegen (js/specialist.js)');
+    await test('volgorde in Beheer: open eerst, dan urgentie, dan de vroegste datum, dan het nieuwste', () => {
+      const item = (id, status, wanneer, datum, created) => ({ id, status, details: { wanneer, datum }, created_at: created });
+      const sorted = ns.specialist.sort([
+        item('klaar', 'gerealiseerd', 'week', '', '2026-11-01'),
+        item('later', 'nieuw', 'geen-haast', '', '2026-11-03'),
+        item('gepland', 'gepland', 'week', '', '2026-11-02'),
+        item('week-laat', 'nieuw', 'week', '2026-11-20', '2026-11-03'),
+        item('week-vroeg', 'nieuw', 'week', '2026-11-10', '2026-11-01'),
+        item('week-zonder', 'nieuw', 'week', '', '2026-11-04')
+      ]);
+      equal(sorted.map((i) => i.id), ['week-vroeg', 'week-laat', 'week-zonder', 'later', 'gepland', 'klaar']);
+    });
+    await test('chat in Teams met het adres en een bericht; initialen van de specialist', () => {
+      equal(ns.specialist.teamsLink('ai@voorbeeld.nl', 'Hoi & dag'), 'https://teams.microsoft.com/l/chat/0/0?users=ai%40voorbeeld.nl&message=Hoi%20%26%20dag');
+      equal([ns.specialist.initials('Sanne de Vries'), ns.specialist.initials('Joost'), ns.specialist.initials('')], ['SV', 'J', 'AI']);
+    });
     await test('kaart op de promptdatabase: een link naar de bouwer, met de meter als versiering', () => {
       const teaser = ns.views.builder.teaser();
       equal([teaser.tagName, teaser.getAttribute('href'), teaser.querySelector('.builder-teaser__meter').getAttribute('aria-hidden')], ['A', '#/promptbouwer', 'true']);

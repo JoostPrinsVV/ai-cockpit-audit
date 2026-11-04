@@ -590,6 +590,35 @@ De cockpit is zo gebouwd dat je bij de migratie twee dingen verwisselt en de res
 Neem de regels in `setup/supabase-audit-brevetten.sql` mee (alleen eigen gegevens lezen, alleen eigen gebruik
 toevoegen, tijdstip door de server, alleen V&V-adressen); in een andere database worden dat rechten of een kleine API.
 
+## AI-specialist invliegen (Beheer → Invliegen, stap 13)
+
+Een team met een klantcasus vraagt vanuit de cockpit de AI-specialist van de discipline om mee te denken
+(`js/specialist.js`). De knop staat bij iedere usecase ("Wil je dit inzetten bij jouw klant?", met de usecase erbij),
+in de ideeënhub (de brede vijfde keuze), op de startpagina (in "Mis je iets?") en in Ctrl+K. Het venster vraagt: wat
+wil je bereiken, de casus (zonder klantnaam), fase, soort klant, welke data (de vier soorten van "Mag dit?"; bij
+hoog-risico-data een waarschuwing), wanneer (deze week, binnen twee weken, geen haast, plus een datum), hoe (meekijken
+in Teams, langskomen, chat) en naam en e-mailadres (verplicht). Na versturen: "<naam> vliegt in", met de reactietijd en
+een knop *Chat alvast in Teams*. Lukt versturen niet, dan kun je het verzoek kopiëren en in Teams sturen.
+
+- **Wie de specialist is**, stel je per discipline in bij **Beheer → Disciplines**: naam, e-mailadres voor Teams,
+  reactietijd en beschikbaarheid. Zonder naam heet hij "de AI-specialist". Het e-mailadres is zichtbaar voor iedereen
+  die de cockpit kan openen (zolang de site openbaar is dus voor iedereen); zet het daarom alleen hier, nooit in de code.
+- **Beheer → Invliegen** (per discipline): de verzoeken op urgentie (eerst nieuw, dan ingepland; daarbinnen deze week
+  en de vroegste datum), met fase, soort klant, data, vorm en de usecase. Per verzoek: *Mail het team*, *Chat in Teams*,
+  de status (ontvangen, ingepland met een datum, afgerond, niet opgepakt), een notitie, en *Maak er een usecase van*
+  (een concept-usecase in Beheer → Inhoud met de titel, fase en casus alvast ingevuld: maak hem anoniem). Op de
+  startpagina van Beheer staat hoeveel teams je willen invliegen. Deze verzoeken staan niet bij Inzendingen.
+- **De aanvrager** ziet de status bij *Jouw inzendingen* in de ideeënhub ("Ingepland op 12 nov."). Een verzoek wordt
+  nooit gepubliceerd; de status komt op de referentie die alleen op het eigen apparaat staat.
+- Eenmalig: voer `setup/supabase-audit-invliegen.sql` uit (stap 13, na stap 1). Tot dan lukt versturen niet en biedt het
+  venster aan het verzoek te kopiëren (en in Teams te sturen, als het adres is ingesteld).
+
+**Later een bericht in Teams bij ieder nieuw verzoek** (geen code nodig): maak in Power Automate een flow met de trigger
+*When an HTTP request is received*; zet in Supabase → Database → Webhooks een webhook op *INSERT* in `audit_ideas` naar
+het adres van die flow; laat de flow alleen doorgaan bij `kind = 'invliegen'` en de juiste `namespace`, en stuur een
+bericht (of een adaptive card met een knop naar `#/beheer/invliegen`) in een Teams-chat of -kanaal. Na de migratie naar
+de Microsoft-omgeving kan dezelfde flow rechtstreeks op de nieuwe opslag reageren.
+
 ## Nieuwsbrief (Beheer → Nieuwsbrief)
 
 Een weekupdate of maandnieuwsbrief, vanzelf samengesteld uit wat er in die periode nieuw was in de cockpit van de
@@ -739,7 +768,8 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    Copilot-gebruik ook `setup/supabase-audit-copilot.sql` (stap 9), voor Beheer → Portfolio
    `setup/supabase-audit-portfolio.sql` (stap 10) en voor de verbetervoorstellen bij prompts
    `setup/supabase-audit-verbeteringen.sql` (stap 11); alle drie mogen op ieder moment na stap 1 en opnieuw. Voor
-   de AI-brevetten met echte accounts `setup/supabase-audit-brevetten.sql` (stap 12; zie 'AI-brevetten').
+   de AI-brevetten met echte accounts `setup/supabase-audit-brevetten.sql` (stap 12; zie 'AI-brevetten'), en voor
+   de AI-specialist invliegen `setup/supabase-audit-invliegen.sql` (stap 13).
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').

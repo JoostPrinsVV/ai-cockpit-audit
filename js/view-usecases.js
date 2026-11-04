@@ -163,6 +163,8 @@
         infoNote(usecase.promptNote),
         tipCallout(usecase.tip)
       ]),
+      // Bij je eigen klant inzetten: de AI-specialist invliegen (js/specialist.js)
+      ns.specialist.card({ usecase }),
       relatedList('uc-related', 'Handige tips hierbij', itemLinks('tip', usecase.relatedTips, true))
     ]);
 

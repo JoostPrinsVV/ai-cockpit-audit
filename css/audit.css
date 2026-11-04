@@ -3267,3 +3267,66 @@ html::-webkit-scrollbar-corner,
 @supports not selector(::-webkit-scrollbar) {
   html, .improve > .improve__panel, .check__panel, .palette__list, .bv-facts, .builder__preview, .prompt-box__text, .usage-table, .drawer { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--color-text-muted) 45%, transparent) transparent; }
 }
+
+/* ==========================================================================
+   AI-specialist invliegen (js/specialist.js)
+   ========================================================================== */
+.flyin__icon { background: color-mix(in srgb, var(--vv-teal) 20%, transparent); }
+/* De specialist: initialen, naam, reactietijd */
+.flyin-person { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius); background: radial-gradient(130% 160% at 0% 0%, var(--vv-navy-800), var(--color-chrome) 60%, var(--color-chrome-deep)); color: var(--color-on-dark); }
+.flyin-person__avatar { display: grid; place-items: center; flex: none; width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--vv-teal); color: var(--vv-navy); font-size: 0.85rem; font-weight: var(--fw-bold); letter-spacing: 0.02em; box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-teal) 30%, transparent); }
+.flyin-person__text { display: grid; gap: 0.1rem; min-width: 0; }
+.flyin-person__name { color: var(--color-on-dark); font-weight: var(--fw-bold); }
+.flyin-person__meta { color: var(--color-on-dark-muted); font-size: var(--fs-sm); }
+.flyin-about { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-body); font-size: var(--fs-sm); }
+.flyin-about .icon { flex: none; color: var(--vv-teal); }
+/* Keuzes als knoppen */
+.flyin-choices { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.flyin-choice { position: relative; display: grid; gap: 0.1rem; padding: var(--space-2) var(--space-3); border: 1.5px solid var(--color-border-strong); border-radius: var(--radius); background: var(--color-surface); cursor: pointer; transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out); }
+.flyin-choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.flyin-choice__label { color: var(--color-text); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.flyin-choice__hint { color: var(--color-text-muted); font-size: var(--fs-xs); }
+.flyin-choice:hover { border-color: var(--vv-teal); }
+.flyin-choice:has(input:checked) { border-color: var(--color-selected); background: var(--color-selected); }
+.flyin-choice:has(input:checked) .flyin-choice__label, .flyin-choice:has(input:checked) .flyin-choice__hint { color: var(--color-on-selected); }
+.flyin-choice:has(input:focus-visible) { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
+.flyin-warning { display: flex; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--color-warning-border); border-radius: var(--radius-sm); background: var(--color-warning-fill); color: var(--color-warning); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.flyin-warning[hidden] { display: none; }
+.flyin-warning .icon { flex: none; margin-top: 0.1em; }
+/* Na versturen: het vliegtuigje vliegt in */
+.flyin-done { display: grid; justify-items: center; gap: var(--space-3); padding: var(--space-5) 0 var(--space-2); text-align: center; }
+.flyin-done__mark { display: grid; place-items: center; width: 4.5rem; height: 4.5rem; border-radius: 50%; background: color-mix(in srgb, var(--color-warning) 16%, transparent); color: var(--color-warning); }
+.flyin-done.is-sent .flyin-done__mark { background: radial-gradient(circle at 35% 30%, var(--vv-navy-800), var(--color-chrome)); color: var(--vv-teal); box-shadow: 0 0 0 6px color-mix(in srgb, var(--vv-teal) 18%, transparent); }
+.flyin-done__mark .icon { width: 2rem; height: 2rem; }
+.flyin-done.is-sent .flyin-done__mark .icon { animation: flyin-plane 900ms var(--ease-spring) both; }
+.flyin-done__title { font-size: var(--fs-xl); }
+.flyin-done__text { max-width: 30rem; color: var(--color-text-body); }
+.flyin-done__actions { justify-content: center; }
+@keyframes flyin-plane { from { opacity: 0; transform: translate(-2.2rem, 1.4rem) rotate(-20deg) scale(0.6); } to { opacity: 1; transform: none; } }
+/* Bij een usecase: wil je dit inzetten bij jouw klant? */
+.flyin-card { display: grid; gap: var(--space-3); margin-top: var(--space-5); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border); border-left: 4px solid var(--vv-teal); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.flyin-card__head { display: flex; align-items: flex-start; gap: var(--space-3); }
+.flyin-card__title { font-size: var(--fs-md); }
+.flyin-card__text { color: var(--color-text-body); font-size: var(--fs-sm); }
+.flyin-card .btn { justify-self: start; }
+/* Startpagina: in het blok 'Mis je iets?' */
+.cta__flyin { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-4); color: var(--color-on-dark-muted); font-size: var(--fs-sm); }
+.cta__flyin-button { display: inline-flex; align-items: center; gap: 0.45em; padding: 0.35rem 0.85rem; border: 1px solid color-mix(in srgb, var(--vv-teal) 60%, transparent); border-radius: var(--radius-pill); background: color-mix(in srgb, var(--vv-teal) 14%, transparent); color: var(--color-on-dark); font: inherit; font-weight: var(--fw-bold); cursor: pointer; transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out); }
+.cta__flyin-button .icon { color: var(--vv-teal); }
+.cta__flyin-button:hover { border-color: var(--vv-teal); background: color-mix(in srgb, var(--vv-teal) 26%, transparent); }
+.cta__flyin-button .icon:last-child { transition: transform var(--duration-fast) var(--ease-out); }
+.cta__flyin-button:hover .icon:last-child { transform: translateX(3px); }
+/* Ideeenhub: de vijfde keuze, over de hele breedte */
+.kind-picker__item--wide { grid-column: 1 / -1; }
+.kind-picker__flyin { display: flex; align-items: center; gap: var(--space-4); border-style: dashed; color: inherit; font: inherit; text-align: left; }
+.kind-picker__flyin .kind-picker__icon { flex: none; margin-bottom: 0; background: var(--color-chrome); color: var(--vv-teal); }
+.kind-picker__flyin-text { display: grid; gap: var(--space-1); flex: 1; min-width: 0; }
+.kind-picker__go { flex: none; color: var(--color-text-muted); transition: transform var(--duration-fast) var(--ease-out); }
+.kind-picker__flyin:hover { border-color: var(--vv-teal); border-style: solid; }
+.kind-picker__flyin:hover .kind-picker__go { color: var(--vv-teal); transform: translateX(3px); }
+.kind-picker__flyin:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: var(--focus-offset); }
+.chip--danger { background: var(--color-danger-fill); color: var(--color-danger); }
+@media (prefers-reduced-motion: reduce) {
+  .flyin-done.is-sent .flyin-done__mark .icon { animation: none; }
+  .cta__flyin-button .icon:last-child, .kind-picker__go { transition: none; }
+}

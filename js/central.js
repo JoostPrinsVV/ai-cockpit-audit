@@ -234,11 +234,24 @@
     };
     // Een verbetervoorstel: bij welke prompt (stap 11). Alleen dan meesturen: zonder stap 11 bestaat de kolom nog niet.
     if (idea.target) row.target = idea.target;
+    // AI-specialist invliegen: fase, soort klant, data, wanneer en hoe (stap 13; js/specialist.js)
+    if (idea.details) row.details = idea.details;
     return add(TABLES.ideas, row, 'Inzending versturen').then((result) => {
       // Voor je logboek (js/brevet.js), als je meedoet met de AI-brevetten
       if (result === 'ok') document.dispatchEvent(new CustomEvent('ai:ingestuurd', { detail: { ref: idea.ref, kind: idea.kind } }));
       return result;
     });
+  }
+
+  /**
+   * De stand van je eigen verzoeken om de AI-specialist in te vliegen (die worden nooit gepubliceerd).
+   * Op referentie: alleen wie de referentie heeft (jouw apparaat), krijgt de status. Stap 13.
+   * @returns {Promise<{ status, items: [{ ref, status, planned, answered_at }] }>}
+   */
+  function requestStatuses(refs) {
+    const list = (refs || []).filter(Boolean).slice(0, 50);
+    if (!list.length) return Promise.resolve({ status: 'ok', items: [] });
+    return read(RPC + 'audit_invliegen_status', 'Status van je verzoeken', post({ p_refs: list }));
   }
 
   /** Gepubliceerde inzendingen (voor iedereen zichtbaar). */
@@ -928,6 +941,7 @@
     upload,
     isMediaUrl,
     submitIdea,
+    requestStatuses,
     listIdeas,
     vote,
     submitReview,

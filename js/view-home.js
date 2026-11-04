@@ -216,6 +216,11 @@
             el('li', {}, [chip('Vraag', { icon: 'question', className: 'chip--dark' })]),
             el('li', {}, [chip('Verzoek', { icon: 'flag', className: 'chip--dark' })]),
             el('li', {}, [chip('Prompt delen', { icon: 'chat', className: 'chip--dark' })])
+          ]),
+          // Een klantcasus: de AI-specialist invliegen (js/specialist.js)
+          el('p', { className: 'cta__flyin' }, [
+            el('span', { text: 'Klantcasus waarbij je wilt weten wat Copilot kan?' }),
+            el('button', { className: 'cta__flyin-button', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.specialist.open() } }, [icon('plane'), el('span', { text: 'AI-specialist invliegen' }), icon('arrow-right')])
           ])
         ]),
         el('a', { className: 'btn btn--primary btn--lg', attrs: { href: '#/ideeen' } }, [icon('message-plus'), el('span', { text: 'Naar de ideeënhub' })])

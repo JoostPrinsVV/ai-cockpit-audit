@@ -42,7 +42,12 @@
         accent: ACCENTS.includes(item.accent) ? item.accent : 'navy',
         eyebrow: text(item.eyebrow) || 'Copilot bij ' + name,
         label: text(item.label) || name.toLowerCase(),
-        phases: text(item.phases) || 'je werk'
+        phases: text(item.phases) || 'je werk',
+        // De AI-specialist die je kunt 'invliegen' (js/specialist.js); leeg = geen specialist ingesteld
+        specialist: text(item.specialist),
+        specialistEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text(item.specialistEmail)) ? text(item.specialistEmail).toLowerCase() : '',
+        specialistResponse: text(item.specialistResponse),
+        specialistAvailability: text(item.specialistAvailability)
       };
     }).filter(Boolean);
     return result.length ? result : null;

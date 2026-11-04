@@ -40,7 +40,9 @@
   ];
   // Een verbetervoorstel bij een prompt (js/improve.js): niet in de keuze van het formulier hier
   const IMPROVEMENT = { id: 'verbetering', label: 'Verbetering', icon: 'wand', accent: 'deepteal' };
-  const ALL_KINDS = KINDS.concat(IMPROVEMENT);
+  // De AI-specialist invliegen (js/specialist.js): een eigen venster, nooit gepubliceerd
+  const FLY_IN = { id: 'invliegen', label: 'Specialist invliegen', icon: 'plane', accent: 'navy' };
+  const ALL_KINDS = KINDS.concat(IMPROVEMENT, FLY_IN);
   const KIND_BY_ID = new Map(ALL_KINDS.map((kind) => [kind.id, kind]));
 
   const STATUSES = {
@@ -84,6 +86,21 @@
   }
 
   /* ---- Formulier --------------------------------------------------------------------- */
+  /** Vijfde keuze, over de hele breedte: de AI-specialist invliegen (opent een eigen venster). */
+  function flyInTile() {
+    const who = ns.specialist.current();
+    const button = el('button', { className: 'kind-picker__label kind-picker__flyin', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [
+      el('span', { className: 'kind-picker__icon', attrs: { 'aria-hidden': 'true' } }, [icon('plane')]),
+      el('span', { className: 'kind-picker__flyin-text' }, [
+        el('span', { className: 'kind-picker__name', text: 'AI-specialist invliegen' }),
+        el('span', { className: 'kind-picker__text', text: 'Een klantcasus waarbij je wilt weten wat Copilot kan? ' + (who.name ? who.label : 'De AI-specialist') + ' denkt met je team mee.' })
+      ]),
+      icon('arrow-right', { className: 'kind-picker__go' })
+    ]);
+    button.addEventListener('click', () => ns.specialist.open());
+    return el('div', { className: 'kind-picker__item kind-picker__item--wide accent-navy' }, [button]);
+  }
+
   function buildForm(config, preselect, onSent) {
     const maxBody = Number(config.ideaMaxLength) || 2000;
     let kind = KIND_BY_ID.has(preselect) ? preselect : 'idee';
@@ -105,7 +122,7 @@
             el('span', { className: 'kind-picker__text', text: item.text })
           ])
         ]);
-      }))
+      }).concat(flyInTile()))
     ]);
 
     const title = el('input', { className: 'field__input', attrs: { id: 'idea-title', name: 'title', type: 'text', maxlength: '120', required: true, autocomplete: 'off', 'aria-describedby': 'idea-title-error' } });
@@ -414,6 +431,13 @@
   function mineBlock() {
     const wrap = el('section', { className: 'side-card', attrs: { 'aria-labelledby': 'mine-title' } });
     let published = new Map();
+    // Verzoeken om de AI-specialist in te vliegen: nooit gepubliceerd, de status komt op referentie (stap 13)
+    let flyIns = new Map();
+    const flyInStatus = (item) => {
+      const info = ns.specialist.STATUS[item.status] || ns.specialist.STATUS.nieuw;
+      const planned = item.status === 'gepland' && item.planned ? ' op ' + formatDate(item.planned) : '';
+      return el('span', { className: 'status status--' + info.tone, text: info.label + planned });
+    };
 
     function render() {
       const list = mySubmissions();
@@ -431,7 +455,8 @@
               const target = document.getElementById('idea-' + item.id);
               if (target) target.scrollIntoView({ behavior: ns.motion.calm() ? 'auto' : 'smooth', block: 'center' });
             } } }) : entry.title]),
-            item ? statusBadge(item.status) : el('span', { className: 'status status--neutral', text: 'Ontvangen' }),
+            entry.kind === FLY_IN.id && flyIns.has(entry.ref) ? flyInStatus(flyIns.get(entry.ref))
+              : item ? statusBadge(item.status) : el('span', { className: 'status status--neutral', text: 'Ontvangen' }),
             el('span', { className: 'mine__date', text: formatDate(entry.at) })
           ]);
         })),
@@ -444,6 +469,12 @@
     }
 
     render();
+    const refs = mySubmissions().filter((entry) => entry.kind === FLY_IN.id).map((entry) => entry.ref);
+    if (refs.length) ns.central.requestStatuses(refs).then((result) => {
+      if (result.status !== 'ok') return;
+      flyIns = new Map(result.items.map((item) => [item.ref, item]));
+      render();
+    });
     return {
       node: wrap,
       render,

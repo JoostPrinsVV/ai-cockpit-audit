@@ -823,6 +823,13 @@
     return 'In de prullenbak gezet';
   }
 
+  // Een nieuw item met alvast ingevulde velden (bijv. een usecase uit een verzoek om in te vliegen); één keer
+  let prefill = null;
+  /** Zet velden klaar voor het volgende nieuwe item van deze soort (#/beheer/inhoud/<soort>/nieuw). */
+  function draft(type, data) {
+    prefill = { type, data: Object.assign({}, data) };
+  }
+
   /** In Beheer: het hele item, met opslaan (en publiceren), verwijderen en de status. */
   function editor(type, id) {
     const schema = SCHEMAS[type];
@@ -834,7 +841,9 @@
     const saved = existing ? stateOf(existing) : null;
     const base = existing && drafting() ? ns.editor.effective(scope.namespace, type, existing.id) || saved : saved;
     const unsaved = Boolean(existing && drafting() && JSON.stringify(base) !== JSON.stringify(saved));
-    const data = existing ? Object.assign({}, base.data, schema.single ? {} : { id: existing.id }) : {};
+    const ready = isNew && prefill && prefill.type === type ? prefill.data : null;
+    if (ready) prefill = null;
+    const data = existing ? Object.assign({}, base.data, schema.single ? {} : { id: existing.id }) : Object.assign({}, ready);
     const canEdit = may('bewerken', type);
     const canDelete = may('verwijderen', type);
     const canPublish = drafting() && ns.rights.can('publiceren', scope.namespace, type);
@@ -1471,5 +1480,5 @@
     };
   }
 
-  ns.adminContent = { render, quickForm };
+  ns.adminContent = { render, quickForm, draft };
 })(window.AIAudit);
