@@ -47,7 +47,7 @@
 
   function warn(message) {
     state.issues.push(message);
-    console.warn('[AI Cockpit Audit] ' + message);
+    console.warn('[AI-cockpit Audit] ' + message);
   }
 
   const text = (value) => (typeof value === 'string' ? value.trim() : '');

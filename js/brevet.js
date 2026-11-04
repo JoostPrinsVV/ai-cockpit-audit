@@ -351,7 +351,7 @@
         state.status = 'ready';
         state.loadedAt = Date.now();
       } catch (error) {
-        console.warn('[AI Cockpit] Logboek laden mislukt', error);
+        console.warn('[AI-cockpit] Logboek laden mislukt', error);
         state.status = 'failed';
       } finally {
         loading = null;

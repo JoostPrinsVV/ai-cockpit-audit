@@ -31,7 +31,7 @@
       {
         kind: 'welcome',
         eyebrow: 'Rondleiding · 1 minuut',
-        title: 'Welkom in de AI Cockpit',
+        title: 'Welkom in de AI-cockpit',
         text: `Hier vind je alles over Copilot in ${discipline.label}: usecases met demo, prompts, tips, trainingen en agents. In een minuut laten we zien waar alles staat.`
       },
       { target: ['.search--hero'], title: 'Zoek alles op één plek', text: 'Typ een woord als "notulen" of "materialiteit". Tip: met Ctrl+K zoek je vanaf iedere pagina, en kopieer je een prompt zonder hem te openen.' },

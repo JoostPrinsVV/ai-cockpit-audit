@@ -9,7 +9,7 @@
    - De inhoud van een cockpit = de gedeelde basis ('ai-algemeen') plus de
      eigen inhoud ('ai-<id>'), zie js/content.js. Inzendingen en tellers gaan
      naar de discipline waarin je zit.
-   - De wisselaar achter 'AI Cockpit' in de kopbalk, en de indeling van de
+   - De wisselaar achter 'AI-cockpit' in de kopbalk, en de indeling van de
      kopbalk: iconen en lange labels vallen pas weg als het echt niet past.
    ========================================================================== */
 (function (ns) {

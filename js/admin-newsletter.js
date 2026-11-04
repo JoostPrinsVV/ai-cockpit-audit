@@ -227,12 +227,12 @@
   /* ---- Het document --------------------------------------------------------------------- */
   function defaults(p) {
     const discipline = ns.cockpit.active();
-    const brand = `${ns.app.config().applicationTitle || 'AI Cockpit'} ${discipline.name}`;
+    const brand = `${ns.app.config().applicationTitle || 'AI-cockpit'} ${discipline.name}`;
     return {
       subject: `${brand} · ${KINDS[p.kind]} ${p.kind === 'maand' ? p.name + ' ' + parse(p.start).getFullYear() : p.name}`,
       intro: p.kind === 'maand'
-        ? `Dit was ${p.name} in de AI Cockpit: nieuwe usecases en prompts om direct te proberen, de tips van de week en de vragen van collega's. Iedere link brengt je naar de juiste plek in de cockpit.`
-        : 'Dit was er deze week nieuw in de AI Cockpit. Iedere link brengt je naar de juiste plek, zodat je het direct kunt proberen.',
+        ? `Dit was ${p.name} in de AI-cockpit: nieuwe usecases en prompts om direct te proberen, de tips van de week en de vragen van collega's. Iedere link brengt je naar de juiste plek in de cockpit.`
+        : 'Dit was er deze week nieuw in de AI-cockpit. Iedere link brengt je naar de juiste plek, zodat je het direct kunt proberen.',
       closing: 'Heb je een idee, een vraag of een prompt die goed werkt? Laat het weten in de ideeënhub: daar komt de volgende editie vandaan.',
       signature: 'Het AI-team'
     };
@@ -260,7 +260,7 @@
       kind: KINDS[p.kind],
       title: p.title,
       range: p.range,
-      app: config.applicationTitle || 'AI Cockpit',
+      app: config.applicationTitle || 'AI-cockpit',
       discipline: discipline.name,
       organization: config.organizationName || 'Visser & Visser',
       subject: texts.subject,

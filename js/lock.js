@@ -134,7 +134,7 @@
       el('div', { className: 'gate__panel' }, [
         el('img', { className: 'gate__logo', attrs: { src: 'assets/branding/logo-dark.svg', alt: '', width: '88', height: '88' } }),
         el('p', { className: 'gate__eyebrow', text: (ns.config && ns.config.organizationName) || 'Visser & Visser' }),
-        el('h1', { className: 'gate__title', attrs: { id: 'gate-title' }, text: 'AI Cockpit' }),
+        el('h1', { className: 'gate__title', attrs: { id: 'gate-title' }, text: 'AI-cockpit' }),
         el('p', { className: 'gate__text', attrs: { id: 'gate-text' }, text: 'Alleen voor collega\'s. Vul de pincode in om verder te gaan; op dit apparaat hoeft dat daarna niet meer.' }),
         form,
         el('p', { className: 'gate__hint' }, [icon('info'), el('span', { text: 'Weet je de pincode niet? Vraag hem aan een collega of aan het AI-team.' })])

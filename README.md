@@ -1,4 +1,4 @@
-# AI Cockpit Audit
+# AI-cockpit Audit
 
 *Jij bepaalt de koers, Copilot navigeert mee.*
 
@@ -83,7 +83,7 @@ kom je in de laatst gekozen discipline, of in Audit.
 
 De cockpit is er per discipline (Audit, Accountancy, Belastingadvies, Salarisadministratie, …), op één gedeelde basis.
 
-- **Wisselaar:** in de kopbalk staat achter 'AI Cockpit' een knopje met de discipline ('Audit ⌄'). Daarin kies je een
+- **Wisselaar:** in de kopbalk staat achter 'AI-cockpit' een knopje met de discipline ('Audit ⌄'). Daarin kies je een
   andere discipline. Je komt op dezelfde pagina; een detailpagina alleen als het item gedeeld is.
 - **Open of op slot** (Beheer → Disciplines): een discipline op slot staat in de wisselaar met een slotje. Collega's
   kunnen er niet in (wie het adres toch opent, komt in Audit); beheerders wel, met bovenaan een balk 'Op slot'. Zo

@@ -128,7 +128,7 @@
   async function outcome(response, what) {
     if (response.ok) return 'ok';
     if (await isMissingTable(response)) return 'missing';
-    console.warn(`[AI Cockpit Audit] ${what} mislukt:`, response.status, await errorCode(response));
+    console.warn(`[AI-cockpit Audit] ${what} mislukt:`, response.status, await errorCode(response));
     return 'failed';
   }
 

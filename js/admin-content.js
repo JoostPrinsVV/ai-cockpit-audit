@@ -91,7 +91,7 @@
         { key: 'steps', label: 'Zo pak je het aan', type: 'list', hint: 'Eén stap per regel' },
         { key: 'prompts', label: 'Prompts', type: 'group', min: 1, itemLabel: 'Prompt', fields: [
           { key: 'label', label: 'Kop', type: 'text', placeholder: 'bijv. Stap 1 · Risico\'s in kaart' },
-          { key: 'text', label: 'Prompttekst', type: 'code', required: true, hint: 'Plaatshouders in hoofdletters tussen blokhaken: [KLANTNAAM]' }
+          { key: 'text', label: 'Prompttekst', type: 'code', required: true, placeholders: true, hint: 'Plaatshouders in hoofdletters tussen blokhaken: [KLANTNAAM]' }
         ] },
         { key: 'promptNote', label: 'Toelichting onder de prompts', type: 'textarea' },
         { key: 'watchOut', label: 'Let op', type: 'list', hint: 'Eén aandachtspunt per regel' },
@@ -110,14 +110,14 @@
         { key: 'task', label: 'Soort taak', type: 'select', options: TASKS, half: true },
         { key: 'tool', label: 'Waar gebruik je hem', type: 'text', half: true, suggestions: () => unique(ns.content.prompts.map((p) => p.tool)) },
         { key: 'license', label: 'Licentie', type: 'license', half: true },
-        { key: 'prompt', label: 'Prompttekst', type: 'code', required: true, hint: 'Plaatshouders in hoofdletters tussen blokhaken: [KLANTNAAM], [PROCES, bijv. inkoopproces]' },
+        { key: 'prompt', label: 'Prompttekst', type: 'code', required: true, placeholders: true, hint: 'Plaatshouders in hoofdletters tussen blokhaken: [KLANTNAAM], [PROCES, bijv. inkoopproces], [KORT / UITGEBREID]. Hieronder zie je wat de cockpit herkent.' },
         { key: 'note', label: 'Toelichting', type: 'textarea', hint: 'Waar en hoe gebruik je hem?' },
         { key: 'followUps', label: 'Vervolgprompts (in dezelfde chat)', type: 'group', itemLabel: 'Vervolgprompt', fields: [
           { key: 'label', label: 'Kop', type: 'text', placeholder: 'bijv. Stap 2 · Conceptantwoord' },
-          { key: 'text', label: 'Prompttekst', type: 'code', required: true }
+          { key: 'text', label: 'Prompttekst', type: 'code', required: true, placeholders: true }
         ] },
         { key: 'promptLabel', label: 'Kop boven de eerste prompt', type: 'text', placeholder: 'bijv. Stap 1 · Alle punten op een rij', hint: 'Alleen bij vervolgprompts; leeg = Stap 1.' },
-        { key: 'promptBasic', label: 'Versie zonder licentie', type: 'code', hint: 'Alleen bij een prompt met licentie: dezelfde (eerste) prompt voor de gratis Copilot Chat, waarin je de tekst plakt of een bestand toevoegt. Collega\'s kiezen dan zelf welke versie ze gebruiken.' },
+        { key: 'promptBasic', label: 'Versie zonder licentie', type: 'code', placeholders: true, hint: 'Alleen bij een prompt met licentie: dezelfde (eerste) prompt voor de gratis Copilot Chat, waarin je de tekst plakt of een bestand toevoegt. Collega\'s kiezen dan zelf welke versie ze gebruiken.' },
         { key: 'noteBasic', label: 'Toelichting bij de versie zonder licentie', type: 'textarea' },
         { key: 'tip', label: 'Tip', type: 'textarea' },
         { key: 'added', label: 'Toegevoegd op', type: 'date', half: true },
@@ -418,6 +418,47 @@
     return el('span', { className: 'field__upload-wrap' }, [button, file]);
   }
 
+  /**
+   * Onder een prompttekst: welke plaatshouders de cockpit herkent, en wat collega's ermee krijgen
+   * (invulveld, voorbeeld, keuzelijst, groot tekstvak of uit Mijn gegevens). Ook wat niet wordt
+   * herkend: een kleine letter na de blokhaak, of een blokhaak die niet dicht staat. Werkt mee
+   * tijdens het typen.
+   */
+  function placeholderPreview(input) {
+    const node = el('div', { className: 'ph-preview', attrs: { 'aria-live': 'polite' } });
+    const draw = () => {
+      const text = input.value;
+      const found = ns.ui.parsePlaceholders(text);
+      const lowercase = Array.from(new Set(text.match(/\[[a-zà-ÿ][^[\]\n]{0,140}\]/g) || []));
+      const open = (text.match(/\[/g) || []).length !== (text.match(/\]/g) || []).length;
+      const warnings = [
+        lowercase.length ? 'Niet herkend, begin met een hoofdletter: ' + lowercase.join(', ') : '',
+        open ? 'Er staat een blokhaak niet dicht: elke [ heeft een ] nodig.' : ''
+      ].filter(Boolean);
+      const items = found.map((p) => {
+        const mine = ns.profile.source(p.key);
+        const what = mine ? 'uit Mijn gegevens (' + mine.toLowerCase() + ')'
+          : p.options.length ? 'keuzelijst: ' + p.options.join(' of ')
+            : p.long ? 'groot tekstvak om te plakken'
+              : p.hint ? 'invulveld, met als voorbeeld "' + p.hint.replace(/^(bijv\.|bijvoorbeeld|zoals)\s*/i, '') + '"'
+                : 'invulveld';
+        return el('li', { className: 'ph-preview__item' }, [el('mark', { className: 'ph' + (mine ? ' ph--filled ph--mine' : ''), text: '[' + p.label + ']' }), el('span', { text: what })]);
+      });
+      node.replaceChildren(
+        el('p', { className: 'ph-preview__title' }, [icon('pencil-line'), el('span', { text: found.length ? `${found.length} ${found.length === 1 ? 'plaatshouder' : 'plaatshouders'} herkend` : 'Nog geen plaatshouders' })]),
+        items.length ? el('ul', { className: 'ph-preview__list', attrs: { role: 'list' } }, items) : el('p', { className: 'ph-preview__help', text: 'Typ in hoofdletters tussen blokhaken, bijv. [KLANTNAAM]. Met een voorbeeld: [PROCES, bijv. inkoopproces]. Een keuze: [KORT / UITGEBREID]. Een groot tekstvak: [PLAK HIER DE TEKST]. [NAAM], [FUNCTIE] en [JAAR] vult de cockpit zelf in.' }),
+        ...warnings.map((warning) => el('p', { className: 'ph-preview__warning' }, [icon('alert'), el('span', { text: warning })]))
+      );
+    };
+    let timer = 0;
+    input.addEventListener('input', () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(draw, 200);
+    });
+    draw();
+    return node;
+  }
+
   /** Bouwt één veld. Geeft { node, get(), validate() } terug. */
   function control(field, value, ctx) {
     const id = nextId();
@@ -479,7 +520,7 @@
         });
         input.value = field.type === 'list' ? (Array.isArray(value) ? value.join('\n') : '') : value == null ? '' : String(value);
         return {
-          node: wrap(input),
+          node: wrap(input, field.placeholders ? placeholderPreview(input) : null),
           get: () => (field.type === 'list' ? input.value.split('\n').map((line) => line.trim()).filter(Boolean) : input.value.replace(/\s+$/, '')),
           validate: () => requiredCheck(!input.value.trim())
         };
@@ -1480,5 +1521,5 @@
     };
   }
 
-  ns.adminContent = { render, quickForm, draft };
+  ns.adminContent = { render, quickForm, draft, placeholderPreview };
 })(window.AIAudit);

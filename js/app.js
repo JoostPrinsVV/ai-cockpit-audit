@@ -24,7 +24,7 @@
   'use strict';
 
   const { el, icon, storage } = ns.ui;
-  const SITE_TITLE = 'AI Cockpit Audit';
+  const SITE_TITLE = 'AI-cockpit Audit';
   const FETCH_TIMEOUT = 3500;
   let baseConfig = {};
   let config = {};
@@ -247,7 +247,7 @@
     try {
       result = handler ? handler(parsed.params) : null;
     } catch (error) {
-      console.error('[AI Cockpit Audit]', error);
+      console.error('[AI-cockpit Audit]', error);
       showFatal(error);
       return;
     }
@@ -384,7 +384,7 @@
     try {
       await ns.content.ensureFiles();
     } catch (error) {
-      console.error('[AI Cockpit Audit]', error);
+      console.error('[AI-cockpit Audit]', error);
     }
     useSource(null);
   }
@@ -418,7 +418,7 @@
     loadAdmin().then(() => {
       if (window.location.hash === hash) route(opts);
     }, (error) => {
-      console.error('[AI Cockpit Audit]', error);
+      console.error('[AI-cockpit Audit]', error);
       view.replaceChildren(el('div', { className: 'page container' }, [el('div', { className: 'notice notice--warning' }, [icon('alert'), el('div', {}, [
         el('p', { className: 'notice__title', text: 'Beheer kon niet worden geladen' }),
         el('p', { text: 'Controleer je verbinding en ververs de pagina.' })
@@ -619,7 +619,7 @@
   function boot() {
     try {
       baseConfig = Object.assign({
-        applicationTitle: 'AI Cockpit',
+        applicationTitle: 'AI-cockpit',
         discipline: 'Audit',
         organizationName: 'Visser & Visser',
         theme: 'licht',
@@ -659,7 +659,7 @@
         document.getElementById('main').focus();
       });
       loadContent().catch((error) => {
-        console.error('[AI Cockpit Audit] Inhoud laden mislukt', error);
+        console.error('[AI-cockpit Audit] Inhoud laden mislukt', error);
         if (!contentReady) useFiles().then(() => route());
       });
       // Gepland publiceren: is het moment van een geplande wijziging voorbij, dan gaat die nu live
@@ -667,7 +667,7 @@
         if (count > 0) loadContent({ force: true }).catch(() => null);
       });
     } catch (error) {
-      console.error('[AI Cockpit Audit] Opstarten mislukt', error);
+      console.error('[AI-cockpit Audit] Opstarten mislukt', error);
       showFatal(error);
     }
   }

@@ -41,7 +41,7 @@
     ].filter(Boolean);
     const who = [item.name, d.team, d.vestiging].filter(Boolean).join(' · ') || 'Onbekend';
     const mail = item.email ? el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: 'mailto:' + item.email + '?subject=' + encodeURIComponent('Je verzoek om de AI-specialist in te vliegen: ' + item.title) } }, [icon('mail'), el('span', { text: 'Mail het team' })]) : null;
-    const chat = item.email ? el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: S.teamsLink(item.email, 'Hoi' + (item.name ? ' ' + item.name.split(/\s+/)[0] : '') + ', ik zag je verzoek in de AI Cockpit: ' + item.title), target: '_blank', rel: 'noopener noreferrer' } }, [icon('chat'), el('span', { text: 'Chat in Teams' })]) : null;
+    const chat = item.email ? el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: S.teamsLink(item.email, 'Hoi' + (item.name ? ' ' + item.name.split(/\s+/)[0] : '') + ', ik zag je verzoek in de AI-cockpit: ' + item.title), target: '_blank', rel: 'noopener noreferrer' } }, [icon('chat'), el('span', { text: 'Chat in Teams' })]) : null;
 
     // Beheren: status, datum, notitie
     const uid = 'fly-' + item.id;

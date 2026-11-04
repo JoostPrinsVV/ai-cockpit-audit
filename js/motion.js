@@ -63,7 +63,7 @@
   // Afronden, ook als de overgang werd overgeslagen (snel achter elkaar klikken) of de nieuwe pagina een fout gaf
   function settle(transition, cleanup) {
     transition.ready.catch(() => null);
-    transition.updateCallbackDone.catch((error) => console.error('[AI Cockpit Audit]', error));
+    transition.updateCallbackDone.catch((error) => console.error('[AI-cockpit Audit]', error));
     transition.finished.then(cleanup, cleanup);
   }
 

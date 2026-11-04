@@ -240,7 +240,7 @@
 
     /** Na versturen (of als versturen niet lukt): wat nu. */
     function done(sent) {
-      const message = 'Hoi ' + (who.name ? who.label : '') + ', ik heb net in de AI Cockpit een verzoek ingestuurd om je in te vliegen: ' + title.value.trim();
+      const message = 'Hoi ' + (who.name ? who.label : '') + ', ik heb net in de AI-cockpit een verzoek ingestuurd om je in te vliegen: ' + title.value.trim();
       const teams = who.email ? el('a', { className: 'btn btn--secondary', attrs: { href: teamsLink(who.email, message), target: '_blank', rel: 'noopener noreferrer' } }, [icon('chat'), el('span', { text: 'Chat ' + (sent ? 'alvast ' : '') + 'in Teams' })]) : null;
       const copy = sent ? null : el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [icon('copy'), el('span', { text: 'Kopieer je verzoek' })]);
       if (copy) copy.addEventListener('click', async () => {

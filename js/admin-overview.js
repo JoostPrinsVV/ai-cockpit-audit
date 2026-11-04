@@ -343,7 +343,7 @@
       const title = document.title;
       document.body.append(root);
       document.body.classList.add('is-printing-overview');
-      document.title = 'AI Cockpit - stand van zaken ' + new Date().toISOString().slice(0, 10);
+      document.title = 'AI-cockpit - stand van zaken ' + new Date().toISOString().slice(0, 10);
       const done = () => {
         document.body.classList.remove('is-printing-overview');
         root.remove();

@@ -124,10 +124,17 @@
 
   /** Kan de cockpit in deze tekst iets voor je invullen (als je het invult)? */
   function canFill(text) {
-    return ns.ui.parsePlaceholders(text || '').some((field) => {
-      const label = labelOf(field.key);
-      return BY_PLACEHOLDER.has(label) || YEAR_PLACEHOLDERS.includes(label) || PREVIOUS_YEAR_PLACEHOLDERS.includes(label);
-    });
+    return ns.ui.parsePlaceholders(text || '').some((field) => Boolean(source(field.key)));
+  }
+
+  /** Welk veld van Mijn gegevens deze plaatshouder invult ('Je naam', 'Boekjaar' …), of '' (Beheer, js/admin-content.js). */
+  function source(inner) {
+    const label = labelOf(inner);
+    const field = FIELDS.find((item) => item.id === BY_PLACEHOLDER.get(label));
+    if (field) return field.label;
+    if (YEAR_PLACEHOLDERS.includes(label)) return 'Boekjaar';
+    if (PREVIOUS_YEAR_PLACEHOLDERS.includes(label)) return 'Boekjaar min één';
+    return '';
   }
 
   /** Voornaam voor de begroeting op de startpagina. */
@@ -178,5 +185,5 @@
     onChange(syncButton);
   }
 
-  ns.profile = { FIELDS, init, get, set, clear, filled, year, autoYear, valueFor, values, fill, canFill, firstName, initials, onChange };
+  ns.profile = { FIELDS, init, get, set, clear, filled, year, autoYear, valueFor, values, fill, canFill, source, firstName, initials, onChange };
 })(window.AIAudit);

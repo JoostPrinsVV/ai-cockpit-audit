@@ -742,7 +742,7 @@
     if (!ns.central.isEnabled() || !ns.central.signedIn()) {
       const content = el('div', { className: 'admin admin--login' });
       const node = el('div', { className: 'page container' }, [
-        pageHeader({ eyebrow: 'AI Cockpit', title: 'Beheer', lead: 'Voor het AI-team: inhoud aanpassen, inzendingen beantwoorden en zien wat er gebruikt wordt.' }),
+        pageHeader({ eyebrow: 'AI-cockpit', title: 'Beheer', lead: 'Voor het AI-team: inhoud aanpassen, inzendingen beantwoorden en zien wat er gebruikt wordt.' }),
         content
       ]);
       if (!ns.central.isEnabled()) content.append(notice({ title: 'Geen centrale opslag ingesteld', text: 'Vul centralUrl en centralKey in in js/config.js en voer setup/supabase-audit.sql uit.' }));

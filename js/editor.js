@@ -67,7 +67,7 @@
       try {
         listener();
       } catch (error) {
-        console.error('[AI Cockpit Audit] bewerkbalk', error);
+        console.error('[AI-cockpit Audit] bewerkbalk', error);
       }
     });
   }

@@ -17,7 +17,7 @@ window.AIAudit = window.AIAudit || {};
 window.AIAudit.config = {
 
   /* ---- Titel en organisatie ------------------------------------------- */
-  applicationTitle: 'AI Cockpit',
+  applicationTitle: 'AI-cockpit',
   discipline: 'Audit',                  // Verschijnt in turquoise achter de titel
   tagline: 'Jij bepaalt de koers, Copilot navigeert mee.', // Slogan onder de titel op de startpagina
   applicationSubtitle: 'Usecases met demo, direct bruikbare prompts, tips, trainingen en agents: alles over Copilot in de audit op één plek.',
