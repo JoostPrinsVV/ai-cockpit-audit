@@ -1698,8 +1698,9 @@ h2.prompt-box__label { font-size: var(--fs-lg); }
   .slides__thumb:hover { border-color: var(--color-text-muted); }
 }
 
-/* Miniaturen: één rij om opzij te schuiven (ruimte rondom voor de focusring) */
-.slides__strip {
+/* Miniaturen: één rij om opzij te schuiven (ruimte rondom voor de focusring).
+   ol. erbij: anders wint ol[role="list"] uit base.css en valt de padding weg */
+ol.slides__strip {
   display: flex;
   gap: var(--space-2);
   margin: 0;
@@ -3045,7 +3046,8 @@ html[data-slot='dicht'] body > :not(.gate, .fatal) { visibility: hidden; }
 @keyframes insignia-glint { to { background-position: -30% 0; } }
 
 /* De ladder: de vier brevetten naast elkaar als route, met de strepen op één stippellijn */
-.ladder { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin: 0; padding: var(--space-5) var(--space-4) var(--space-5); border-radius: var(--radius-lg); background: var(--color-surface-muted); list-style: none; }
+/* ol. erbij: anders wint ol[role="list"] uit base.css en valt de padding weg (en staat de stippellijn te laag) */
+ol.ladder { position: relative; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); margin: 0; padding: var(--space-5) var(--space-4) var(--space-5); border-radius: var(--radius-lg); background: var(--color-surface-muted); list-style: none; }
 .ladder::before { content: ''; position: absolute; top: calc(var(--space-5) + 1.4rem); right: 12.5%; left: 12.5%; border-top: 2px dashed color-mix(in srgb, var(--vv-teal) 55%, var(--color-border-strong)); }
 .ladder__step { position: relative; display: grid; align-content: start; justify-items: center; gap: 0.15rem; min-width: 0; text-align: center; }
 .ladder__mark { display: grid; place-items: center; padding: 0 var(--space-2); background: var(--color-surface-muted); }
