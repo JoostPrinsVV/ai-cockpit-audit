@@ -204,6 +204,7 @@
         el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-email' }, text: 'Je e-mailadres' }), email, emailError])
       ]),
       el('p', { className: 'privacy' }, [icon('shield'), el('span', { text: 'Noem geen klantnamen, dossier- of persoonsgegevens. Je verzoek ziet alleen het AI-team; het komt nooit in de ideeënhub.' })]),
+      ns.promises.line('flyin'),
       formError,
       el('div', { className: 'improve__actions' }, [cancel, send])
     ]);
@@ -252,7 +253,10 @@
         el('span', { className: 'flyin-done__mark', attrs: { 'aria-hidden': 'true' } }, [icon(sent ? 'plane' : 'alert')]),
         el('h2', { className: 'flyin-done__title', attrs: { id: id + '-heading' }, text: sent ? (who.name ? who.label + ' vliegt in' : 'De AI-specialist vliegt in') : 'Versturen lukte niet' }),
         el('p', { className: 'flyin-done__text', text: sent
-          ? 'Je verzoek is binnen' + (who.response ? ': ' + who.response.charAt(0).toLowerCase() + who.response.slice(1) : '') + '. De status zie je in de ideeënhub, bij Jouw inzendingen.'
+          // De belofte van het AI-team gaat voor de reactietijd bij de specialist (Beheer → Disciplines)
+          ? (ns.promises.sentence('flyin')
+            ? 'Je verzoek is binnen. ' + ns.promises.sentence('flyin')
+            : 'Je verzoek is binnen' + (who.response ? ': ' + who.response.charAt(0).toLowerCase() + who.response.slice(1) : '') + '.') + ' De status zie je in de ideeënhub, bij Jouw inzendingen.'
           : 'Je verzoek is niet bewaard. Kopieer het en stuur het ' + (who.email ? 'in Teams' : 'via chat of mail') + ' naar ' + (who.name || 'de AI-specialist') + '.' }),
         el('div', { className: 'improve__actions flyin-done__actions' }, [copy, teams, ok].filter(Boolean))
       ]));

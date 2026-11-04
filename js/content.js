@@ -53,6 +53,11 @@
   const text = (value) => (typeof value === 'string' ? value.trim() : '');
   const list = (value) => (Array.isArray(value) ? value.map(text).filter(Boolean) : []);
   const bool = (value) => (value === true ? true : value === false ? false : null);
+  // Tijdwinst: hoeveel minuten een prompt of usecase per keer scheelt (schatting van het AI-team; 0 = geen)
+  const saves = (value) => {
+    const n = Math.round(Number(value));
+    return Number.isFinite(n) && n > 0 ? Math.min(n, 480) : 0;
+  };
 
   /* Alleen eigen bestanden (relatief pad, geen 'javascript:' of ander schema) of https://.
      Geen backslash: browsers lezen '/\host' als '//host', een ander domein. */
@@ -144,6 +149,7 @@
         accent: phase.accent,
         level: text(item.level),
         duration: text(item.duration),
+        saves: saves(item.saves),
         license: bool(item.license),
         tools: list(item.tools),
         icon: text(item.icon) || phase.icon,
@@ -200,6 +206,7 @@
         accent: phase.accent,
         task: text(item.task),
         tool: text(item.tool),
+        saves: saves(item.saves),
         license,
         prompt,
         promptLabel: text(item.promptLabel) || (followUps.length ? 'Stap 1' : ''),
@@ -239,6 +246,7 @@
           accent: usecase.accent,
           task: '',
           tool: usecase.tools[0] || '',
+          saves: 0, // de tijdwinst hoort bij de usecase (alle stappen samen)
           license: usecase.license,
           prompt: step.text,
           promptLabel: '',

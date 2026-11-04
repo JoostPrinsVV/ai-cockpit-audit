@@ -29,6 +29,8 @@
       prompt.tool ? chip(prompt.tool, { icon: 'robot' }) : null,
       prompt.task && withTask !== false ? chip(prompt.task) : null,
       prompt.followUps.length ? chip(`${prompt.followUps.length + 1} stappen`, { icon: 'checklist' }) : null,
+      // Tijdwinst (js/tijdwinst.js); bij een prompt uit een usecase staat die bij de usecase
+      ns.tijdwinst.chip(prompt),
       licenseBadge(licenseOf(prompt), { short: true }),
       prompt.usecase && prompt.usecase.hasDemo ? el('span', { className: 'badge badge--demo' }, [icon('play-circle'), 'Met demo']) : null,
       ns.reviews.ratingChip('prompt', prompt.id),
@@ -195,7 +197,8 @@
           el('span', { className: 'prompt-help__icon', attrs: { 'aria-hidden': 'true' } }, [icon('message-plus')]),
           el('div', { className: 'prompt-help__text' }, [
             el('p', { className: 'prompt-help__title', text: 'Staat jouw prompt er niet bij?' }),
-            el('p', { text: 'Vraag hem aan: het AI-team maakt hem. Of deel een prompt die bij jou goed werkt.' })
+            el('p', { text: 'Vraag hem aan: het AI-team maakt hem. Of deel een prompt die bij jou goed werkt.' }),
+            ns.promises.line('prompt')
           ]),
           el('div', { className: 'prompt-help__actions' }, [askButton('Vraag een prompt aan', 'btn--primary btn--sm'), shareButton()])
         ]),

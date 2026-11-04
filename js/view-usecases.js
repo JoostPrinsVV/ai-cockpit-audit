@@ -20,6 +20,8 @@
     if (usecase.hasDemo) meta.push(el('span', { className: 'meta' }, [icon(usecase.video ? 'film' : 'play-circle'), el('span', { text: (usecase.duration ? usecase.duration + ' ' : '') + 'demo' })]));
     else meta.push(el('span', { className: 'meta meta--muted' }, [icon('clock'), el('span', { text: 'Demo volgt' })]));
     if (usecase.level) meta.push(el('span', { className: 'meta' }, [icon('sparkle'), el('span', { text: usecase.level })]));
+    // Tijdwinst: de schatting van het AI-team (js/tijdwinst.js)
+    if (usecase.saves) meta.push(el('span', { className: 'meta meta--saves', attrs: { title: 'Schatting van het AI-team, per keer dat je de usecase doorloopt' } }, [icon('clock'), el('span', { text: 'Scheelt ±' + ns.tijdwinst.format(usecase.saves) })]));
     const rating = ns.reviews.ratingChip('usecase', usecase.id);
     if (rating) meta.push(rating);
 
@@ -180,7 +182,8 @@
           licenseBadge(usecase.license),
           ...usecase.tools.map((tool) => chip(tool, { icon: 'robot' })),
           usecase.level ? chip(usecase.level, { icon: 'sparkle' }) : null,
-          usecase.hasDemo && usecase.duration ? chip(usecase.duration + ' demo', { icon: 'clock' }) : null,
+          usecase.hasDemo && usecase.duration ? chip(usecase.duration + ' demo', { icon: 'film' }) : null,
+          ns.tijdwinst.chip(usecase, { usecase: true }),
           newBadge(usecase.added)
         ]
       }),

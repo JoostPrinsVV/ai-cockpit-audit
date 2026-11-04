@@ -3332,3 +3332,124 @@ html::-webkit-scrollbar-corner,
   .flyin-done.is-sent .flyin-done__mark .icon { animation: none; }
   .cta__flyin-button .icon:last-child, .kind-picker__go { transition: none; }
 }
+
+/* ==========================================================================
+   Tijdwinst, Kickstart en beloftes van het AI-team
+   (js/tijdwinst.js, js/kickstart.js, js/promises.js)
+   ========================================================================== */
+/* 'Scheelt ±20 min' op kaarten */
+.chip--saves { background: color-mix(in srgb, var(--vv-teal) 16%, var(--color-surface)); color: var(--color-text); }
+.chip--saves .icon, .meta--saves .icon { color: var(--color-success); }
+
+/* 'Scheelde dit tijd?' onderin, na het kopiëren (pakt de focus niet) */
+.tw-ask { position: fixed; left: max(var(--space-4), env(safe-area-inset-left)); bottom: max(var(--space-4), env(safe-area-inset-bottom)); z-index: 60; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: var(--space-3); width: min(25rem, calc(100% - 2rem)); padding: var(--space-4) var(--space-5) var(--space-4) var(--space-4); border: 1px solid var(--color-border); border-left: 4px solid var(--vv-teal); border-radius: var(--radius-lg); background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-xl); animation: invite-in 380ms var(--ease-spring) both; }
+.tw-ask.is-leaving { animation: invite-out 200ms ease-in forwards; }
+.tw-ask__icon, .tw-card__icon { display: grid; place-items: center; flex: none; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: color-mix(in srgb, var(--vv-teal) 18%, transparent); color: var(--color-success); }
+.tw-ask__body { display: grid; gap: 2px; min-width: 0; padding-right: var(--space-7, 2.5rem); }
+.tw-ask__title { font-weight: var(--fw-bold); }
+.tw-ask__text { overflow: hidden; color: var(--color-text-muted); font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
+.tw-ask__actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.tw-ask__actions:empty { display: none; }
+.tw-ask .dialog-close { top: var(--space-2); right: var(--space-2); width: 2rem; height: 2rem; }
+/* Op een telefoon is er onderin plek voor één kaart: zolang de vraag er staat, wacht de uitnodiging van de brevetten */
+@media (max-width: 40rem) {
+  body:has(> .tw-ask) > .brevet-invite { visibility: hidden; }
+}
+
+/* Het totaal van alle collega's (startpagina, pas vanaf vijf uur) */
+.tw-proof-wrap:has(> .tw-proof[hidden]) { display: none; }
+.tw-proof { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: var(--space-2); margin: calc(var(--space-2) * -1) 0 var(--space-6); color: var(--color-text-body); font-size: var(--fs-sm); text-align: center; }
+.tw-proof .icon { color: var(--color-success); }
+.tw-proof__note { padding: 0 0.55em; border-radius: var(--radius-pill); background: var(--color-surface-muted); color: var(--color-text-muted); font-size: var(--fs-xs); }
+
+/* Mijn logboek: je tijdwinst en de Kickstart */
+.mine-top { display: grid; gap: var(--space-5); margin-bottom: var(--space-6); }
+@media (min-width: 64rem) {
+  .mine-top:has(> .ks:not([hidden])) { grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr); align-items: start; }
+}
+.tw-card { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.tw-card__head { display: flex; align-items: flex-start; gap: var(--space-3); }
+.tw-card__title { font-size: var(--fs-lg); }
+.tw-card__text { margin-top: 2px; color: var(--color-text-body); font-size: var(--fs-sm); }
+.tw-card__figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin: 0; }
+.tw-card__figure { display: grid; gap: 2px; min-width: 0; padding: var(--space-3); border-radius: var(--radius); background: var(--color-surface-muted); }
+.tw-card__label { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.tw-card__value { margin: 0; font-size: var(--fs-md); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+
+/* Kickstart */
+.ks[hidden] { display: none; }
+.ks__panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); padding: var(--space-5) var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: linear-gradient(135deg, color-mix(in srgb, var(--vv-teal) 10%, var(--color-surface)), var(--color-surface) 60%); box-shadow: var(--shadow-sm); }
+.ks__panel.is-done { background: var(--color-surface); }
+.ks__head { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-3) var(--space-4); }
+.ks__icon { display: grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; border-radius: var(--radius); background: var(--color-chrome); color: var(--vv-teal); }
+.ks__heading { display: grid; flex: 1 1 18rem; gap: 2px; min-width: 0; }
+.ks__eyebrow { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-instrument); text-transform: uppercase; }
+.ks__title { font-size: var(--fs-xl); }
+.ks__title:focus { outline: none; }
+.ks__lead { color: var(--color-text-body); }
+.ks__status { display: inline-flex; align-items: center; align-self: center; gap: 0.35em; padding: 0.3rem 0.85rem; border-radius: var(--radius-pill); background: var(--color-surface-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.ks__status.is-done { background: color-mix(in srgb, var(--vv-teal) 20%, transparent); }
+.ks__status.is-done .icon { color: var(--color-success); }
+.ks__status-count { color: var(--color-text-muted); font-weight: var(--fw-regular); }
+.ks__hide { align-self: center; }
+.ks-points { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-2) var(--space-5); margin: 0; padding: 0; list-style: none; color: var(--color-text-body); }
+.ks-points li { display: flex; align-items: flex-start; gap: var(--space-2); }
+.ks-points .icon { flex: none; margin-top: 0.2em; color: var(--color-success); }
+.ks__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.ks__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
+.ks__route, .ks-extras { min-width: 0; }
+@media (max-width: 40rem) {
+  .ks__panel { padding: var(--space-4); }
+  .ks__heading { flex-basis: 12rem; }
+}
+@media (min-width: 56rem) {
+  .ks .ks__body { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+  .mine-top .ks__body { grid-template-columns: 1fr; }
+}
+@media (min-width: 80rem) {
+  .mine-top .ks__body { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+}
+.ks__route { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.ks-steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.ks-step { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.ks-step__mark { display: grid; place-items: center; flex: none; width: 1.6rem; height: 1.6rem; border: 2px solid var(--color-border-strong); border-radius: 50%; }
+.ks-step__mark .icon { width: 0.95rem; height: 0.95rem; }
+.ks-step.is-done .ks-step__mark { border-color: var(--vv-teal); background: var(--vv-teal); color: var(--vv-navy); }
+.ks-step__label { flex: 1 1 12rem; font-weight: var(--fw-semibold); }
+.ks-step.is-done .ks-step__label { color: var(--color-text-muted); font-weight: var(--fw-regular); }
+.ks-step__count { color: var(--color-text-muted); font-weight: var(--fw-regular); font-variant-numeric: tabular-nums; }
+.ks-step .btn { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+.ks-step .btn span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ks-goal { display: grid; gap: var(--space-2); color: var(--color-text-body); font-size: var(--fs-sm); }
+.ks-goal__bar { display: block; height: 0.55rem; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-surface-muted); }
+.ks-goal__fill { display: block; width: calc(var(--ks-goal, 0) * 100%); height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--vv-teal), color-mix(in srgb, var(--vv-teal) 55%, #fff)); transition: width 600ms var(--ease-out); }
+.ks-extras { display: grid; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius); background: var(--color-surface-muted); }
+.ks-extras__title { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-md); }
+.ks-extras__title .icon { color: var(--accent-crimson); }
+.ks-extra { display: grid; gap: var(--space-1); }
+.ks-extra + .ks-extra { padding-top: var(--space-3); border-top: 1px solid var(--color-border); }
+.ks-extra__name { font-weight: var(--fw-bold); }
+.ks-extra__text { color: var(--color-text-body); font-size: var(--fs-sm); }
+.ks-extra .btn { justify-self: start; margin-left: calc(var(--space-2) * -1); }
+.ks-prompts { display: grid; gap: var(--space-2); margin: var(--space-1) 0 0; padding: 0; list-style: none; }
+.ks-prompt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); font-size: var(--fs-sm); }
+.ks-prompt__mark { display: grid; place-items: center; flex: none; width: 1.25rem; height: 1.25rem; color: var(--color-text-muted); }
+.ks-prompt.is-done .ks-prompt__mark { color: var(--color-success); }
+.ks-prompt__title { flex: 1 1 10rem; min-width: 0; color: var(--color-text); font-weight: var(--fw-semibold); }
+.ks-prompt .chip { font-size: var(--fs-xs); }
+
+/* Beloftes van het AI-team: klein en zakelijk, onder het formulier */
+.promise { display: flex; align-items: flex-start; gap: var(--space-2); color: var(--color-text-body); font-size: var(--fs-sm); }
+.promise .icon { flex: none; margin-top: 0.15em; color: var(--color-success); }
+.promise strong { color: var(--color-text); font-weight: var(--fw-semibold); }
+.idea-form__promise[hidden] { display: none; }
+.prompt-help .promise { margin-top: var(--space-2); }
+.empty__actions--stack { flex-direction: column; align-items: center; gap: var(--space-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tw-ask, .tw-ask.is-leaving { animation: none; }
+  .ks-goal__fill { transition: none; }
+}
+@media (forced-colors: active) {
+  .tw-ask, .tw-card, .ks__panel, .ks-step, .ks-extras { border: 1px solid CanvasText; }
+}

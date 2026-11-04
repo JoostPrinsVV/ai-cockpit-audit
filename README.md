@@ -627,6 +627,54 @@ het adres van die flow; laat de flow alleen doorgaan bij `kind = 'invliegen'` en
 bericht (of een adaptive card met een knop naar `#/beheer/invliegen`) in een Teams-chat of -kanaal. Na de migratie naar
 de Microsoft-omgeving kan dezelfde flow rechtstreeks op de nieuwe opslag reageren.
 
+## Tijdwinst, Kickstart en beloftes van het AI-team (stap 14)
+
+Drie onderdelen die samen laten zien wat de cockpit iemand oplevert, en het begin zo makkelijk mogelijk maken.
+
+**Tijdwinst** (`js/tijdwinst.js`). Bij een prompt of usecase zet het AI-team in Beheer → Inhoud een schatting:
+*Scheelt ongeveer (minuten)*. Die staat als "Scheelt ±20 min" op de kaart (bij een usecase geldt hij voor alle stappen
+samen; de stappen zelf tonen hem niet). Na het kopiëren vraagt de cockpit onderin, zonder de focus te pakken:
+*Scheelde dit tijd?* met *Ja, ±20 min* en *Nee*.
+- Per prompt (of usecase) hoogstens één keer per dag, en hoogstens vijf vragen per dag. De vraag verdwijnt na anderhalve
+  minuut in beeld (niet terwijl je in Copilot zit).
+- *Ja* telt op bij je eigen teller (deze week, maand en jaar) in **Mijn logboek**. Die staat alleen op het eigen
+  apparaat (`ai-snackbar-audit:tijdwinst`). Het antwoord gaat ook als anonieme teller naar de database (`time_saved` of
+  `time_none`), zonder naam of apparaat.
+- De tik levert bewust geen AI-miles op: dan blijft het getal eerlijk.
+- **Beheer → Gebruik** toont per prompt of usecase hoe vaak ja en nee, en de tijd terug (aantal keer ja maal de schatting
+  van nu). Veel "nee" is een teken dat een prompt beter kan.
+- Op de **startpagina** staat onder de onderdelen hoeveel uur collega's deze maand terugwonnen (anders: sinds de start).
+  Pas vanaf vijf uur, en altijd met "schatting" erbij.
+
+**Kickstart** (`js/kickstart.js`). Een kaart op de startpagina en in Mijn logboek: *Kickstart voor assistenten. In 14
+dagen je eerste uur per week terug.* Wie start, vinkt vier stappen af: de rondleiding, de check "Veilig vliegen", drie
+startprompts gebruiken en de usecase van de Kickstart bekijken. Een balk toont de tijdwinst van deze week op weg naar
+het eerste uur. Bij *Hoort erbij* staan de startprompts (met hun tijdwinst), de prompt op maat en de AI-miles. Afronden
+levert AI-miles op voor wie meedoet met de brevetten (*Kickstart afgerond*, standaard 50, instelbaar bij Beheer →
+AI-brevetten → Regels). *Niet voor mij* of *Verbergen* haalt hem van de startpagina; in Mijn logboek blijft hij staan.
+De voortgang staat alleen op het eigen apparaat (`ai-snackbar-audit:kickstart`).
+- In **Beheer → Inhoud → Teksten → Kickstart**: titel, wat het oplevert, de startprompts (de eerste vijf die je aanvinkt)
+  en de usecase. Zonder eigen keuze kiest de cockpit prompts uit de fasen van het seizoen (seizoenskompas), met een
+  tijdsindicatie eerst en één per usecase. *Kickstart uitzetten* haalt hem overal weg.
+
+**Beloftes van het AI-team** (`js/promises.js`). Klein onder het formulier waar ze bij horen:
+- AI-specialist invliegen: *reactie binnen 1–2 werkdagen* (termijn 2 werkdagen);
+- een verzoek in de ideeënhub: *reactie binnen een week* (5 werkdagen);
+- *Vraag een prompt aan* (op de promptpagina, bij zoeken zonder resultaat, in Ctrl+K en in de Kickstart): *een prompt op
+  maat binnen 1 werkdag* (1 werkdag).
+
+Tekst en termijn pas je aan in **Beheer → Inhoud → Teksten → Beloftes van het AI-team**. Leeg = de standaard; een
+streepje (`-`) zet één belofte uit, *Geen beloftes tonen* allemaal. In **Beheer → Inzendingen** en **Invliegen** staat
+bij een open verzoek hoeveel tijd er nog is ("Nog 5 uur", oranje in de laatste acht uur, rood als hij verlopen is).
+Weekenden tellen niet mee; wat in het weekend binnenkomt, telt vanaf maandag. Een reactie telt als gehouden zodra de
+status niet meer *Ontvangen* is of er een antwoord staat; een prompt op maat pas als hij gerealiseerd (of afgehandeld) is.
+Beloof alleen wat het AI-team waar kan maken.
+
+Eenmalig: voer `setup/supabase-audit-tijdwinst.sql` uit (stap 14, na stap 1). Dat zet de twee soorten tellers erbij,
+de functie `audit_time_saved` (alleen aantallen, voor de regel op de startpagina) en, als de AI-brevetten er al zijn,
+*Kickstart afgerond* als feit dat een deelnemer zelf mag vastleggen. Tot dan werken de eigen teller en de Kickstart
+gewoon; alleen het totaal van collega's en de tijdwinst in Beheer → Gebruik blijven leeg.
+
 ## Nieuwsbrief (Beheer → Nieuwsbrief)
 
 Een weekupdate of maandnieuwsbrief, vanzelf samengesteld uit wat er in die periode nieuw was in de cockpit van de
@@ -777,7 +825,8 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    `setup/supabase-audit-portfolio.sql` (stap 10) en voor de verbetervoorstellen bij prompts
    `setup/supabase-audit-verbeteringen.sql` (stap 11); alle drie mogen op ieder moment na stap 1 en opnieuw. Voor
    de AI-brevetten met echte accounts `setup/supabase-audit-brevetten.sql` (stap 12; zie 'AI-brevetten'), en voor
-   de AI-specialist invliegen `setup/supabase-audit-invliegen.sql` (stap 13).
+   de AI-specialist invliegen `setup/supabase-audit-invliegen.sql` (stap 13), en voor de tijdwinst
+   `setup/supabase-audit-tijdwinst.sql` (stap 14).
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').
@@ -802,7 +851,8 @@ Bewust zo gelaten: de inhoud van een discipline die op slot staat, is technisch 
 - In de browser bewaren we alleen wat je bewaard en recent bekeken hebt, het thema, een willekeurige stem-code, de titels
   van je eigen inzendingen, welke usecases en prompts je hebt beoordeeld, de gekozen discipline, de scrollpositie per
   pagina (alleen in dit tabblad), de afgevinkte acties uit een naslagwerk, de laatst bekende inhoud (zodat de site
-  snel opent), Mijn gegevens (als je die invult) en welke items je al kent (de radar). Beheerders: ook niet-opgeslagen wijzigingen (`bewerken:<e-mailadres>`), ook na uitloggen, tot je ze
+  snel opent), Mijn gegevens (als je die invult), welke items je al kent (de radar), je tijdwinst (de keren dat je
+  "Ja, het scheelde tijd" tikte) en je voortgang in de Kickstart. Beheerders: ook niet-opgeslagen wijzigingen (`bewerken:<e-mailadres>`), ook na uitloggen, tot je ze
   opslaat; ouder dan 30 dagen wordt niet meer teruggehaald.
 - De site en de repository zijn openbaar bereikbaar. Alles op het platform is informatie voor gebruikers; zet er nooit
   configuratie, systeemprompts, goedkeuringsdocumenten, interne opnames of klantinformatie op.
@@ -850,7 +900,8 @@ Het doel is WCAG 2.2 niveau AA. Wat daarvoor in de code zit (en wat je bij nieuw
 
 `tests/index.html` test de kern zonder build of npm: plaatshouders, zoeken, de controles op adressen en paden, inhoud
 laden, rechten, het soortenregister, de verzoeken naar Supabase (met een nagebootste verbinding), de werkversies, het
-gereedschap van Beheer, de voorbeeldinhoud van Accountancy en het inlezen van het Copilot-gebruik. Dat laatste met een verzonnen Excel-bestand dat de test
+gereedschap van Beheer, de voorbeeldinhoud van Accountancy, de AI-brevetten, de tijdwinst, de Kickstart, de termijnen
+van de beloftes en het inlezen van het Copilot-gebruik. Dat laatste met een verzonnen Excel-bestand dat de test
 zelf maakt (`tests/fixture-copilot.js`, zelfde opbouw als het echte bestand), nooit met een echte export. Open hem via een lokale webserver (`/tests/`) of op de live site
 (`…/ai-cockpit-audit/tests/`). De uitkomst staat bovenaan en in de titel van het tabblad (✓ of ✗); er wordt niets
 opgeslagen of verstuurd. Een nieuwe test zet je in `tests/tests.js` (`await test('…', () => equal(…))`).

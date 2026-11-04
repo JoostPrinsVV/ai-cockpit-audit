@@ -113,10 +113,15 @@
 
     const logbook = ns.views.logbook.section();
     const withLogbook = Boolean(logbook.node);
+    // Je tijdwinst (js/tijdwinst.js) en de Kickstart (js/kickstart.js), ook als je niet meedoet met de brevetten
+    const time = ns.tijdwinst.card();
+    const kickstart = ns.kickstart.card({ place: 'mijn' });
+    kickstart.node.classList.remove('section', 'container');
     const node = el('div', { className: 'page container' }, [
       pageHeader(withLogbook
-        ? { eyebrow: 'Persoonlijk', title: 'Mijn logboek', lead: 'Je AI-brevet en je AI-miles, en je gegevens: één keer invullen, daarna staan je naam, functie en boekjaar al in iedere prompt.' }
+        ? { eyebrow: 'Persoonlijk', title: 'Mijn logboek', lead: 'Je tijdwinst, je AI-brevet en je AI-miles, en je gegevens: één keer invullen, daarna staan je naam, functie en boekjaar al in iedere prompt.' }
         : { eyebrow: 'Persoonlijk', title: 'Mijn gegevens', lead: 'Vul één keer in wie je bent. Daarna staan je naam, functie en boekjaar al in iedere prompt: onder een e-mail, in een rolomschrijving, bij de vergelijking met vorig jaar.' }),
+      el('div', { className: 'mine-top' }, [time.node, kickstart.node]),
       logbook.node,
       withLogbook ? el('h2', { className: 'section__title mine__heading', text: 'Mijn gegevens' }) : null,
       el('div', { className: 'mine' }, [form, aside])
@@ -127,6 +132,8 @@
       // Weg vlak na typen: nog even bewaren
       destroy: () => {
         logbook.destroy();
+        time.destroy();
+        kickstart.destroy();
         if (!timer) return;
         window.clearTimeout(timer);
         ns.profile.set(Object.fromEntries(Object.entries(inputs).map(([id, input]) => [id, input.value])));

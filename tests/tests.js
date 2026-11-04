@@ -5,7 +5,8 @@
    inlezen van het Copilot-gebruik (met een verzonnen bestand uit
    fixture-copilot.js), de route van een idee per discipline, Mijn gegevens,
    het seizoenskompas, de promptbouwer, het verbetervoorstel bij een prompt en
-   de AI-brevetten (miles, plafonds, checkrides, royalty's en de demo).
+   de AI-brevetten (miles, plafonds, checkrides, royalty's en de demo), de tijdwinst, de Kickstart en de
+   termijnen van de beloftes van het AI-team.
    Draait in de browser (tests/index.html), zonder build of npm.
    ========================================================================== */
 (function (ns) {
@@ -423,6 +424,113 @@
     await test('kaart op de promptdatabase: een link naar de bouwer, met de meter als versiering', () => {
       const teaser = ns.views.builder.teaser();
       equal([teaser.tagName, teaser.getAttribute('href'), teaser.querySelector('.builder-teaser__meter').getAttribute('aria-hidden')], ['A', '#/promptbouwer', 'true']);
+    });
+
+    /* ---- Tijdwinst, Kickstart en beloftes ---- */
+    describe('Tijdwinst, Kickstart en beloftes (js/tijdwinst.js, js/kickstart.js, js/promises.js)');
+    const T = ns.tijdwinst;
+    // Verzonnen inhoud: een usecase met tijdwinst (twee stappen), een losse prompt met en een zonder
+    function withContent(run) {
+      const c = ns.content;
+      const saved = { promptById: c.promptById, usecaseById: c.usecaseById, prompts: c.prompts, usecases: c.usecases };
+      const uc = { id: 'uc', title: 'Usecase', saves: 45, featured: true, hasDemo: false };
+      const step1 = { id: 'uc-1', title: 'Stap 1', usecase: uc, step: 1, saves: 0 };
+      const step2 = { id: 'uc-2', title: 'Stap 2', usecase: uc, step: 2, saves: 0 };
+      const loose = { id: 'losse', title: 'Losse prompt', saves: 20 };
+      const plain = { id: 'zonder', title: 'Zonder schatting', saves: 0 };
+      try {
+        c.prompts = [plain, step1, step2, loose];
+        c.usecases = [uc];
+        c.promptById = new Map(c.prompts.map((p) => [p.id, p]));
+        c.usecaseById = new Map([[uc.id, uc]]);
+        run({ uc, step1, loose, plain });
+      } finally {
+        Object.assign(c, saved);
+      }
+    }
+    await test('tijdwinst: minuten en notatie', () => {
+      equal([T.format(20), T.format(65), T.format(120), T.format(0)], ['20 min', '1 u 5 min', '2 uur', '0 min']);
+      equal([T.minutes('30'), T.minutes(-5), T.minutes('veel'), T.minutes(900)], [30, 0, 0, 480]);
+    });
+    await test('tijdwinst: je teller per week (vanaf maandag), maand en jaar; een dag in de toekomst telt niet', () => {
+      const log = [
+        { key: 'prompt:a', minutes: 20, day: '2026-11-04' },
+        { key: 'prompt:b', minutes: 30, day: '2026-11-02' },
+        { key: 'prompt:c', minutes: 15, day: '2026-11-01' },
+        { key: 'prompt:d', minutes: 60, day: '2026-10-20' },
+        { key: 'prompt:e', minutes: 45, day: '2025-12-01' },
+        { key: 'prompt:f', minutes: 10, day: '2026-11-05' }
+      ];
+      equal(T.totals(log, '2026-11-04'), { week: 50, month: 65, year: 125, all: 170, count: 5 });
+      equal([T.mondayOf('2026-11-04'), T.mondayOf('2026-11-01'), T.mondayOf('2026-11-02')], ['2026-11-02', '2026-10-26', '2026-11-02']);
+    });
+    await test('tijdwinst: per prompt één keer per dag vragen, hoogstens vijf vragen per dag', () => {
+      const asked = { day: '2026-11-04', keys: ['prompt:a'] };
+      equal([T.canAsk('prompt:a', asked, '2026-11-04'), T.canAsk('prompt:b', asked, '2026-11-04'), T.canAsk('prompt:a', asked, '2026-11-05')], [false, true, true]);
+      const full = { day: '2026-11-04', keys: ['1', '2', '3', '4', '5'] };
+      equal(T.canAsk('prompt:nieuw', full, '2026-11-04'), false, 'na vijf vragen niet meer');
+      const state = { asked: { day: '2026-11-03', keys: ['x'] } };
+      T.noteAsked(state, 'y', '2026-11-04');
+      equal(state.asked, { day: '2026-11-04', keys: ['y'] }, 'een nieuwe dag begint opnieuw');
+    });
+    await test('tijdwinst: een prompt uit een usecase telt bij de usecase; zonder schatting geen vraag', () => withContent(() => {
+      equal(T.itemOf('uc-1'), { key: 'usecase:uc', minutes: 45, title: 'Usecase', kind: 'usecase' });
+      equal(T.itemOf('losse'), { key: 'prompt:losse', minutes: 20, title: 'Losse prompt', kind: 'prompt' });
+      equal([T.itemOf('zonder'), T.itemOf('bestaat-niet')], [null, null]);
+      equal([T.minutesOf('usecase:uc'), T.minutesOf('prompt:losse'), T.minutesOf('prompt:uc-1'), T.minutesOf('prompt:weg')], [45, 20, 0, 0]);
+      equal(T.chip({ saves: 0 }), null, 'geen kaartlabel zonder schatting');
+      equal([T.chip({ saves: 90 }).textContent, T.chip({ saves: 60 }).textContent], ['Scheelt ±1 u 30 min', 'Scheelt ±1 uur']);
+    }));
+    await test('tijdwinst van collega\'s: pas vanaf vijf uur op de startpagina, eerst deze maand', () => {
+      ok(/deze maand al ±7 uur/.test(T.proofText({ month: 400, total: 900 })), 'deze maand');
+      ok(/al ±10 uur/.test(T.proofText({ month: 100, total: 600 })), 'in totaal');
+      equal([T.proofText({ month: 10, total: 100 }), T.proofText(null)], ['', '']);
+    });
+    await test('beloftes: standaard, eigen tekst en termijn, uit met een streepje of helemaal', () => {
+      const P = ns.promises;
+      equal(P.get('flyin', {}), { text: 'Reactie binnen 1–2 werkdagen', days: 2 });
+      equal(P.get('prompt', { promisePrompt: 'Binnen een week een prompt op maat', promisePromptDays: 5 }), { text: 'Binnen een week een prompt op maat', days: 5 });
+      equal([P.get('request', { promiseRequest: '-' }), P.get('flyin', { promisesOff: true }), P.get('prompt', { promisePromptDays: 'snel' }).days], [null, null, 1]);
+      equal([P.kindOf({ kind: 'invliegen' }), P.kindOf({ kind: 'verzoek', title: 'Prompt voor: huurcontract samenvatten' }), P.kindOf({ kind: 'verzoek', title: 'Demo voor ons team' }), P.kindOf({ kind: 'idee' })], ['flyin', 'prompt', 'request', null]);
+    });
+    await test('beloftes: termijn in werkdagen (weekend telt niet), verlopen en gehouden', () => {
+      const P = ns.promises;
+      const at = (y, m, d, h) => new Date(y, m - 1, d, h || 0, 0, 0);
+      equal(P.addWorkdays(at(2026, 11, 6, 10), 1).getTime(), at(2026, 11, 9, 10).getTime(), 'vrijdag + 1 = maandag');
+      equal(P.addWorkdays(at(2026, 11, 7, 10), 1).getTime(), at(2026, 11, 10, 0).getTime(), 'zaterdag: vóór het eind van maandag');
+      equal(P.addWorkdays(at(2026, 11, 4, 14), 2).getTime(), at(2026, 11, 6, 14).getTime(), 'woensdag + 2 = vrijdag');
+      const item = { kind: 'invliegen', status: 'nieuw', created_at: at(2026, 11, 4, 14).toISOString() };
+      const soon = P.deadline(item, at(2026, 11, 5, 14), {});
+      equal([soon.kind, Math.round(soon.hoursLeft), soon.late, P.leftText(soon)], ['flyin', 24, false, 'Nog 1 dag']);
+      equal(P.deadline(item, at(2026, 11, 7, 9), {}).late, true, 'zaterdag is te laat');
+      equal(P.deadline(Object.assign({}, item, { status: 'in-behandeling' }), at(2026, 11, 7, 9), {}), null, 'gereageerd = gehouden');
+      const prompt = { kind: 'verzoek', title: 'Prompt voor: notulen', status: 'in-behandeling', created_at: at(2026, 11, 4, 9).toISOString() };
+      ok(P.deadline(prompt, at(2026, 11, 4, 12), {}), 'een prompt op maat is pas gehouden als hij er is');
+      equal([P.leftText({ late: true }), P.leftText({ hoursLeft: 5.5 }), P.leftText({ hoursLeft: 50 })], ['Belofte verlopen', 'Nog 5 uur', 'Nog 2 dagen']);
+    });
+    await test('kickstart: stappen, voortgang en dag zoveel van de veertien', () => {
+      const K = ns.kickstart;
+      const set = { prompts: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }], usecase: { id: 'uc' } };
+      const half = K.progress({ started: '2026-11-01', prompts: ['a', 'b', 'x'], usecase: '', policy: false }, set, { tour: true, policy: false }, '2026-11-04');
+      equal([half.steps.map((s) => s.id), half.done, half.day, half.complete, half.steps[2].have], [['tour', 'policy', 'prompts', 'usecase'], 1, 4, false, 2]);
+      const full = K.progress({ started: '2026-11-01', prompts: ['a', 'b', 'c'], usecase: 'uc', policy: true }, set, { tour: true }, '2026-11-04');
+      equal([full.done, full.complete], [4, true]);
+      equal(K.progress({ prompts: [], policy: false }, { prompts: [{ id: 'a' }, { id: 'b' }], usecase: null }, { policy: true }, '2026-11-04').steps.map((s) => s.id + (s.need ? s.need : '')), ['tour', 'policy', 'prompts2'], 'twee startprompts, geen usecase');
+      equal(K.progress({ prompts: [] }, set, {}, '2026-11-04').day, 0, 'nog niet gestart');
+    });
+    await test('kickstart: eigen startprompts uit Beheer, anders zelf gekozen (met tijdwinst eerst, één per usecase)', () => withContent(({ uc }) => {
+      const K = ns.kickstart;
+      const own = K.startSet({ kickstartPrompts: ['losse', 'weg', 'uc-1'], kickstartUsecase: ['uc'] });
+      equal([own.prompts.map((p) => p.id), own.usecase.id], [['losse', 'uc-1'], 'uc']);
+      const auto = K.startSet({});
+      equal([auto.prompts.map((p) => p.id), auto.usecase === uc], [['uc-1', 'losse', 'zonder'], true]);
+      equal([K.info({}).title, K.info({ kickstartTitle: 'Startweken', kickstartOff: true }).on], ['Kickstart voor assistenten', false]);
+    }));
+    await test('kickstart afgerond: één keer AI-miles (instelbaar bij de regels)', () => {
+      const facts = [fact('kickstart_done', '', '2026-11-04'), fact('kickstart_done', '', '2026-11-05')];
+      equal(B.compute(facts, { today: '2026-11-05' }).miles, 50);
+      equal(B.compute(facts, { today: '2026-11-05', rules: B.rules({ miles: { kickstart_done: 80 } }) }).miles, 80);
+      ok(B.SELF_KINDS.includes('kickstart_done'), 'een deelnemer legt hem zelf vast');
     });
 
     /* ---- verbetervoorstel ---- */

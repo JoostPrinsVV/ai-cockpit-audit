@@ -97,7 +97,9 @@
         el('div', { className: 'flyin-item__badges' }, [
           el('span', { className: 'flyin-item__when' + (urgent ? ' is-urgent' : '') }, [icon('clock'), el('span', { text: (S.labelOf(S.WHEN, d.wanneer) || 'Geen termijn') + (d.datum ? ' · uiterlijk ' + formatDate(d.datum) : '') })]),
           statusBadge(item.status),
-          item.status === 'gepland' && d.ingepland ? el('span', { className: 'flyin-item__planned', text: 'op ' + formatDate(d.ingepland) }) : null
+          item.status === 'gepland' && d.ingepland ? el('span', { className: 'flyin-item__planned', text: 'op ' + formatDate(d.ingepland) }) : null,
+          // Nog niet gereageerd: hoeveel tijd er nog is volgens de belofte (js/promises.js)
+          ns.promises.badge(item)
         ]),
         el('span', { className: 'flyin-item__date', text: 'Ingestuurd ' + formatDate(String(item.created_at || '').slice(0, 10)) })
       ]),

@@ -52,7 +52,8 @@
   const unique = (values) => Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, 'nl'));
   const asOptions = (values) => values.map((value) => ({ value, label: value }));
   // Lijsten waaruit je bij 'refs' kiest
-  const REF_LISTS = { usecase: 'usecases', tip: 'tips', training: 'trainings', phase: 'phases' };
+  const REF_LISTS = { usecase: 'usecases', prompt: 'prompts', tip: 'tips', training: 'trainings', phase: 'phases' };
+  const SAVES_HINT = 'Schatting van het AI-team: hoeveel minuten scheelt dit iemand per keer? Staat als "Scheelt ±20 min" op de kaart; na het kopiëren vraagt de cockpit of het tijd scheelde, en dat telt op in de tijdwinst. Leeg = geen tijdsindicatie.';
   // De standaardroute van een idee voor de omgeving waarin je werkt (data/disciplines.js): stappen of rollen
   const routeDefaults = (key) => (ctx) => {
     const routes = ns.ideaRoutes || {};
@@ -81,6 +82,7 @@
         { key: 'icon', label: 'Icoon', type: 'icon', half: true },
         { key: 'level', label: 'Niveau', type: 'select', options: LEVELS, half: true },
         { key: 'duration', label: 'Duur van de demo', type: 'text', placeholder: 'bijv. 2 min', half: true },
+        { key: 'saves', label: 'Scheelt ongeveer (minuten)', type: 'number', max: 480, placeholder: 'bijv. 30', half: true, hint: SAVES_HINT + ' Geldt voor de hele usecase (alle prompts samen).' },
         { key: 'license', label: 'Licentie', type: 'license', half: true },
         { key: 'added', label: 'Toegevoegd op', type: 'date', half: true, hint: 'Na de lanceringsdatum krijgt hij een tijdje het label Nieuw.' },
         { key: 'featured', label: 'Uitlichten op de startpagina', type: 'bool' },
@@ -110,6 +112,7 @@
         { key: 'task', label: 'Soort taak', type: 'select', options: TASKS, half: true },
         { key: 'tool', label: 'Waar gebruik je hem', type: 'text', half: true, suggestions: () => unique(ns.content.prompts.map((p) => p.tool)) },
         { key: 'license', label: 'Licentie', type: 'license', half: true },
+        { key: 'saves', label: 'Scheelt ongeveer (minuten)', type: 'number', max: 480, placeholder: 'bijv. 20', half: true, hint: SAVES_HINT },
         { key: 'prompt', label: 'Prompttekst', type: 'code', required: true, placeholders: true, hint: 'Plaatshouders in hoofdletters tussen blokhaken: [KLANTNAAM], [PROCES, bijv. inkoopproces], [KORT / UITGEBREID]. Hieronder zie je wat de cockpit herkent.' },
         { key: 'note', label: 'Toelichting', type: 'textarea', hint: 'Waar en hoe gebruik je hem?' },
         { key: 'followUps', label: 'Vervolgprompts (in dezelfde chat)', type: 'group', itemLabel: 'Vervolgprompt', fields: [
@@ -288,6 +291,20 @@
           { key: 'keywords', label: 'Zoekwoorden', type: 'list', hint: 'Eén per regel, bijv. voorraad. Wat de cockpit hiermee vindt, komt eerst.' },
           { key: 'accent', label: 'Kleur', type: 'select', options: kit.accentOptions, hint: 'Leeg = de kleur van de eerste fase.' }
         ] },
+        { key: '_kickstart', label: 'Kickstart (startpagina en Mijn logboek)', type: 'heading', hint: 'Een korte startroute: rondleiding, de check "Veilig vliegen", drie startprompts gebruiken en één usecase bekijken, met als doel het eerste uur per week terug. Leeg = de standaard: de cockpit kiest zelf prompts uit de fasen van het seizoen, met een tijdsindicatie eerst. De voortgang staat alleen op het apparaat van de collega.' },
+        { key: 'kickstartTitle', label: 'Titel', type: 'text', half: true, placeholder: 'Kickstart voor assistenten' },
+        { key: 'kickstartLead', label: 'Wat het oplevert', type: 'text', half: true, placeholder: 'In 14 dagen je eerste uur per week terug' },
+        { key: 'kickstartPrompts', label: 'Startprompts (kies er vijf)', type: 'refs', ref: 'prompt', hint: 'De eerste vijf die je aanvinkt (in de volgorde van de lijst). Kies prompts met een tijdsindicatie die nu in het seizoen werken. Drie ervan gebruiken is een stap.' },
+        { key: 'kickstartUsecase', label: 'Usecase van de Kickstart', type: 'refs', ref: 'usecase', hint: 'De eerste die je aanvinkt. Leeg = een usecase met demo uit het seizoen.' },
+        { key: 'kickstartOff', label: 'Kickstart uitzetten', type: 'bool' },
+        { key: '_promises', label: 'Beloftes van het AI-team', type: 'heading', hint: 'Klein onder het formulier waar ze bij horen. De termijn (in werkdagen) gebruikt Beheer om bij een open verzoek te tonen hoeveel tijd er nog is. Leeg = de standaard; een streepje (-) zet één belofte uit. Beloof alleen wat het AI-team waar kan maken.' },
+        { key: 'promiseFlyin', label: 'AI-specialist invliegen', type: 'text', half: true, placeholder: 'Reactie binnen 1–2 werkdagen' },
+        { key: 'promiseFlyinDays', label: 'Termijn (werkdagen)', type: 'number', max: 30, half: true, placeholder: '2' },
+        { key: 'promiseRequest', label: 'Verzoek in de ideeënhub', type: 'text', half: true, placeholder: 'Reactie binnen een week' },
+        { key: 'promiseRequestDays', label: 'Termijn (werkdagen)', type: 'number', max: 30, half: true, placeholder: '5' },
+        { key: 'promisePrompt', label: 'Prompt op maat (Vraag een prompt aan)', type: 'text', half: true, placeholder: 'Een prompt op maat binnen 1 werkdag' },
+        { key: 'promisePromptDays', label: 'Termijn (werkdagen)', type: 'number', max: 30, half: true, placeholder: '1' },
+        { key: 'promisesOff', label: 'Geen beloftes tonen', type: 'bool' },
         { key: '_brevet', label: 'AI-brevetten', type: 'heading', hint: 'Brevetten, voordelen, checkrides en AI-miles pas je aan in Beheer → AI-brevetten → Regels: voor alle disciplines, of alleen voor deze.' }
       ]
     }
@@ -591,7 +608,8 @@
         const boxes = items.map((item) => {
           const boxId = nextId();
           const box = el('input', { attrs: { id: boxId, type: 'checkbox', value: item.id, checked: selected.has(item.id) } });
-          return el('label', { className: 'check check--compact', attrs: { for: boxId } }, [box, el('span', { text: (item.title || item.label) + (item.locked ? ' (op slot)' : '') })]);
+          // Een prompt uit een usecase: met de naam van de usecase ervoor (de stap alleen zegt weinig)
+          return el('label', { className: 'check check--compact', attrs: { for: boxId } }, [box, el('span', { text: (item.usecase ? item.usecase.title + ' · ' : '') + (item.title || item.label) + (item.locked ? ' (op slot)' : '') })]);
         });
         if (!boxes.length) boxes.push(el('p', { className: 'field__hint', text: 'Nog niets om te kiezen.' }));
         const group = el('fieldset', { className: 'field field--wide refs' }, [el('legend', { className: 'field__label', text: field.label }), hint, el('div', { className: 'refs__list' }, boxes)]);

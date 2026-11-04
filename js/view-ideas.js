@@ -151,6 +151,8 @@
 
     const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
     const submit = el('button', { className: 'btn btn--primary btn--lg', attrs: { type: 'submit' } }, [icon('send'), el('span', { text: 'Versturen' })]);
+    // Bij een verzoek: de belofte van het AI-team (js/promises.js)
+    const promise = el('div', { className: 'idea-form__promise' });
 
     const form = el('form', { className: 'idea-form', attrs: { novalidate: true } }, [
       kindPicker,
@@ -168,6 +170,7 @@
       ]),
       el('label', { className: 'check', attrs: { for: 'idea-public' } }, [allowPublic, el('span', { text: 'Mijn inzending mag zichtbaar worden in de hub, zonder naam en e-mailadres, zodat collega\'s het antwoord ook zien.' })]),
       el('p', { className: 'privacy' }, [icon('shield'), el('span', { text: 'Noem geen klantnamen, dossier- of persoonsgegevens. Je naam en e-mailadres ziet alleen het AI-team.' })]),
+      promise,
       formError,
       submit
     ]);
@@ -177,6 +180,9 @@
       title.placeholder = info.titleHint;
       bodyHint.textContent = info.bodyHint;
       body.placeholder = kind === 'prompt' ? 'Plak hier je prompt…' : '';
+      const line = kind === 'verzoek' ? ns.promises.line('request') : null;
+      promise.replaceChildren(...(line ? [line] : []));
+      promise.hidden = !line;
     }
     applyKind();
 
@@ -712,6 +718,8 @@
       ]),
       el('label', { className: 'check', attrs: { for: id + '-public' } }, [allowPublic, el('span', { text: kind === 'verzoek' ? 'Mag zichtbaar worden in de ideeënhub (zonder naam), zodat collega\'s zien dat deze prompt is aangevraagd.' : 'Mag zichtbaar worden in de ideeënhub (zonder naam en e-mailadres).' })]),
       el('p', { className: 'privacy' }, [icon('shield'), el('span', { text: 'Noem geen klantnamen, dossier- of persoonsgegevens. Je naam en e-mailadres ziet alleen het AI-team.' })]),
+      // Een prompt aanvragen: de belofte van het AI-team (js/promises.js)
+      kind === 'verzoek' ? ns.promises.line('prompt') : null,
       formError,
       el('div', { className: 'improve__actions' }, [cancel, send])
     ]);
@@ -761,7 +769,8 @@
       if (result === 'ok') {
         rememberSubmission({ ref: payload.ref, kind, title: payload.title, at: new Date().toISOString() });
         close();
-        toast(info.thanks + ' Je vindt hem terug in de ideeënhub, bij Jouw inzendingen.', { tone: 'success', duration: 6000 });
+        const promised = kind === 'verzoek' ? ns.promises.sentence('prompt') : '';
+        toast(info.thanks + (promised ? ' ' + promised : '') + ' Je vindt hem terug in de ideeënhub, bij Jouw inzendingen.', { tone: 'success', duration: 7000 });
         return;
       }
       // Mislukt: niets kwijtraken

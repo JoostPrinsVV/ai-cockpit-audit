@@ -204,6 +204,8 @@
         ns.ideas.kindChip(item.kind),
         el('span', { className: 'admin-item__title', text: item.title }),
         ns.ideas.statusBadge(item.status),
+        // Open verzoek met een belofte van het AI-team: hoeveel tijd er nog is (js/promises.js)
+        ns.promises.badge(item),
         ns.adminPortfolio.badge(ns.adminPortfolio.outcome(item.assessment)),
         item.is_public ? el('span', { className: 'badge badge--free', attrs: { title: 'Zichtbaar in de hub' } }, [icon('eye'), 'Gepubliceerd']) : null,
         item.votes ? el('span', { className: 'badge', attrs: { title: 'Stemmen' } }, [icon('thumb'), String(item.votes)]) : null,
@@ -465,6 +467,19 @@
         const trainingRows = Array.from(trainingIds).map((id) => [title(ns.content.trainingById, id), trainingViews.get(id) || 0, trainingPlays.get(id) || 0]).sort((a, b) => b[1] + b[2] - a[1] - a[2]);
         const agentIds = new Set([...agentViews.keys(), ...agentOpens.keys()]);
         const agentRows = Array.from(agentIds).map((id) => [title(ns.content.agentById, id), agentViews.get(id) || 0, agentOpens.get(id) || 0]).sort((a, b) => b[1] + b[2] - a[1] - a[2]);
+        // Tijdwinst: 'Scheelde dit tijd?' ja en nee per prompt of usecase, maal de schatting van nu (js/tijdwinst.js, stap 14)
+        const savedYes = count('time_saved');
+        const savedNo = count('time_none');
+        const timeTitle = (key) => {
+          const split = key.indexOf(':');
+          const id = key.slice(split + 1);
+          return key.slice(0, split) === 'usecase' ? title(ns.content.usecaseById, id) : title(ns.content.promptById, id);
+        };
+        const timeRows = Array.from(new Set([...savedYes.keys(), ...savedNo.keys()])).map((key) => {
+          const yes = savedYes.get(key) || 0;
+          return [timeTitle(key), yes, savedNo.get(key) || 0, ns.tijdwinst.format(yes * ns.tijdwinst.minutesOf(key))];
+        }).sort((a, b) => b[1] - a[1] || a[2] - b[2]);
+        const timeTotal = Array.from(savedYes.entries()).reduce((sum, [key, n]) => sum + n * ns.tijdwinst.minutesOf(key), 0);
 
         body.replaceChildren(
           el('div', { className: 'kpis' }, [
@@ -473,16 +488,18 @@
             ['Prompts gekopieerd', total(copies)],
             ['Tips bekeken', total(tipViews)],
             ['Opnames geopend', total(trainingPlays)],
-            ['Agents geopend', total(agentOpens)]
+            ['Agents geopend', total(agentOpens)],
+            ['Tijdwinst (schatting)', ns.tijdwinst.format(timeTotal)]
           ].map(([label, value]) => el('div', { className: 'kpi' }, [el('span', { className: 'kpi__value', text: String(value) }), el('span', { className: 'kpi__label', text: label })]))),
           el('div', { className: 'usage-grid' }, [
+            table('Tijdwinst: "Scheelde dit tijd?"', timeRows, ['Prompt of usecase', 'Ja', 'Nee', 'Tijd terug']),
             table('Usecases', usecaseRows, ['Usecase', 'Bekeken', 'Demo gestart']),
             table('Meest gekopieerde prompts (top 20)', promptRows, ['Prompt', 'Gekopieerd']),
             table('Tips', tipRows, ['Tip', 'Bekeken', 'Voorbeeld gekopieerd']),
             table('Trainingen', trainingRows, ['Training', 'Bekeken', 'Opname geopend']),
             table('Agents & tools', agentRows, ['Agent', 'Bekeken', 'Geopend'])
           ]),
-          el('p', { className: 'field__hint', text: 'Anonieme tellers: er wordt niet bijgehouden wie iets bekijkt of kopieert.' })
+          el('p', { className: 'field__hint', text: 'Anonieme tellers: er wordt niet bijgehouden wie iets bekijkt of kopieert. Tijdwinst = aantal keer "Ja" maal de schatting die nu bij de prompt of usecase staat; veel "Nee" is een teken dat een prompt beter kan. De tijdwinst-tellers werken na stap 14 (setup/supabase-audit-tijdwinst.sql).' })
         );
       } catch (error) {
         body.replaceChildren(loadFailed(error));

@@ -1057,3 +1057,8 @@ ul.admin-roles { display: grid; gap: var(--space-2); margin: 0 0 var(--space-5);
 @media (max-width: 640px) {
   .bvr-levels { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Beloftes van het AI-team: hoeveel tijd er nog is bij een open verzoek (js/promises.js) */
+.badge--promise { gap: 0.3em; background: var(--color-surface-muted); color: var(--color-text-body); font-variant-numeric: tabular-nums; }
+.badge--promise.is-soon { background: var(--color-warning-fill); color: var(--color-warning); }
+.badge--promise.is-late { background: var(--color-danger-fill); color: var(--color-danger); }

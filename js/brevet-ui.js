@@ -349,6 +349,8 @@
         return;
       }
       send.disabled = true;
+      // Ook voor wie (nog) niet meedoet: de Kickstart vinkt deze stap af (js/kickstart.js)
+      document.dispatchEvent(new CustomEvent('ai:veilig-vliegen'));
       await ns.brevet.record('policy_check', '');
       node.close();
       toast('Check "Veilig vliegen" gehaald', { tone: 'success' });

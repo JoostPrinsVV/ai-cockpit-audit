@@ -641,6 +641,8 @@
       ns.profile.init(); // je initialen in de kopbalk
       ns.brevet.init(); // je logboek met AI-miles (laadt zodra de inhoud er is)
       ns.brevetUi.init(); // de strepen van je brevet op de knop rechtsboven
+      ns.tijdwinst.init(); // na het kopiëren: 'Scheelde dit tijd?'
+      ns.kickstart.init(); // de stappen van de Kickstart afvinken
       ns.palette.init(); // zoekvenster: Ctrl+K, / of de zoekknop
       fillChrome();
       ns.instruments.init();

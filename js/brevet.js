@@ -31,14 +31,14 @@
   ];
 
   // Wat een deelnemer zelf laat vastleggen; de rest legt beheer vast (zie setup/supabase-audit-brevetten.sql)
-  const SELF_KINDS = ['active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done', 'profile_done', 'policy_check', 'idea_sent', 'recording_watched'];
+  const SELF_KINDS = ['active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done', 'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done'];
   const ADMIN_KINDS = ['contribution_adopted', 'training_registered', 'training_attended', 'session_given', 'nominated', 'prompt_author', 'bonus'];
   // Gebruik: samen hoogstens caps.usagePerDay per dag
   const USAGE = ['prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong'];
 
   const MILES = {
     prompt_used: 5, demo_watched: 10, prompt_rated: 3, builder_strong: 5,
-    tour_done: 5, profile_done: 5, policy_check: 10, idea_sent: 10, recording_watched: 10,
+    tour_done: 5, profile_done: 5, policy_check: 10, idea_sent: 10, recording_watched: 10, kickstart_done: 50,
     training_attended: 25, session_given: 50, royalty: 5, rhythm: 15,
     // Overgenomen bijdrage, per soort inzending
     adopted: { prompt: 100, verbetering: 50, idee: 150, usecase: 250, verzoek: 20, vraag: 0 }
@@ -83,6 +83,7 @@
     policy_check: 'Check "Veilig vliegen" gehaald',
     idea_sent: 'Ingestuurd in de ideeënhub',
     recording_watched: 'Opname van een training bekeken',
+    kickstart_done: 'Kickstart afgerond',
     training_attended: 'Training bijgewoond',
     contribution_adopted: 'Bijdrage overgenomen door het AI-team',
     session_given: 'Sessie gegeven in je team',
@@ -258,6 +259,7 @@
           break;
         }
         case 'recording_watched': trainings.add(fact.item); miles = r.miles.recording_watched; break;
+        case 'kickstart_done': miles = r.miles.kickstart_done || 0; break;
         case 'training_attended': trainings.add(fact.item); live.add(fact.item); miles = r.miles.training_attended; break;
         case 'training_registered': stats.registered.push(fact.item); return;
         case 'contribution_adopted': {

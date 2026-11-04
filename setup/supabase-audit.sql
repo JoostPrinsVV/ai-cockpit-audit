@@ -193,7 +193,8 @@ create table if not exists public.audit_events (
 -- Toegestane soorten tellers (ook bij opnieuw uitvoeren bijgewerkt, bijv. na het toevoegen van trainingen en agents)
 alter table public.audit_events drop constraint if exists audit_events_kind_check;
 alter table public.audit_events add constraint audit_events_kind_check
-  check (kind in ('view_usecase', 'play_demo', 'copy_prompt', 'view_tip', 'copy_tip', 'view_training', 'play_training', 'view_agent', 'open_agent'));
+  check (kind in ('view_usecase', 'play_demo', 'copy_prompt', 'view_tip', 'copy_tip', 'view_training', 'play_training', 'view_agent', 'open_agent',
+                  'time_saved', 'time_none'));
 create index if not exists audit_events_namespace_idx on public.audit_events (namespace, occurred_at);
 alter table public.audit_events enable row level security;
 revoke all on public.audit_events from anon, authenticated;

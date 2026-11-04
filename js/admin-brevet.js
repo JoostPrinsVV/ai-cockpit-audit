@@ -401,6 +401,7 @@
     ['policy_check', 'Check "Veilig vliegen" gehaald', 'één keer'],
     ['idea_sent', 'Insturen in de ideeënhub', 'tot het plafond per week'],
     ['recording_watched', 'Opname van een training bekeken', 'per training één keer (zelf aangegeven)'],
+    ['kickstart_done', 'Kickstart afgerond', 'één keer: alle stappen van de Kickstart gedaan'],
     ['training_attended', 'Live training bijgewoond', 'legt het AI-team vast'],
     ['session_given', 'Sessie gegeven in je team', 'legt het AI-team vast'],
     ['royalty', 'Royalty: een collega gebruikt jouw prompt', 'per collega één keer, tot het plafond per maand'],

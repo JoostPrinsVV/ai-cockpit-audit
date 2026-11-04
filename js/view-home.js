@@ -240,10 +240,20 @@
     // Seizoenskompas (js/compass.js): wat er nu speelt, met dezelfde regels als 'Recent toegevoegd'
     const compass = ns.compass.section(config, itemRow);
     const radar = ns.radar.fresh();
-    const node = el('div', { className: 'home' }, [hero(config, radar), tiles(), compass, mine, featuredUsecases(), colleagues(), featuredTips(), recent(radar), ideasCta()]);
+    // De Kickstart (js/kickstart.js) en, zodra het er is, de tijdwinst van alle collega's (js/tijdwinst.js)
+    const kickstart = ns.kickstart.card({ place: 'home' });
+    const proof = el('div', { className: 'container tw-proof-wrap' }, [ns.tijdwinst.proof()]);
+    const node = el('div', { className: 'home' }, [hero(config, radar), tiles(), proof, kickstart.node, compass, mine, featuredUsecases(), colleagues(), featuredTips(), recent(radar), ideasCta()]);
     // Eerste bezoek: de rondleiding (js/tour.js), even na het opstarten van de instrumenten
     ns.tour.maybeStart();
-    return { node, title: '', destroy: stopSaved };
+    return {
+      node,
+      title: '',
+      destroy: () => {
+        stopSaved();
+        kickstart.destroy();
+      }
+    };
   }
 
   ns.views = ns.views || {};

@@ -297,7 +297,10 @@
   // Een kopie op je eigen computer (testen, voorbereiden) telt niet mee
   const LOCAL = window.location.protocol === 'file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(window.location.hostname);
 
-  /** kind: 'view_usecase' | 'play_demo' | 'copy_prompt' | 'view_tip' | 'copy_tip' | 'view_training' | 'play_training' | 'view_agent' | 'open_agent'. Geen persoonsgegevens. */
+  /**
+   * kind: 'view_usecase' | 'play_demo' | 'copy_prompt' | 'view_tip' | 'copy_tip' | 'view_training' | 'play_training' | 'view_agent' | 'open_agent'
+   * | 'time_saved' | 'time_none' (tijdwinst: 'Scheelde dit tijd?' ja of nee, stap 14). Geen persoonsgegevens.
+   */
   function track(kind, itemId) {
     // Altijd als signaal in de pagina (je logboek, js/brevet.js); de anonieme teller alleen als die aan staat
     document.dispatchEvent(new CustomEvent('ai:track', { detail: { kind, id: String(itemId || '') } }));
@@ -305,6 +308,14 @@
     add(TABLES.events, { namespace: config.namespace, kind, item_id: String(itemId || '').slice(0, 80) }, 'Tellen').then((result) => {
       if (result === 'missing') trackingOff = true; // geen tabel: niet bij elke klik opnieuw proberen
     });
+  }
+
+  /**
+   * Tijdwinst van alle collega's in deze discipline (anoniem, stap 14): per prompt of usecase hoe vaak
+   * 'Ja, het scheelde tijd' deze maand en in totaal. items: [{ item_id, month_count, total_count }].
+   */
+  function timeSaved() {
+    return read(RPC + 'audit_time_saved', 'Tijdwinst lezen', post({ p_namespace: config.namespace }));
   }
 
   /* ---- Beheer: inloggen en sessie ---------------------------------------------------- */
@@ -948,6 +959,7 @@
     reviewStats,
     listReviews,
     track,
+    timeSaved,
     signIn,
     signOut,
     signedIn,

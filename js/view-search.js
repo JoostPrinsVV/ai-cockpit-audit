@@ -44,7 +44,7 @@
         // Meteen een prompt aanvragen, met wat je zocht (js/view-ideas.js)
         const ask = el('button', { className: 'btn btn--primary', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [icon('flag'), el('span', { text: 'Vraag een prompt aan' })]);
         ask.addEventListener('click', () => ns.ideas.quick({ kind: 'verzoek', title: query }));
-        results.replaceChildren(emptyState(`Niets gevonden voor "${query}"`, 'Probeer een ander woord. Of laat het ons weten: misschien is dit precies een goed idee voor een nieuwe prompt of usecase.', ask));
+        results.replaceChildren(emptyState(`Niets gevonden voor "${query}"`, 'Probeer een ander woord. Of laat het ons weten: misschien is dit precies een goed idee voor een nieuwe prompt of usecase.', el('div', { className: 'empty__actions empty__actions--stack' }, [ask, ns.promises.line('prompt')])));
         return;
       }
       results.replaceChildren(...[
