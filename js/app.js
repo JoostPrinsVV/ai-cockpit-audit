@@ -263,13 +263,15 @@
     const seq = ++routeSeq;
 
     // Nieuwe pagina tonen, met een overgang (js/motion.js); niet bij verversen van dezelfde pagina.
-    // Binnen dezelfde omgeving en naar beneden gescrold: eerst rustig naar boven, dan het nieuwe onderdeel
-    // (anders springt de pagina eerst, omdat het nieuwe onderdeel meestal korter is)
+    // Binnen dezelfde omgeving en een klein stukje naar beneden gescrold: eerst rustig naar boven, dan het
+    // nieuwe onderdeel. Verder naar beneden (bijv. onderaan een lang formulier): meteen wisselen; het nieuwe
+    // onderdeel staat dan in hetzelfde beeld bovenaan (anders schiet de hele pagina eerst voorbij).
     // (Terug of vooruit in de geschiedenis: gewoon naar de bewaarde plek.)
     const mode = opts.keepScroll || within ? 'refresh' : firstRoute ? 'first' : 'page';
     const step = window.history.state && window.history.state.scroll;
     const returning = Boolean(step && typeof scrollPositions[step] === 'number');
-    const show = (commit) => (within && !returning && window.scrollY > 2 && !ns.motion.calm() ? scrollTopThen(commit) : commit());
+    const glide = within && !returning && window.scrollY > 2 && window.scrollY <= window.innerHeight && !ns.motion.calm();
+    const show = (commit) => (glide ? scrollTopThen(commit) : commit());
     show(() => ns.motion.swap(() => {
       // Intussen al een nieuwere pagina (de overgang tekent een beeld later): deze niet meer tonen
       if (seq !== routeSeq) return;
