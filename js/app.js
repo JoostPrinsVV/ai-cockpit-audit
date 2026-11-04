@@ -356,6 +356,9 @@
       const value = settings[name];
       if (Array.isArray(value) ? value.length : typeof value === 'string' && value.trim()) config[name] = value;
     });
+    // De oude schrijfwijze van de naam (de standaard van vroeger, vaak nog zo opgeslagen in Beheer → Teksten)
+    // wordt de Nederlandse: AI-cockpit, zoals AI-beleid en AI-specialist
+    if (/^\s*AI\s+Cockpit\s*$/i.test(config.applicationTitle || '')) config.applicationTitle = 'AI-cockpit';
     // De naam komt uit Beheer → Disciplines. De uitleg in js/config.js gaat over de audit:
     // een andere discipline zonder eigen uitleg krijgt een algemene.
     const discipline = ns.cockpit.active();
