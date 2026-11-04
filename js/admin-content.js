@@ -53,7 +53,7 @@
   const asOptions = (values) => values.map((value) => ({ value, label: value }));
   // Lijsten waaruit je bij 'refs' kiest
   const REF_LISTS = { usecase: 'usecases', prompt: 'prompts', tip: 'tips', training: 'trainings', phase: 'phases' };
-  const SAVES_HINT = 'Schatting van het AI-team: hoeveel minuten scheelt dit iemand per keer? Staat als "Scheelt ±20 min" op de kaart; na het kopiëren vraagt de cockpit of het tijd scheelde, en dat telt op in de tijdwinst. Leeg = geen tijdsindicatie.';
+  const SAVES_HINT = 'Schatting van het AI-team: hoeveel minuten scheelt dit iemand per keer? Staat als "Scheelt ±20 min" op de kaart; na het kopiëren vraagt de cockpit of het tijd scheelde, en dat telt op in de tijdwinst. Leeg = geen tijdsindicatie. Alles in één keer: het tabblad Tijdwinst.';
   // De standaardroute van een idee voor de omgeving waarin je werkt (data/disciplines.js): stappen of rollen
   const routeDefaults = (key) => (ctx) => {
     const routes = ns.ideaRoutes || {};
@@ -1455,6 +1455,167 @@
    * @param {object} state     { status } van het laatste ophalen
    * @param {object} where     de omgeving: { kind: 'discipline'|'basis', namespace, base, name, id, files }
    */
+  /* ---- Tijdwinst: de schatting van alle usecases en losse prompts in één scherm ------------------- */
+  // Prompts uit een usecase hebben geen eigen schatting: die van de usecase geldt voor alle stappen samen
+  const SAVES_TYPES = ['usecase', 'prompt'];
+  const SAVES_MAX = 480;
+  /** '' (geen schatting) of een heel getal van 1 tot 480; null als het geen geldig getal is. */
+  function savesValue(raw) {
+    const text = String(raw == null ? '' : raw).trim();
+    if (!text) return '';
+    const n = Number(text);
+    if (!Number.isFinite(n) || n < 0 || n > SAVES_MAX || Math.round(n) !== n) return null;
+    return n === 0 ? '' : n;
+  }
+  const withSaves = (data, value) => {
+    const copy = Object.assign({}, data);
+    if (value === '') delete copy.saves;
+    else copy.saves = value;
+    return copy;
+  };
+
+  /** Hoeveel usecases en losse prompts in deze omgeving een schatting hebben: { filled, total }. */
+  function savesCount() {
+    const live = SAVES_TYPES.flatMap((type) => rowsOf(type).filter((row) => row.status !== 'trash'));
+    return { filled: live.filter((row) => savesValue((stateOf(row).data || {}).saves)).length, total: live.length };
+  }
+
+  function savesView() {
+    const types = SAVES_TYPES.filter((type) => may('bewerken', type));
+    const canPublish = drafting() && types.every((type) => ns.rights.can('publiceren', scope.namespace, type));
+    const phaseIndex = new Map(ns.content.phases.map((phase, index) => [phase.id, index]));
+    const BASIS = { eigen: 'Ingeschat voor deze', taak: 'Standaard voor deze soort taak', standaard: 'Standaard' };
+    const entries = [];
+    types.forEach((type) => rowsOf(type).forEach((row) => {
+      const state = stateOf(row);
+      if (row.status === 'trash' || !state || state.status === 'trash') return;
+      const data = state.data || {};
+      const current = savesValue(data.saves) || '';
+      const proposal = ns.adminSaves.suggest(type, row.id, data);
+      const name = nameOf(row);
+      const input = el('input', { className: 'field__input field__input--sm saves__input', attrs: { type: 'number', min: '0', max: String(SAVES_MAX), step: '5', inputmode: 'numeric', placeholder: String(proposal.minutes), 'aria-label': 'Scheelt ongeveer, in minuten: ' + name } });
+      input.value = current === '' ? '' : String(current);
+      entries.push({ type, row, data, state, current, proposal, name, input });
+    }));
+    entries.sort((a, b) => (phaseIndex.has(a.data.phase) ? phaseIndex.get(a.data.phase) : 99) - (phaseIndex.has(b.data.phase) ? phaseIndex.get(b.data.phase) : 99) || (a.state.position || 0) - (b.state.position || 0));
+
+    const count = el('p', { className: 'saves__count', attrs: { 'aria-live': 'polite' } });
+    const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
+    const takeOver = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('wand'), el('span', { text: 'Voorstellen invullen in lege velden' })]);
+    const save = el('button', { className: canPublish ? 'btn btn--secondary' : 'btn btn--primary', attrs: { type: 'button' } }, [icon('check'), el('span', { text: drafting() && !canPublish ? 'Opslaan als voorstel' : 'Opslaan' })]);
+    const saveAndPublish = canPublish ? el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('send'), el('span', { text: 'Opslaan en publiceren' })]) : null;
+    let busy = false;
+
+    const changed = () => entries.filter((entry) => savesValue(entry.input.value) !== null && savesValue(entry.input.value) !== entry.current);
+    function update() {
+      const filled = entries.filter((entry) => savesValue(entry.input.value)).length;
+      const dirty = changed().length;
+      count.textContent = `${filled} van de ${entries.length} hebben een schatting` + (dirty ? ` · ${dirty} ${dirty === 1 ? 'wijziging' : 'wijzigingen'} nog niet opgeslagen` : '');
+      [save, saveAndPublish].filter(Boolean).forEach((button) => { button.disabled = busy || !dirty; });
+      entries.forEach((entry) => entry.input.setAttribute('aria-invalid', String(savesValue(entry.input.value) === null)));
+    }
+    entries.forEach((entry) => entry.input.addEventListener('input', update));
+    takeOver.addEventListener('click', () => {
+      let n = 0;
+      entries.forEach((entry) => {
+        if (entry.input.value.trim()) return;
+        entry.input.value = String(entry.proposal.minutes);
+        n += 1;
+      });
+      update();
+      toast(n ? `${n} ${n === 1 ? 'voorstel' : 'voorstellen'} ingevuld. Kijk ze na en sla op.` : 'Alle velden zijn al ingevuld.');
+    });
+
+    async function persist(publishNow) {
+      formError.hidden = true;
+      const wrong = entries.find((entry) => savesValue(entry.input.value) === null);
+      if (wrong) {
+        formError.replaceChildren(el('p', { text: `"${wrong.name}": vul een heel aantal minuten in, van 0 tot ${SAVES_MAX} (leeg of 0 = geen schatting).` }));
+        formError.hidden = false;
+        wrong.input.focus();
+        return;
+      }
+      const list = changed();
+      if (!list.length) return;
+      busy = true;
+      update();
+      try {
+        if (drafting()) {
+          // Werkversies; bij publiceren alleen wat al live stond (een concept blijft een concept)
+          const items = [];
+          let concepts = 0;
+          for (const entry of list) {
+            const stored = await stage(entry.type, entry.row.id, withSaves(entry.data, savesValue(entry.input.value)), entry.state.position, entry.state.status);
+            if (!stored) continue; // iemand anders was je voor en je hield hun versie
+            if (entry.row.status === 'published') items.push({ namespace: scope.namespace, type: entry.type, id: entry.row.id, version: stored.version });
+            else concepts += 1;
+          }
+          if (publishNow && items.length) {
+            await ns.editor.publish(items); // haalt de inhoud ook opnieuw op
+            if (concepts) toast(`${concepts} ${concepts === 1 ? 'concept blijft' : 'concepten blijven'} nog niet live.`);
+          } else {
+            await afterChange(canPublish ? 'Opgeslagen. Nog niet live: publiceer hier of via de bewerkbalk.' : 'Voorstel opgeslagen. Een beheerder publiceert het.');
+          }
+        } else {
+          await ns.central.saveContent(list.map((entry) => ({ type: entry.type, id: entry.row.id, data: withSaves(entry.data, savesValue(entry.input.value)), position: entry.state.position || 0, status: entry.row.status })), scope.namespace);
+          await afterChange(`Opgeslagen: ${list.length} ${list.length === 1 ? 'schatting staat' : 'schattingen staan'} live.`);
+        }
+      } catch (error) {
+        kit.failed('Opslaan', error);
+      } finally {
+        busy = false;
+        if (save.isConnected) update();
+      }
+    }
+    save.addEventListener('click', () => persist(false));
+    if (saveAndPublish) saveAndPublish.addEventListener('click', () => persist(true));
+
+    const group = (type) => {
+      const own = entries.filter((entry) => entry.type === type);
+      if (!own.length) return null;
+      const labelId = nextId();
+      return el('section', { className: 'saves__group', attrs: { 'aria-labelledby': labelId } }, [
+        el('h3', { className: 'saves__title', attrs: { id: labelId }, text: type === 'usecase' ? 'Usecases (alle stappen samen)' : 'Losse prompts' }),
+        el('table', { className: 'table saves__table' }, [
+          el('thead', {}, [el('tr', {}, [
+            el('th', { attrs: { scope: 'col' }, text: type === 'usecase' ? 'Usecase' : 'Prompt' }),
+            el('th', { attrs: { scope: 'col' }, text: 'Fase' }),
+            el('th', { className: 'num', attrs: { scope: 'col' }, text: 'Voorstel' }),
+            el('th', { className: 'num', attrs: { scope: 'col' }, text: 'Scheelt (min)' })
+          ])]),
+          el('tbody', {}, own.map((entry) => {
+            const phase = ns.content.phaseById.get(entry.data.phase);
+            const pendingLabel = drafting() ? changeText(entry.row) : '';
+            return el('tr', {}, [
+              el('th', { attrs: { scope: 'row' } }, [
+                el('a', { attrs: { href: `${scope.base}/${entry.type}/${entry.row.id}` }, text: entry.name }),
+                pendingLabel ? el('span', { className: 'badge badge--change saves__change', text: pendingLabel }) : null
+              ]),
+              el('td', { className: 'saves__phase', text: phase ? phase.short || phase.label : '–' }),
+              el('td', { className: 'num saves__proposal', attrs: { title: BASIS[entry.proposal.basis] + (entry.proposal.basis === 'taak' ? ': ' + entry.data.task : '') } }, [String(entry.proposal.minutes), entry.proposal.basis === 'eigen' ? null : el('span', { className: 'saves__basis', text: '*' })]),
+              el('td', { className: 'num' }, [entry.input])
+            ]);
+          }))
+        ])
+      ]);
+    };
+
+    update();
+    const node = el('div', { className: 'saves' }, [
+      el('div', { className: 'saves__intro' }, [
+        el('p', { className: 'section__lead', text: 'Hoeveel minuten scheelt een usecase of prompt iemand per keer, vergeleken met het zelf doen? Dat staat als "Scheelt ±20 min" op de kaart, en na het kopiëren vraagt de cockpit of het tijd scheelde. Zonder schatting geen vraag en geen tijdwinst in de Kickstart.' }),
+        el('p', { className: 'field__hint', text: 'Het voorstel is een voorzichtig startpunt van het AI-team (met * een standaard voor de soort taak). Leeg of 0 = geen schatting. Beter iets te laag dan te hoog: collega\'s moeten het herkennen.' })
+      ]),
+      el('div', { className: 'saves__bar' }, [count, takeOver]),
+      entries.length ? null : el('p', { className: 'section__lead', text: 'Hier staan nog geen usecases of losse prompts.' }),
+      group('usecase'),
+      group('prompt'),
+      formError,
+      el('div', { className: 'cms-form__actions saves__actions' }, [saveAndPublish, save].filter(Boolean))
+    ]);
+    return { node, canLeave: () => busy || !changed().length };
+  }
+
   function render(params, state, where) {
     if (where) scope = where;
     // De inhoud kon niet worden opgehaald (bijv. even geen netwerk): niet doen alsof de database
@@ -1476,7 +1637,10 @@
     if (!allowed.length) {
       return { node: notice({ tone: 'warning', icon: 'lock', text: 'Je hebt hier geen bewerkrechten. Vraag een hoofdbeheerder om een rol voor deze discipline.' }), canLeave: null };
     }
-    const type = SCHEMAS[params[0]] && allowed.includes(params[0]) ? params[0] : allowed[0];
+    // Tijdwinst: een eigen tabblad (geen soort inhoud), voor wie usecases of prompts mag bewerken
+    const savesAllowed = SAVES_TYPES.some((key) => allowed.includes(key));
+    const savesTab = savesAllowed && params[0] === 'tijdwinst';
+    const type = savesTab ? 'tijdwinst' : SCHEMAS[params[0]] && allowed.includes(params[0]) ? params[0] : allowed[0];
     const seeded = isSeeded();
     const tabs = el('nav', { className: 'toggles cms-tabs', attrs: { 'aria-label': 'Soort inhoud' } }, allowed.map((key) => {
       const count = SCHEMAS[key].single ? null : rowsOf(key).filter((row) => row.status !== 'trash').length;
@@ -1484,7 +1648,14 @@
         el('span', { text: SCHEMAS[key].label }),
         count != null && seeded ? el('span', { className: 'toggle__count', text: String(count) }) : null
       ]);
-    }));
+    }).concat(savesAllowed ? [(() => {
+      const saves = seeded ? savesCount() : null;
+      return el('a', { className: 'toggle', attrs: { href: `${scope.base}/tijdwinst`, 'aria-current': savesTab ? 'page' : null, title: 'Schattingen van de tijdwinst per usecase en prompt' } }, [
+        icon('clock'),
+        el('span', { text: 'Tijdwinst' }),
+        saves && saves.total ? el('span', { className: 'toggle__count', text: `${saves.filled}/${saves.total}` }) : null
+      ]);
+    })()] : []));
     // Voor welke omgeving dit is, staat al bovenaan de pagina (js/view-admin.js)
     if (!seeded) {
       if (!owner) return { node: el('div', { className: 'cms' }, [el('p', { className: 'section__lead', text: 'Deze omgeving is nog niet ingericht. Dat doet een hoofdbeheerder.' })]), canLeave: null };
@@ -1495,8 +1666,12 @@
 
     let body;
     let canLeave = null;
-    const editing = Boolean(SCHEMAS[type].single || params[1]);
-    if (editing) {
+    const editing = !savesTab && Boolean(SCHEMAS[type].single || params[1]);
+    if (savesTab) {
+      const result = savesView();
+      body = result.node;
+      canLeave = result.canLeave;
+    } else if (editing) {
       const result = editor(type, SCHEMAS[type].single ? SCHEMAS[type].single : params[1]);
       body = result.node || result;
       canLeave = result.canLeave || null;
@@ -1515,5 +1690,5 @@
     };
   }
 
-  ns.adminContent = { render, quickForm, draft, placeholderPreview };
+  ns.adminContent = { render, quickForm, draft, placeholderPreview, savesValue };
 })(window.AIAudit);

@@ -123,6 +123,16 @@ er te doen is (nieuwe inzendingen, toelichtingen die nog niet gepubliceerd zijn,
 het Copilot-gebruik) en legt in drie zinnen uit hoe Beheer werkt. Wie alleen een rol voor inhoud heeft, ziet alleen
 Start en die inhoud. De onderdelen staan in `TABS` in `js/view-admin.js`.
 
+Bovenaan Start staat voor hoofdbeheerders **Klaar voor livegang?** (`js/admin-launch.js`): wat er nog moet voordat
+collega's alles kunnen gebruiken, met een knop naar de plek waar je het regelt.
+- **Database (eenmalig):** stap 13 (invliegen), stap 14 (tijdwinst) en stap 12 (brevetten met echte accounts; pas nodig
+  bij de Microsoft-login). De cockpit controleert zelf of een stap is uitgevoerd, door een functie van die stap
+  alleen-lezend aan te roepen (`probe` in `js/central.js`).
+- **Cockpit van de discipline:** inhoud in de database, schattingen van de tijdwinst (klaar vanaf 80%), de startprompts
+  van de Kickstart (naar keuze) en de AI-specialist voor invliegen.
+- **Alle disciplines:** de beloftes van het AI-team.
+Is alles klaar, dan klapt het blok in tot één regel.
+
 ## Inhoud beheren (Beheer → Inhoud)
 
 Na het eenmalig instellen (zie 'Supabase instellen' hieronder) beheer je alle inhoud in de site zelf, zonder bestanden:
@@ -635,6 +645,11 @@ Drie onderdelen die samen laten zien wat de cockpit iemand oplevert, en het begi
 *Scheelt ongeveer (minuten)*. Die staat als "Scheelt ±20 min" op de kaart (bij een usecase geldt hij voor alle stappen
 samen; de stappen zelf tonen hem niet). Na het kopiëren vraagt de cockpit onderin, zonder de focus te pakken:
 *Scheelde dit tijd?* met *Ja, ±20 min* en *Nee*.
+- **Alles in één scherm:** Beheer → Inhoud → tabblad **Tijdwinst** (ook bij Gedeelde basis). Alle usecases en losse
+  prompts met hun schatting, gegroepeerd en op fase. Per regel staat een voorstel (`js/admin-saves.js`: voor de inhoud van
+  Audit per stuk ingeschat, anders een standaard per soort taak, met een *). *Voorstellen invullen in lege velden* zet
+  ze erin; jij kijkt ze na en kiest *Opslaan* of *Opslaan en publiceren*. Met werkversies wordt alleen gepubliceerd wat al
+  live stond; een concept blijft een concept.
 - Per prompt (of usecase) hoogstens één keer per dag, en hoogstens vijf vragen per dag. De vraag verdwijnt na anderhalve
   minuut in beeld (niet terwijl je in Copilot zit).
 - *Ja* telt op bij je eigen teller (deze week, maand en jaar) in **Mijn logboek**. Die staat alleen op het eigen

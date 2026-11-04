@@ -1062,3 +1062,47 @@ ul.admin-roles { display: grid; gap: var(--space-2); margin: 0 0 var(--space-5);
 .badge--promise { gap: 0.3em; background: var(--color-surface-muted); color: var(--color-text-body); font-variant-numeric: tabular-nums; }
 .badge--promise.is-soon { background: var(--color-warning-fill); color: var(--color-warning); }
 .badge--promise.is-late { background: var(--color-danger-fill); color: var(--color-danger); }
+/* Beheer → Start: Klaar voor livegang? (js/admin-launch.js) */
+.launch { border: 1px solid var(--color-border); border-left: 4px solid var(--vv-teal); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.launch.is-ready { border-left-color: var(--color-success); }
+.launch__head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5); cursor: pointer; list-style: none; }
+.launch__head::-webkit-details-marker { display: none; }
+.launch__head:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: -2px; border-radius: var(--radius); }
+.launch__icon { display: grid; flex: none; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: var(--radius-sm); background: var(--color-chrome); color: var(--vv-teal); }
+.launch__heading { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.launch__title { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+.launch__summary { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.launch__chevron { flex: none; color: var(--color-text-muted); transition: transform var(--duration-fast) var(--ease-out); }
+.launch[open] .launch__chevron { transform: rotate(180deg); }
+.launch__lists { display: grid; gap: var(--space-5); padding: 0 var(--space-5) var(--space-5); }
+.launch__group-title { margin-bottom: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-instrument); text-transform: uppercase; }
+ul.launch__list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.launch__item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.launch__mark { display: grid; flex: none; place-items: center; width: 1.75rem; height: 1.75rem; color: var(--color-text-muted); }
+.launch__item.is-done .launch__mark { color: var(--color-success); }
+.launch__item.is-todo { border-color: color-mix(in srgb, var(--color-warning) 45%, var(--color-border)); background: var(--color-warning-fill); }
+.launch__item.is-todo .launch__mark { color: var(--color-warning); }
+.launch__body { display: grid; flex: 1 1 16rem; gap: 2px; min-width: 0; }
+.launch__label { font-weight: var(--fw-semibold); }
+.launch__text { color: var(--color-text-body); font-size: var(--fs-sm); }
+.launch__item.is-done .launch__text { color: var(--color-text-muted); }
+
+/* Beheer → Inhoud → Tijdwinst: alle schattingen in één scherm */
+.saves { display: grid; gap: var(--space-5); }
+.saves__intro { display: grid; gap: var(--space-2); max-width: 75ch; }
+.saves__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); background: var(--color-surface-muted); }
+.saves__count { font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; }
+.saves__group { display: grid; gap: var(--space-2); }
+.saves__title { font-size: var(--fs-md); }
+.saves__table th[scope='row'] { font-weight: var(--fw-semibold); }
+.saves__table th[scope='row'] a { color: var(--color-text); }
+.saves__change { margin-left: var(--space-2); vertical-align: middle; }
+.saves__phase { color: var(--color-text-muted); font-size: var(--fs-sm); white-space: nowrap; }
+.saves__proposal { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.saves__basis { margin-left: 1px; }
+.saves__input { width: 6rem; text-align: right; font-variant-numeric: tabular-nums; }
+.saves__input[aria-invalid='true'] { border-color: var(--color-danger); }
+.saves__actions { justify-content: flex-start; }
+@media (prefers-reduced-motion: reduce) {
+  .launch__chevron { transition: none; }
+}

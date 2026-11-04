@@ -729,6 +729,8 @@
         ['Tekst aanpassen kan ook op de site zelf.', ' Zet Bewerken aan in de donkere balk bovenin, klik op wat je wilt veranderen en sla op. Collega\'s zien een wijziging pas na Publiceren.']
       ];
     container.append(el('div', { className: 'admin-start' }, [
+      // Wat er nog moet voordat collega's alles kunnen gebruiken (js/admin-launch.js)
+      owner ? ns.adminLaunch.render().node : null,
       tasks.length
         ? el('section', { className: 'admin-start__tasks', attrs: { 'aria-labelledby': 'admin-tasks-title' } }, [
           el('h2', { className: 'admin-start__title', attrs: { id: 'admin-tasks-title' }, text: 'Wat wil je doen?' }),

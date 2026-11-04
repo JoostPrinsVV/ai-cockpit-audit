@@ -318,6 +318,22 @@
     return read(RPC + 'audit_time_saved', 'Tijdwinst lezen', post({ p_namespace: config.namespace }));
   }
 
+  /**
+   * Is een stap uit setup/ uitgevoerd? Roept een databasefunctie van die stap aan die alleen leest
+   * (Beheer → Start, 'Klaar voor livegang'). Geeft 'ok', 'missing' (stap nog niet uitgevoerd),
+   * 'failed' of 'off'.
+   */
+  async function probe(fn, body) {
+    if (!enabled) return 'off';
+    try {
+      const response = await request(RPC + fn, post(body || {}, admin ? admin.token : null));
+      if (response.ok) return 'ok';
+      return (await isMissingTable(response)) ? 'missing' : 'failed';
+    } catch (error) {
+      return 'failed';
+    }
+  }
+
   /* ---- Beheer: inloggen en sessie ---------------------------------------------------- */
   function readSession() {
     try {
@@ -960,6 +976,7 @@
     listReviews,
     track,
     timeSaved,
+    probe,
     signIn,
     signOut,
     signedIn,

@@ -526,6 +526,34 @@
       equal([auto.prompts.map((p) => p.id), auto.usecase === uc], [['uc-1', 'losse', 'zonder'], true]);
       equal([K.info({}).title, K.info({ kickstartTitle: 'Startweken', kickstartOff: true }).on], ['Kickstart voor assistenten', false]);
     }));
+    await test('voorstellen voor de tijdwinst: eigen voorstel, anders per soort taak, anders de standaard', () => {
+      const S = ns.adminSaves;
+      equal(S.suggest('prompt', 'contract-doorlichten', {}), { minutes: 20, basis: 'eigen' });
+      equal(S.suggest('prompt', 'iets-nieuws', { task: 'Plannen' }), { minutes: 10, basis: 'taak' });
+      equal(S.suggest('prompt', 'iets-nieuws', { task: 'Onbekend' }), { minutes: 15, basis: 'standaard' });
+      equal([S.suggest('usecase', 'risicoanalyse').minutes, S.suggest('usecase', 'nieuw').basis], [45, 'standaard']);
+    });
+    await test('voorstellen: iedere usecase en losse prompt van Audit (data/) heeft een eigen voorstel', async () => {
+      const saved = { prompts: ns.prompts, usecases: ns.usecases };
+      try {
+        await ns.ui.loadScripts(['../data/prompts.js', '../data/usecases.js']);
+        const missing = ns.prompts.filter((p) => !ns.adminSaves.SUGGESTIONS.prompt[p.id]).map((p) => p.id)
+          .concat(ns.usecases.filter((u) => !ns.adminSaves.SUGGESTIONS.usecase[u.id]).map((u) => u.id));
+        equal(missing, []);
+        ok(Object.values(ns.adminSaves.SUGGESTIONS.prompt).concat(Object.values(ns.adminSaves.SUGGESTIONS.usecase)).every((n) => n >= 5 && n <= 60), 'voorzichtig: tussen 5 en 60 minuten');
+      } finally {
+        ns.prompts = saved.prompts;
+        ns.usecases = saved.usecases;
+      }
+    });
+    await test('livegangcheck: schattingen tellen alleen usecases en losse prompts; klaar vanaf 80%', () => {
+      const L = ns.adminLaunch;
+      const uc = { id: 'uc', saves: 30 };
+      const content = { usecases: [uc, { id: 'uc2', saves: 0 }], prompts: [{ id: 'uc-1', usecase: uc, saves: 0 }, { id: 'p1', saves: 15 }, { id: 'p2', saves: 10 }, { id: 'p3', saves: 0, locked: true }] };
+      equal(L.savesCount(content), { filled: 3, total: 4 });
+      equal([L.savesState({ filled: 3, total: 4 }), L.savesState({ filled: 4, total: 5 }), L.savesState({ filled: 0, total: 0 })], ['todo', 'done', 'optional']);
+      equal(L.STEPS.map((step) => step.id), ['step13', 'step14', 'step12']);
+    });
     await test('kickstart afgerond: één keer AI-miles (instelbaar bij de regels)', () => {
       const facts = [fact('kickstart_done', '', '2026-11-04'), fact('kickstart_done', '', '2026-11-05')];
       equal(B.compute(facts, { today: '2026-11-05' }).miles, 50);
