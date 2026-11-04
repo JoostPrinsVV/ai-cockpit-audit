@@ -37,6 +37,31 @@
     { label: 'Cijfers vergelijken', values: { role: 'Je bent een kritische controller', goal: 'Vergelijk de cijfers van [JAAR] met [VORIG JAAR] en noem de grootste verschillen met een mogelijke verklaring.', context: 'Ik bereid een gesprek met de klant voor en wil weten waar ik naar moet vragen.', source: 'het bijgevoegde document', onlySource: true, formats: ['een tabel'], expect: 'Kolommen: post, bedrag dit jaar, vorig jaar, verschil, mogelijke verklaring.', extras: ['Doe geen aannames over bedragen of data die niet in de bron staan.'] } }
   ];
 
+  /* In het Engels (js/i18n.js): dezelfde bouwstenen in het Engels. Die komen in je prompt terecht, dus die
+     vertalen we hier zelf (de rest van het scherm vertaalt js/i18n.js). */
+  const ROLES_EN = {
+    audit: ['You are an experienced auditor', 'You are a critical reviewer of an audit file', 'You are an IT auditor'],
+    accountancy: ['You are an experienced compilation accountant', 'You are a tax adviser', 'You are an adviser for SME owners'],
+    algemeen: ['You are an experienced adviser at an accountancy firm', 'You are a communications adviser', 'You are a critical reader']
+  };
+  const VERBS_EN = ['Summarise', 'Analyse', 'Write an email', 'Make a table of', 'Compare', 'Check', 'Come up with questions about'];
+  const SOURCES_EN = ['the attached document', 'the email below', 'the text below', '/[FILE NAME] (choose the file with /)', 'the Teams meeting', 'only your general knowledge, without files'];
+  // 'in het Engels' is handig voor Nederlandse collega's; in het Engels is het omgekeerde handig: in het Nederlands
+  const FORMATS_EN = ['a table', 'a bulleted list', 'a short email', 'a maximum of 200 words', 'a professional tone', 'address the client formally', 'step by step', 'in Dutch'];
+  const EXTRAS_EN = [
+    'Ask me questions first if anything is unclear.',
+    'For each point, state where it is in the source.',
+    'Indicate where you are in doubt or unsure.',
+    'Make no assumptions about amounts or dates that are not in the source.'
+  ];
+  const EXAMPLES_EN = [
+    { label: 'Email to a client', values: { role: 'You are an experienced adviser at an accountancy firm', goal: 'Write a friendly email to [CLIENT NAME] asking for the missing documents for the year-end work.', context: 'The client is an SME owner with little time. The deadline is [DATE].', source: 'the text below', formats: ['a short email', 'a maximum of 200 words'], expect: 'Put the documents in a numbered list. Sign with [NAME].' } },
+    { label: 'Summarise minutes', values: { role: 'You are an experienced minute-taker', goal: 'Summarise the meeting into decisions, actions and open points.', context: 'The meeting was about the audit planning. The summary goes to the whole team.', source: 'the Teams meeting', formats: ['a table'], expect: 'Per action: who, what and when.', extras: ['For each point, state where it is in the source.'] } },
+    { label: 'Compare figures', values: { role: 'You are a critical controller', goal: 'Compare the figures for [YEAR] with [PREVIOUS YEAR] and name the biggest differences with a possible explanation.', context: 'I am preparing a meeting with the client and want to know what to ask about.', source: 'the attached document', onlySource: true, formats: ['a table'], expect: 'Columns: item, amount this year, last year, difference, possible explanation.', extras: ['Make no assumptions about amounts or dates that are not in the source.'] } }
+  ];
+  const english = () => Boolean(ns.i18n && ns.i18n.english());
+  const pick = (nl, en) => (english() ? en : nl);
+
   const EMPTY = { role: '', goal: '', context: '', source: '', onlySource: false, formats: [], expect: '', extras: [] };
   const full = (values) => Object.assign({}, EMPTY, values || state);
   const words = (value) => value.trim().split(/\s+/).filter(Boolean).length;
@@ -53,11 +78,11 @@
     if (v.goal.trim()) parts.push(sentence(v.goal));
     if (v.context.trim()) parts.push(sentence(v.context));
     const source = [];
-    if (v.source.trim()) source.push(`Gebruik ${v.source.trim().replace(/[.]$/, '')}.`);
-    if (v.onlySource) source.push('Gebruik alleen deze bron; staat iets er niet in, zeg dat dan.');
+    if (v.source.trim()) source.push(pick('Gebruik ', 'Use ') + v.source.trim().replace(/[.]$/, '') + '.');
+    if (v.onlySource) source.push(pick('Gebruik alleen deze bron; staat iets er niet in, zeg dat dan.', 'Only use this source; if something is not in it, say so.'));
     if (source.length) parts.push(source.join(' '));
     const expect = [];
-    if (v.formats.length) expect.push(`Lever het op als ${v.formats.join(', ').replace(/, ([^,]*)$/, ' en $1')}.`);
+    if (v.formats.length) expect.push(pick('Lever het op als ', 'Deliver it as ') + v.formats.join(', ').replace(/, ([^,]*)$/, pick(' en $1', ' and $1')) + '.');
     if (v.expect.trim()) expect.push(sentence(v.expect));
     if (expect.length) parts.push(expect.join(' '));
     if (v.extras.length) parts.push(v.extras.join('\n'));
@@ -139,7 +164,8 @@
     const opts = options || {};
     return el('div', { className: 'chips builder__chips', attrs: { role: 'group', 'aria-label': label } }, values.map((value) => {
       const pressed = opts.pressed ? opts.pressed(value) : null;
-      const btn = el('button', { className: 'builder__chip', attrs: { type: 'button', 'aria-pressed': pressed === null ? null : String(pressed) } }, [opts.plus ? icon('plus') : null, el('span', { text: value })]);
+      // translate="no": de tekst komt zo in je prompt, en staat al in de goede taal
+      const btn = el('button', { className: 'builder__chip', attrs: { type: 'button', translate: 'no', 'aria-pressed': pressed === null ? null : String(pressed) } }, [opts.plus ? icon('plus') : null, el('span', { text: value })]);
       btn.addEventListener('click', () => onPick(value, btn));
       return btn;
     }));
@@ -203,18 +229,23 @@
 
     // 1. Rol
     const role = textField('role', 'Wie is Copilot?', 'Een rol zet Copilot in de juiste stand.', 0, 'Bijv. Je bent een ervaren auditor');
-    const roleChips = chips('Voorbeelden van een rol', ROLES[disciplineId] || ROLES.algemeen, (value) => setField('role', value), { plus: true });
+    const roles = pick(ROLES, ROLES_EN);
+    const roleChips = chips('Voorbeelden van een rol', roles[disciplineId] || roles.algemeen, (value) => setField('role', value), { plus: true });
     // 2. Doel
     const goal = textField('goal', 'Wat moet Copilot doen?', 'Begin met een werkwoord en wees concreet over wat eruit moet komen.', 3, 'Bijv. Vat de notulen samen in besluiten, acties en open punten');
-    const verbChips = chips('Begin met een werkwoord', VERBS, (verb) => {
-      const rest = state.goal.replace(/^(Vat samen|Analyseer|Schrijf een e-mail|Maak een tabel van|Vergelijk|Controleer|Bedenk vragen over)\b\s*/i, '');
+    const verbChips = chips('Begin met een werkwoord', pick(VERBS, VERBS_EN), (verb) => {
+      const rest = state.goal.replace(/^(Vat samen|Analyseer|Schrijf een e-mail|Maak een tabel van|Vergelijk|Controleer|Bedenk vragen over|Summarise|Analyse|Write an email|Make a table of|Compare|Check|Come up with questions about)\b\s*/i, '');
       setField('goal', verb + ' ' + rest);
       fields.goal.focus();
     });
     // 3. Context
     const context = textField('context', 'Wat moet Copilot weten?', 'Voor wie is het, waarom, en wat is de situatie? Gebruik [PLAATSHOUDERS] in plaats van klantnamen.', 3, 'Bijv. Het overleg ging over de planning; de samenvatting gaat naar het team');
     const me = ns.profile.get();
-    const about = [me.functie ? `Ik werk als ${me.functie.toLowerCase()} bij ${ns.app.config().organizationName || 'Visser & Visser'}` : '', me.team ? `in ${me.team}` : '', me.klanten ? `en werk vooral voor ${me.klanten}` : ''].filter(Boolean).join(' ');
+    const org = ns.app.config().organizationName || 'Visser & Visser';
+    const about = (english()
+      ? [me.functie ? `I work as ${me.functie.toLowerCase()} at ${org}` : '', me.team ? `in ${me.team}` : '', me.klanten ? `and mainly work for ${me.klanten}` : '']
+      : [me.functie ? `Ik werk als ${me.functie.toLowerCase()} bij ${org}` : '', me.team ? `in ${me.team}` : '', me.klanten ? `en werk vooral voor ${me.klanten}` : ''])
+      .filter(Boolean).join(' ');
     const aboutButton = about
       ? el('button', { className: 'builder__chip', attrs: { type: 'button' } }, [icon('user'), el('span', { text: 'Over mij invoegen' })])
       : el('a', { className: 'builder__link', attrs: { href: '#/mijn' } }, [icon('user'), el('span', { text: 'Vul je functie in bij Mijn gegevens, dan kun je die hier invoegen' })]);
@@ -226,14 +257,14 @@
     }
     // 4. Bron
     const source = textField('source', 'Welke bron gebruikt Copilot?', 'Met / kies je in Copilot een bestand; of plak de tekst onder je prompt.', 0, 'Bijv. het bijgevoegde document');
-    const sourceChips = chips('Voorbeelden van een bron', SOURCES, (value) => setField('source', value), { plus: true });
+    const sourceChips = chips('Voorbeelden van een bron', pick(SOURCES, SOURCES_EN), (value) => setField('source', value), { plus: true });
     const only = el('input', { attrs: { id: 'pb-only', type: 'checkbox', checked: state.onlySource } });
     only.addEventListener('change', () => {
       state.onlySource = only.checked;
       update();
     });
     // 5. Verwachting
-    const formatChips = chips('Vorm', FORMATS, (value, btn) => {
+    const formatChips = chips('Vorm', pick(FORMATS, FORMATS_EN), (value, btn) => {
       const on = !state.formats.includes(value);
       state.formats = on ? state.formats.concat(value) : state.formats.filter((f) => f !== value);
       btn.setAttribute('aria-pressed', String(on));
@@ -241,7 +272,7 @@
     }, { pressed: (value) => state.formats.includes(value) });
     const expect = textField('expect', 'Nog iets over de vorm?', 'Bijv. de kolommen van een tabel, of met wie je ondertekent ([NAAM]).', 2, 'Bijv. Kolommen: post, dit jaar, vorig jaar, verschil');
     // 6. Extra
-    const extras = el('div', { className: 'builder__extras' }, EXTRAS.map((line, index) => {
+    const extras = el('div', { className: 'builder__extras', attrs: { translate: 'no' } }, pick(EXTRAS, EXTRAS_EN).map((line, index) => {
       const id = 'pb-extra-' + index;
       const box = el('input', { attrs: { id, type: 'checkbox', checked: state.extras.includes(line) } });
       box.addEventListener('change', () => {
@@ -258,7 +289,7 @@
     };
     const examples = el('div', { className: 'builder__examples' }, [
       el('span', { className: 'builder__examples-label', text: 'Begin met een voorbeeld:' }),
-      ...EXAMPLES.map((example) => el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: () => apply(example.values) } }, [el('span', { text: example.label })]))
+      ...pick(EXAMPLES, EXAMPLES_EN).map((example) => el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button', translate: 'no' }, on: { click: () => apply(example.values) } }, [el('span', { text: example.label })]))
     ]);
     const reset = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Opnieuw beginnen' })]);
     reset.addEventListener('click', () => apply({}));

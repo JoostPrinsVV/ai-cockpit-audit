@@ -30,13 +30,15 @@
     return Number.isFinite(n) && n > 0 ? Math.min(n, 480) : 0;
   }
 
-  /** '20 min', '1 u 5 min', '12 uur'. */
+  /** '20 min', '1 u 5 min', '12 uur' (in het Engels: '1 h 5 min', '12 hours'). */
   function format(total) {
     const value = Math.max(0, Math.round(Number(total) || 0));
     if (value < 60) return value + ' min';
     const hours = Math.floor(value / 60);
     const rest = value % 60;
-    return rest ? `${hours} u ${rest} min` : `${hours} uur`;
+    const english = ns.i18n && ns.i18n.english();
+    if (rest) return `${hours} ${english ? 'h' : 'u'} ${rest} min`;
+    return english ? `${hours} ${hours === 1 ? 'hour' : 'hours'}` : `${hours} uur`;
   }
 
   const today = () => (ns.content && ns.content.today ? ns.content.today() : new Date().toISOString().slice(0, 10));

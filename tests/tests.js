@@ -54,6 +54,47 @@
   }
 
   async function run() {
+    // De tests gaan uit van het Nederlands, ook als in deze browser English gekozen is (js/i18n.js)
+    if (ns.i18n) ns.i18n.use('nl');
+
+    /* ---- taal ---- */
+    describe('Taal: Nederlands en Engels (js/i18n.js, js/i18n-en.js)');
+    await test('vertalen: vaste teksten, patronen met een getal of naam, en Nederlands als er geen vertaling is', () => {
+      const I = ns.i18n;
+      try {
+        I.use('en');
+        equal([I.t('Kopieer prompt'), I.t('Mijn logboek'), I.t('Dit staat nergens')], ['Copy prompt', 'My logbook', 'Dit staat nergens']);
+        equal([I.t('Dag 3 van 14'), I.t('Ja, ±20 min'), I.t('Voor managers en partners'), I.t('Usecase · Planning en interimcontroles')], ['Day 3 of 14', 'Yes, ±20 min', 'For managers and partners', 'Use case · Planning and interim audits']);
+        equal(I.t('Hallo {naam}', { naam: 'Sanne' }), 'Hallo Sanne', 'invullen werkt ook zonder vertaling');
+        equal(I.locale(), 'en-GB');
+        I.use('nl');
+        equal([I.t('Kopieer prompt'), I.t('Hallo {naam}', { naam: 'Sanne' }), I.locale()], ['Kopieer prompt', 'Hallo Sanne', 'nl-NL'], 'in het Nederlands verandert er niets');
+      } finally {
+        I.use('nl');
+      }
+    });
+    await test('de pagina vertalen: tekst en aria-label wel, prompts, code, invoer en translate="no" niet', () => {
+      const I = ns.i18n;
+      const box = document.createElement('div');
+      box.innerHTML = '<p> Sluiten </p><button aria-label="Zoeken" title="Mijn logboek">Annuleren</button><pre>Sluiten</pre><code>Sluiten</code><span translate="no">Sluiten</span><textarea placeholder="Zoeken">Sluiten</textarea><input placeholder="Zoeken">';
+      try {
+        I.use('en');
+        I.translateTree(box);
+        const [p, button, pre, code, span, textarea, input] = box.children;
+        equal([p.textContent, button.textContent, button.getAttribute('aria-label'), button.getAttribute('title')], [' Close ', 'Cancel', 'Search', 'My logbook'], 'tekst (met de spaties eromheen) en attributen');
+        equal([pre.textContent, code.textContent, span.textContent, textarea.value], ['Sluiten', 'Sluiten', 'Sluiten', 'Sluiten'], 'prompts, code, translate="no" en wat je typt blijven');
+        equal([textarea.getAttribute('placeholder'), input.getAttribute('placeholder')], ['Search', 'Search'], 'een placeholder wel');
+      } finally {
+        I.use('nl');
+      }
+    });
+    await test('vertaallijst: geen sleutels met spaties eromheen, en elk patroon is een geldig paar', () => {
+      const keys = Object.keys(ns.i18nEn.words);
+      equal(keys.filter((key) => key !== key.trim()), [], 'sleutels zonder spaties eromheen (zo wordt er gezocht)');
+      ok(keys.length > 300, 'een flinke lijst: ' + keys.length);
+      ok(ns.i18nEn.patterns.every(([pattern, out]) => pattern instanceof RegExp && (typeof out === 'string' || typeof out === 'function')), 'patronen: [RegExp, tekst of functie]');
+    });
+
     /* ---- ui: tekst, zoeken en plaatshouders ---- */
     describe('Tekst en zoeken (js/ui.js)');
     await test('normalize: kleine letters, zonder accenten, één spatie', () => {

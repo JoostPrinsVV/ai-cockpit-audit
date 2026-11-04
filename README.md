@@ -711,6 +711,28 @@ de functie `audit_time_saved` (alleen aantallen, voor de regel op de startpagina
 *Kickstart afgerond* als feit dat een deelnemer zelf mag vastleggen. Tot dan werken de eigen teller en de Kickstart
 gewoon; alleen het totaal van collega's en de tijdwinst in Beheer → Gebruik blijven leeg.
 
+## Engels (voor het team in Zuid-Afrika)
+
+Iedereen kiest zijn taal in **Mijn gegevens → Taal / Language** of via **Ctrl+K** (*Switch to English*). De keuze staat
+alleen op dat apparaat (`ai-snackbar-audit:taal`). Staat de browser op een andere taal dan Nederlands en is er nog niets
+gekozen, dan vraagt de cockpit het één keer. Datums en getallen volgen dan het Britse Engels (`en-GB`).
+
+**Fase 1 (klaar): de schermen.** `js/i18n.js` vertaalt in het Engels alle knoppen, koppen, uitleg en meldingen terwijl ze
+verschijnen, ook `aria-label`, `title`, `placeholder` en `alt`. De vertalingen staan in `js/i18n-en.js`: een lijst met
+de Nederlandse tekst als sleutel, plus patronen voor teksten met een getal of naam (`Nog 5 uur` → `Due in 5 hours`). Wat
+er niet in staat, blijft Nederlands; er gaat dus nooit iets stuk. De promptbouwer heeft eigen Engelse bouwstenen
+(`js/view-builder.js`), omdat die tekst in je prompt zetten. Niet vertaald: Beheer (blijft Nederlands), wat je zelf typt,
+stukken met `translate="no"` en de inhoud.
+
+Een vertaling toevoegen of verbeteren: zet de cockpit op English, open de pagina's en typ in de console
+`AIAudit.i18n.missing()`. Dat geeft de Nederlandse schermteksten die je zag zonder vertaling (de inhoud zit er niet
+tussen). Zet ze in `js/i18n-en.js` (sleutel zonder spaties eromheen; de tests controleren dat) en draai `tools/versie.ps1`.
+Let op: de teksten over het AI-beleid (*Mag dit?*, de checkride, Werk-modus) zijn een eerste vertaling en moeten nog
+langs Compliance voordat het Zuid-Afrikaanse team ermee werkt.
+
+**Fase 2 (volgt): de inhoud.** Prompts, usecases, tips, trainingen en agents krijgen per item een Engelse versie in
+Beheer. Zonder Engelse versie toont de cockpit het Nederlandse item met het label *Dutch only*.
+
 ## Nieuwsbrief (Beheer → Nieuwsbrief)
 
 Een weekupdate of maandnieuwsbrief, vanzelf samengesteld uit wat er in die periode nieuw was in de cockpit van de

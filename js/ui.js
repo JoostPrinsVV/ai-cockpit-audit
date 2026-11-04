@@ -497,6 +497,8 @@
   }
 
   const MONTHS = ['jan.', 'feb.', 'mrt.', 'apr.', 'mei', 'jun.', 'jul.', 'aug.', 'sep.', 'okt.', 'nov.', 'dec.'];
+  // In het Engels (js/i18n.js): 3 Nov 2026
+  const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   function parseDate(value) {
     if (!value) return null;
@@ -507,7 +509,8 @@
   function formatDate(value) {
     const date = parseDate(value);
     if (!date) return '';
-    return date.getDate() + ' ' + MONTHS[date.getMonth()] + ' ' + date.getFullYear();
+    const months = ns.i18n && ns.i18n.english() ? MONTHS_EN : MONTHS;
+    return date.getDate() + ' ' + months[date.getMonth()] + ' ' + date.getFullYear();
   }
 
   function isNew(value) {

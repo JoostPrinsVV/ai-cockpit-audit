@@ -369,7 +369,7 @@
       config.applicationSubtitle = `Usecases, prompts, tips, trainingen en agents: alles over Copilot in ${discipline.label} op één plek.`;
     }
     if (ns.content.source !== 'bestanden' && ns.content.updatedAt) {
-      config.lastUpdated = new Date(ns.content.updatedAt).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+      config.lastUpdated = new Date(ns.content.updatedAt).toLocaleDateString(ns.i18n.locale(), { day: 'numeric', month: 'long', year: 'numeric' });
     }
     fillChrome();
   }
@@ -668,6 +668,11 @@
       loadContent().catch((error) => {
         console.error('[AI-cockpit Audit] Inhoud laden mislukt', error);
         if (!contentReady) useFiles().then(() => route());
+      });
+      // Browser niet op Nederlands en nog geen taal gekozen: één keer 'Switch to English?' (js/i18n.js).
+      // De rondleiding wacht tot je kiest.
+      ns.i18n.offer(() => {
+        if (document.querySelector('.home')) ns.tour.maybeStart();
       });
       // Gepland publiceren: is het moment van een geplande wijziging voorbij, dan gaat die nu live
       ns.central.publishDue().then((count) => {

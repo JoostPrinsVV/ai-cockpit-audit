@@ -10,8 +10,8 @@
   'use strict';
 
   const { el, icon, toast, formatDate } = ns.ui;
-  const NUMBER = new Intl.NumberFormat('nl-NL');
-  const MONTH = new Intl.DateTimeFormat('nl-NL', { month: 'long', year: 'numeric' });
+  const NUMBER = new Intl.NumberFormat(ns.i18n.locale());
+  const MONTH = new Intl.DateTimeFormat(ns.i18n.locale(), { month: 'long', year: 'numeric' });
 
   /** Waar een regel in het logboek over gaat (de titel van de prompt, demo, training …). */
   function subject(entry) {

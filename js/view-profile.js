@@ -93,7 +93,20 @@
       toast('Gewist');
     });
 
+    // Taal van de cockpit (js/i18n.js): wisselen laadt de pagina opnieuw. Tweetalig, zodat je hem altijd vindt.
+    const language = el('select', { className: 'field__input', attrs: { id: 'mine-taal', 'aria-describedby': 'mine-taal-hint' } }, [
+      el('option', { attrs: { value: 'nl', translate: 'no' }, text: 'Nederlands' }),
+      el('option', { attrs: { value: 'en', translate: 'no' }, text: 'English' })
+    ]);
+    language.value = ns.i18n.lang();
+    language.addEventListener('change', () => ns.i18n.set(language.value));
+
     const form = el('form', { className: 'form-card mine__form', attrs: { novalidate: true, 'aria-labelledby': 'mine-form-title' } }, [
+      el('div', { className: 'field mine__language' }, [
+        el('label', { className: 'field__label', attrs: { for: 'mine-taal', translate: 'no' }, text: 'Taal / Language' }),
+        language,
+        el('p', { className: 'field__hint', attrs: { id: 'mine-taal-hint' }, text: 'De knoppen en uitleg van de cockpit. Prompts en andere inhoud staan in het Engels zodra ze vertaald zijn.' })
+      ]),
       el('h2', { className: 'form-card__title', attrs: { id: 'mine-form-title' }, text: 'Wie ben je?' }),
       el('div', { className: 'mine__fields' }, [
         ...ns.profile.FIELDS.map(field),

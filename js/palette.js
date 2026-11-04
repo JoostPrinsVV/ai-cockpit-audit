@@ -40,12 +40,17 @@
       { label: 'AI-specialist invliegen', meta: 'Voor een klantcasus', icon: 'plane', run: () => ns.specialist.open(), words: 'specialist invliegen klant casus hulp meekijken advies ai-team copilot inzetten', quick: true },
       { label: 'Rondleiding door de cockpit', meta: 'In een minuut waar alles staat', icon: 'plane', run: () => ns.tour.restart(), words: 'rondleiding uitleg tour help hulp begin wegwijs' },
       { label: 'Wissel tussen licht en donker', meta: 'Thema', icon: 'moon', run: () => document.getElementById('theme-button').click(), words: 'thema donker licht dark mode' },
+      // Taal (js/i18n.js): het label staat al in de andere taal, zodat je hem altijd vindt
+      ns.i18n.english()
+        ? { label: 'Nederlands', meta: 'Taal / Language', icon: 'globe', run: () => ns.i18n.set('nl'), words: 'taal language dutch nederlands' }
+        : { label: 'Switch to English', meta: 'Taal / Language', icon: 'globe', run: () => ns.i18n.set('en'), words: 'taal language english engels' },
       { label: 'Startpagina', meta: 'Pagina', icon: 'plane', href: '#/', words: 'home start begin' },
       ...ns.kinds.pages.map((kind) => ({ label: kind.title, meta: 'Pagina', icon: kind.icon, href: '#/' + kind.list, words: kind.many + ' overzicht' })),
       { label: 'Ideeënhub', meta: 'Pagina', icon: 'message-plus', href: '#/ideeen', words: 'ideeen hub inzendingen' },
       { label: 'Beheer', meta: 'Voor het AI-team', icon: 'settings', href: '#/beheer', words: 'beheer admin inloggen' }
     ];
-    return list.filter(Boolean).map((action) => Object.assign(action, { haystack: normalize(action.label + ' ' + action.meta + ' ' + action.words) }));
+    // Zoeken werkt ook op de Engelse tekst (als je Engels gekozen hebt)
+    return list.filter(Boolean).map((action) => Object.assign(action, { haystack: normalize([action.label, action.meta, action.words, ns.i18n.english() ? ns.i18n.t(action.label) + ' ' + ns.i18n.t(action.meta) : ''].join(' ')) }));
   }
 
   /** Hoe goed een titel past: begint ermee 3, bevat het hele zoekwoord 2, alleen ergens in de tekst 1. */

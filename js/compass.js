@@ -260,7 +260,7 @@
     const panel = el('div', { className: 'compass__panel on-dark' }, [
       dial(list, day),
       el('div', { className: 'compass__now' }, [
-        el('p', { className: 'compass__eyebrow' }, [icon('compass'), el('span', { text: `Seizoenskompas · ${MONTHS[month - 1]}` })]),
+        el('p', { className: 'compass__eyebrow' }, [icon('compass'), el('span', { text: `Seizoenskompas · ${ns.i18n.english() ? ns.i18n.month(month - 1) : MONTHS[month - 1]}` })]),
         main
           ? el('h2', { className: 'compass__title', attrs: { id: 'home-compass' } }, [el('span', { className: 'compass__label', text: 'Nu op koers: ' }), main.title])
           : el('h2', { className: 'compass__title', attrs: { id: 'home-compass' }, text: 'Rustig vaarwater' }),
@@ -269,7 +269,7 @@
           el('span', { text: 'Ook nu: ' }),
           ...also.map((season) => el('span', { className: 'compass__chip ' + accentClass(season.accent), text: season.title }))
         ]) : null,
-        coming ? el('p', { className: 'compass__next' }, [icon('arrow-right'), el('span', { text: `Hierna: ${coming.season.title} (vanaf ${MONTHS[coming.month - 1]})` })]) : null,
+        coming ? el('p', { className: 'compass__next' }, [icon('arrow-right'), el('span', { text: `Hierna: ${coming.season.title} (vanaf ${ns.i18n.english() ? ns.i18n.month(coming.month - 1) : MONTHS[coming.month - 1]})` })]) : null,
         whole
       ])
     ]);

@@ -55,7 +55,7 @@
     }, [
       el('span', { className: 'ladder__mark' }, [insignia(index, 'md', { rules: r })]),
       el('p', { className: 'ladder__name', text: level.name }),
-      el('p', { className: 'ladder__miles', text: index === current ? 'Jouw brevet' : index === 0 ? 'De eerste stappen' : `${level.miles.toLocaleString('nl-NL')} AI-miles` }),
+      el('p', { className: 'ladder__miles', text: index === current ? 'Jouw brevet' : index === 0 ? 'De eerste stappen' : `${level.miles.toLocaleString(ns.i18n.locale())} AI-miles` }),
       el('ul', { className: 'ladder__perks', attrs: { role: 'list', 'aria-label': 'Voordelen' } }, level.perks.map((perk) => el('li', {}, [icon('check'), el('span', { text: perk })])))
     ])));
   }
@@ -132,7 +132,7 @@
           ]),
           next ? el('div', { className: 'promo__block' }, [
             el('h3', { className: 'promo__label', text: `Op weg naar ${next.level.name}` }),
-            el('p', { className: 'promo__next', text: next.milesNeeded ? `Nog ${next.milesNeeded.toLocaleString('nl-NL')} AI-miles, en de checkride:` : 'Genoeg miles; nu nog de checkride:' }),
+            el('p', { className: 'promo__next', text: next.milesNeeded ? `Nog ${next.milesNeeded.toLocaleString(ns.i18n.locale())} AI-miles, en de checkride:` : 'Genoeg miles; nu nog de checkride:' }),
             checklist(next.checks)
           ]) : el('p', { className: 'promo__next', text: 'Hoger dan dit gaat het niet. Dank je wel dat je collega\'s meeneemt.' }),
           el('div', { className: 'improve__actions' }, [share, close])

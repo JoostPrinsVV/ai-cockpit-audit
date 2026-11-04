@@ -18,7 +18,7 @@
 
   /** 'vrijdag 30 oktober' */
   function longDate(date) {
-    return new Date(date + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+    return new Date(date + 'T12:00:00').toLocaleDateString(ns.i18n.locale(), { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   /** 'morgen' of 'over 3 dagen' */

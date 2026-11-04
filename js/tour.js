@@ -337,8 +337,8 @@
       scheduled = window.setTimeout(() => {
         scheduled = 0;
         if (window.location.hash.replace(/^#\/?/, '') !== '' || !document.querySelector('.home')) return;
-        // Staat er net een ander venster open (zoeken, Mag dit?): even later nog eens
-        if (document.querySelector('dialog[open]')) later();
+        // Staat er net een ander venster open (zoeken, Mag dit?), of de vraag naar de taal (js/i18n.js): even later nog eens
+        if (document.querySelector('dialog[open]') || (ns.i18n && ns.i18n.isOffering())) later();
         else start();
       }, START_DELAY);
     };

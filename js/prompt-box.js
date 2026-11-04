@@ -102,7 +102,7 @@
         });
         renderText();
       });
-      fillPanel.append(intro, profileNote, grid, clear);
+      fillPanel.append(...[intro, profileNote, grid, clear].filter(Boolean));
 
       fillToggle = el('button', { className: 'btn btn--secondary btn--sm prompt-box__fill', attrs: { type: 'button', 'aria-expanded': 'false', 'aria-controls': id + '-fill' } }, [
         icon('pencil-line'),

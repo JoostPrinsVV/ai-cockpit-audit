@@ -92,7 +92,7 @@
   }
 
   const lower = (text) => text.charAt(0).toLowerCase() + text.slice(1);
-  const DUE = new Intl.DateTimeFormat('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const DUE = new Intl.DateTimeFormat(ns.i18n ? ns.i18n.locale() : 'nl-NL', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
   /** Korte tekst bij de termijn: 'Belofte verlopen', 'Nog 5 uur', 'Nog 2 dagen'. */
   function leftText(info) {
