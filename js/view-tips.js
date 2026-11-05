@@ -39,7 +39,7 @@
     return el('article', { className: 'tip-card ' + accentClass(tip.accent) + (large ? ' tip-card--large' : ''), dataset: { kind: 'tip', id: tip.id } }, [
       el('div', { className: 'tip-card__top' }, [
         el('span', { className: 'tip-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(tip.icon)]),
-        el('div', { className: 'tip-card__badges' }, [ns.ui.draftBadge(tip), ns.cockpit.sharedBadge(tip), weekBadge(tip), tip.weekly ? null : newBadge(tip.added), licenseBadge(tip.license, { short: true })]),
+        el('div', { className: 'tip-card__badges' }, [ns.ui.draftBadge(tip), ns.ui.dutchBadge(tip), ns.cockpit.sharedBadge(tip), weekBadge(tip), tip.weekly ? null : newBadge(tip.added), licenseBadge(tip.license, { short: true })]),
         saveButton('tip', tip.id, tip.title)
       ]),
       el('p', { className: 'tip-card__category', text: eyebrow || tip.category.label }),

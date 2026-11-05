@@ -95,6 +95,102 @@
       ok(ns.i18nEn.patterns.every(([pattern, out]) => pattern instanceof RegExp && (typeof out === 'string' || typeof out === 'function')), 'patronen: [RegExp, tekst of functie]');
     });
 
+    /* ---- Engelse versie van de inhoud ---- */
+    describe('Inhoud in het Engels (js/content-en.js, js/admin-english.js)');
+    const usecaseNl = {
+      id: 'risico', title: 'Risico\'s in kaart', phase: 'planning', video: 'assets/videos/a.mp4', steps: ['Open de jaarrekening', 'Plak de prompt'],
+      prompts: [{ label: 'Stap 1', text: 'Maak een risicotabel voor [KLANTNAAM].' }, { label: 'Stap 2', text: 'Vat samen voor [NAAM].' }]
+    };
+    const usecaseEn = { title: 'Mapping the risks', steps: ['Open the financial statements'], prompts: [{}, { text: 'Summarise for [NAME].' }], video: 'evil.mp4' };
+    await test('apply: Engels over het Nederlands, onderdelen op volgorde, plaatjes en links uit het Nederlands', () => {
+      const E = ns.contentEn;
+      const out = E.apply('usecase', Object.assign({}, usecaseNl, { en: usecaseEn }));
+      equal([out.title, out.phase, out.video], ['Mapping the risks', 'planning', 'assets/videos/a.mp4'], 'titel vertaald, fase en video uit het Nederlands');
+      equal(out.steps, ['Open the financial statements'], 'een lijst met regels: de Engelse lijst');
+      equal(out.prompts, [{ label: 'Stap 1', text: 'Maak een risicotabel voor [KLANTNAAM].' }, { label: 'Stap 2', text: 'Summarise for [NAME].' }], 'het tweede Engelse onderdeel hoort bij het tweede Nederlandse');
+      ok(!out._dutchOnly, 'vertaald');
+      equal(E.apply('usecase', usecaseNl)._dutchOnly, true, 'zonder Engelse versie: Dutch only');
+      equal(E.apply('usecase', Object.assign({}, usecaseNl, { en: { title: '  ' } }))._dutchOnly, true, 'een lege Engelse versie telt niet');
+      const training = E.apply('training', { title: 'T', actions: [{ title: 'Stel je instructies in', slide: '3' }], en: { actions: [{ title: 'Set your instructions' }] } });
+      equal([training.actions[0].title, training.actions[0].slide, training.actions[0]._key], ['Set your instructions', '3', 'Stel je instructies in'], 'het vinkje bij een actie hoort bij de Nederlandse kop');
+    });
+    await test('extract, vingerafdruk en status: bijwerken als het Nederlands verandert', () => {
+      const E = ns.contentEn;
+      const nl = E.extract('usecase', usecaseNl);
+      equal(Object.keys(nl), ['title', 'steps', 'prompts'], 'alleen de teksten (geen fase, video of id)');
+      const en = E.clean('usecase', usecaseEn, usecaseNl);
+      equal(en.video, undefined, 'opschonen: geen video in de Engelse versie');
+      equal(en.prompts, [{}, { text: 'Summarise for [NAME].' }], 'een leeg onderdeel blijft staan voor de volgorde');
+      const saved = Object.assign({}, usecaseNl, { en });
+      equal(E.status('usecase', saved), 'ok');
+      equal(E.status('usecase', Object.assign({}, saved, { phase: 'afronding', video: 'b.mp4' })), 'ok', 'fase of video veranderen: de vertaling klopt nog');
+      equal(E.status('usecase', Object.assign({}, saved, { title: 'Risico\'s in beeld' })), 'verouderd', 'tekst veranderd: bijwerken');
+      equal(E.status('usecase', usecaseNl), '', 'niet vertaald');
+    });
+    await test('inhoud laden in het Engels: vertaalde items, Dutch only, en het Nederlands blijft de bron', () => {
+      const C = ns.content;
+      const source = {
+        phase: [{ id: 'planning', label: 'Planning', en: { label: 'Planning stage' } }],
+        usecase: [Object.assign({}, usecaseNl, { en: usecaseEn })],
+        prompt: [{ id: 'mail', title: 'Mail aan de klant', phase: 'planning', prompt: 'Schrijf een mail.' }],
+        tip: [], training: [], agent: [],
+        setting: { tagline: 'Jij bepaalt de koers', en: { tagline: 'You set the course' } }
+      };
+      try {
+        ns.i18n.use('en');
+        C.load(source);
+        const usecase = C.usecaseById.get('risico');
+        equal([usecase.title, usecase.dutchOnly, usecase.phase.label, C.settings.tagline], ['Mapping the risks', false, 'Planning stage', 'You set the course']);
+        equal([C.promptById.get('risico-2').prompt, C.promptById.get('risico-2').dutchOnly], ['Summarise for [NAME].', false], 'prompt uit de usecase');
+        equal([C.promptById.get('mail').title, C.promptById.get('mail').dutchOnly], ['Mail aan de klant', true], 'niet vertaald: Nederlands met Dutch only');
+        ns.i18n.use('nl');
+        C.load(source);
+        equal([C.usecaseById.get('risico').title, C.promptById.get('mail').dutchOnly, C.settings.tagline], ['Risico\'s in kaart', false, 'Jij bepaalt de koers'], 'in het Nederlands: niets veranderd');
+      } finally {
+        ns.i18n.use('nl');
+        C.load();
+      }
+    });
+    await test('Engelse plaatshouders: [NAME], [ROLE] en [YEAR] uit Mijn gegevens, e.g. als voorbeeld', () => {
+      const P = ns.profile;
+      const saved = ns.ui.storage.get('profiel', null);
+      try {
+        P.set({ naam: 'Sanne de Vries', functie: 'Senior auditor', boekjaar: '2026' });
+        equal(P.fill('[NAME], [ROLE], [FINANCIAL YEAR], [PREVIOUS YEAR], [CLIENT NAME]'), 'Sanne de Vries, Senior auditor, 2026, 2025, [CLIENT NAME]');
+        const fields = ns.ui.parsePlaceholders('[PROCESS, e.g. purchasing process] [PASTE THE MINUTES HERE]');
+        equal([fields[0].label, fields[0].hint, fields[1].long], ['PROCESS', 'e.g. purchasing process', true]);
+      } finally {
+        P.clear();
+        if (saved) P.set(saved);
+      }
+    });
+    await test('Copilot-antwoord inlezen: JSON uit een codeblok, alleen bekende velden, en aandachtspunten', () => {
+      const A = ns.adminEnglish;
+      const answer = 'Hier is de vertaling:\n```json\n{ "title": "Mapping the risks", "prompts": [{ "label": "Step 1", "text": "Make a risk table." }, { "label": "Step 2", "text": "Summarise for [NAME]." }], "phase": "afronding" }\n```';
+      const parsed = A.parse(answer, 'usecase', usecaseNl);
+      equal(parsed.en.phase, undefined, 'geen fase uit Copilot');
+      equal(parsed.en.title, 'Mapping the risks');
+      ok(parsed.warnings.some((warning) => /plaatshouders/.test(warning)), 'een plaatshouder kwijt: ' + show(parsed.warnings));
+      let message = '';
+      try {
+        A.parse('Sorry, dat kan ik niet.', 'usecase', usecaseNl);
+      } catch (error) {
+        message = error.message;
+      }
+      ok(/geen JSON/.test(message), 'zonder JSON: uitleg');
+      const file = A.parseFile('{ "items": [ { "type": "prompt", "id": "mail", "en": { "title": "Email" } }, { "type": "onzin", "id": "x", "en": {} }, { "id": "y" } ] }');
+      equal([file.items.length, file.skipped], [1, 2], 'bestand: bruikbare items en overgeslagen regels');
+      ok(/Vertaal/.test(A.prompt('prompt', { title: 'Mail', prompt: 'Schrijf [NAAM]', phase: 'x' })) && !/"phase"/.test(A.prompt('prompt', { title: 'Mail', phase: 'x' })), 'de vertaalprompt bevat alleen de teksten');
+    });
+    await test('Engels veld in Beheer: een groep heeft net zoveel onderdelen als het Nederlands, met het Nederlands als voorbeeld', () => {
+      const A = ns.adminEnglish;
+      const group = { key: 'prompts', label: 'Prompts', type: 'group', min: 1, fields: [{ key: 'label', type: 'text' }, { key: 'text', type: 'code', required: true, placeholders: true }] };
+      const copy = A.mirror(group, usecaseNl.prompts, ns.contentEn.SPEC.usecase.prompts);
+      equal([copy.fixed, copy.keepEmpty, copy.min, copy.dutch.length], [true, true, undefined, 2]);
+      const text = copy.mirror(group.fields[1], usecaseNl.prompts[1]);
+      equal([text.placeholder, text.required], ['Vat samen voor [NAAM].', false], 'het Nederlandse onderdeel als grijze tekst, niet verplicht');
+    });
+
     /* ---- ui: tekst, zoeken en plaatshouders ---- */
     describe('Tekst en zoeken (js/ui.js)');
     await test('normalize: kleine letters, zonder accenten, één spatie', () => {

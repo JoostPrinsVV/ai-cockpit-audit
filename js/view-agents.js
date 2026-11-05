@@ -76,7 +76,7 @@
     return el('article', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : ''), dataset: { kind: 'agent', id: agent.id } }, [
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(agent.icon)]),
-        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), ns.cockpit.sharedBadge(agent), newBadge(agent.added), agentLicense(agent, true)])
+        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), ns.ui.dutchBadge(agent), ns.cockpit.sharedBadge(agent), newBadge(agent.added), agentLicense(agent, true)])
       ]),
       el('div', { className: 'uc-card__body' }, [
         el('p', { className: 'uc-card__phase', text: agent.kind }),

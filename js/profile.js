@@ -19,13 +19,14 @@
   const EVENT = 'ai:profiel';
 
   /* Velden. placeholders: de plaatshouders (het deel vóór ', bijv.', in hoofdletters) die het veld
-     invult. Precies die naam: [NAAM EN FUNCTIE] of [NAAM AFZENDER] is iemand anders. */
+     invult. Precies die naam: [NAAM EN FUNCTIE] of [NAAM AFZENDER] is iemand anders. Ook de Engelse
+     namen, voor de Engelse versie van een prompt ([NAME], [ROLE], …; zie js/content-en.js). */
   const FIELDS = [
-    { id: 'naam', label: 'Je naam', hint: 'Bijv. Sanne de Vries', autocomplete: 'name', placeholders: ['NAAM', 'MIJN NAAM', 'JOUW NAAM', 'JE NAAM', 'ONDERTEKENING'] },
-    { id: 'functie', label: 'Je functie', hint: 'Bijv. senior auditor', autocomplete: 'organization-title', placeholders: ['FUNCTIE', 'MIJN FUNCTIE', 'JOUW FUNCTIE', 'JE FUNCTIE'],
+    { id: 'naam', label: 'Je naam', hint: 'Bijv. Sanne de Vries', autocomplete: 'name', placeholders: ['NAAM', 'MIJN NAAM', 'JOUW NAAM', 'JE NAAM', 'ONDERTEKENING', 'NAME', 'MY NAME', 'YOUR NAME', 'SIGNATURE'] },
+    { id: 'functie', label: 'Je functie', hint: 'Bijv. senior auditor', autocomplete: 'organization-title', placeholders: ['FUNCTIE', 'MIJN FUNCTIE', 'JOUW FUNCTIE', 'JE FUNCTIE', 'ROLE', 'MY ROLE', 'YOUR ROLE', 'JOB TITLE', 'MY JOB TITLE', 'YOUR JOB TITLE'],
       options: ['Assistent-accountant', 'Junior auditor', 'Senior auditor', 'Supervisor', 'Manager', 'Partner', 'Samenstellend accountant', 'Fiscalist', 'Adviseur', 'Office manager'] },
-    { id: 'vestiging', label: 'Vestiging', hint: 'Bijv. Amsterdam', autocomplete: 'off', placeholders: ['VESTIGING', 'KANTOOR', 'MIJN VESTIGING', 'MIJN KANTOOR'] },
-    { id: 'team', label: 'Team', hint: 'Bijv. team MKB Noord', autocomplete: 'off', placeholders: ['TEAM', 'MIJN TEAM', 'JOUW TEAM'] },
+    { id: 'vestiging', label: 'Vestiging', hint: 'Bijv. Amsterdam', autocomplete: 'off', placeholders: ['VESTIGING', 'KANTOOR', 'MIJN VESTIGING', 'MIJN KANTOOR', 'OFFICE', 'MY OFFICE', 'YOUR OFFICE'] },
+    { id: 'team', label: 'Team', hint: 'Bijv. team MKB Noord', autocomplete: 'off', placeholders: ['TEAM', 'MIJN TEAM', 'JOUW TEAM', 'MY TEAM', 'YOUR TEAM'] },
     // Alleen voor de promptbouwer (als achtergrond): een soort klanten, nooit een naam
     { id: 'klanten', label: 'Soort klanten', hint: 'Bijv. mkb in de bouw en de groothandel', autocomplete: 'off', placeholders: [] }
   ];
@@ -51,8 +52,8 @@
   }
 
   // Boekjaar: '' (niet invullen), 'auto' of een jaartal
-  const YEAR_PLACEHOLDERS = ['JAAR', 'BOEKJAAR'];
-  const PREVIOUS_YEAR_PLACEHOLDERS = ['VORIG JAAR', 'VORIG BOEKJAAR'];
+  const YEAR_PLACEHOLDERS = ['JAAR', 'BOEKJAAR', 'YEAR', 'FINANCIAL YEAR'];
+  const PREVIOUS_YEAR_PLACEHOLDERS = ['VORIG JAAR', 'VORIG BOEKJAAR', 'PREVIOUS YEAR', 'PRIOR YEAR', 'PREVIOUS FINANCIAL YEAR', 'PRIOR FINANCIAL YEAR'];
 
   const BY_PLACEHOLDER = new Map();
   FIELDS.forEach((field) => field.placeholders.forEach((name) => BY_PLACEHOLDER.set(name, field.id)));
@@ -123,7 +124,7 @@
   }
 
   /** Label van een plaatshouder ('NAAM, bijv. Sanne' → 'NAAM'), in hoofdletters. */
-  const labelOf = (inner) => String(inner).split(/,\s*(?=bijv\.|bijvoorbeeld|zoals)/i)[0].trim().toUpperCase();
+  const labelOf = (inner) => String(inner).split(ns.ui.HINT_SPLIT)[0].trim().toUpperCase();
 
   /** Wat de cockpit invult voor deze plaatshouder (de tekst tussen de haken), of ''. */
   function valueFor(inner, today) {

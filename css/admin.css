@@ -1139,3 +1139,39 @@ ul.naslag-import__warnings { display: grid; gap: var(--space-1); margin: var(--s
 @media (prefers-reduced-motion: reduce) {
   .naslag-import__chevron { transition: none; }
 }
+
+/* Engelse versie onderaan een formulier (js/admin-english.js) */
+.en-box { border: 1px solid var(--color-border); border-left: 4px solid var(--accent-rose-ink); border-radius: var(--radius); background: var(--color-surface); }
+.en-box__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); cursor: pointer; list-style: none; }
+.en-box__head::-webkit-details-marker { display: none; }
+.en-box__head:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: -2px; border-radius: var(--radius); }
+.en-box__icon { display: grid; flex: none; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: var(--radius-sm); background: var(--accent-rose-wash, var(--accent-rose-tint)); color: var(--accent-rose-ink); }
+.en-box__heading { display: grid; flex: 1 1 14rem; gap: 2px; min-width: 0; }
+.en-box__title { font-weight: var(--fw-bold); }
+.en-box__lead { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.en-box__status { flex: none; }
+.en-box__chevron { flex: none; color: var(--color-text-muted); transition: transform var(--duration-fast) var(--ease-out); }
+.en-box[open] .en-box__chevron { transform: rotate(180deg); }
+.en-box__body { display: grid; gap: var(--space-4); padding: 0 var(--space-4) var(--space-4); }
+.en-box__steps { padding-right: 0; padding-left: 1.3rem; }
+.en-box__grid { padding-top: var(--space-4); border-top: 1px solid var(--color-border); }
+.en-box__grid ::placeholder { color: var(--color-text-muted); opacity: 0.85; }
+.en-box__actions { display: flex; justify-content: flex-end; }
+.en-box .naslag-import__actions { flex-wrap: wrap; }
+/* Beheer → Inhoud: 'EN' bij een item met een Engelse versie */
+.badge--en { background: var(--accent-rose-wash, var(--accent-rose-tint)); color: var(--accent-rose-ink); text-decoration: none; }
+.badge--en-old { background: var(--color-warning-fill); color: var(--color-warning); }
+/* Beheer → Inhoud → Engels */
+.en-tab__filters { justify-self: start; }
+.en-list { display: grid; gap: var(--space-5); }
+.en-list__group { display: grid; gap: var(--space-2); }
+ul.en-list__items { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.en-list__item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-2) var(--space-4); }
+.en-list__item + .en-list__item { border-top: 1px solid var(--color-border); }
+.en-list__name { flex: 1 1 16rem; min-width: 0; color: var(--color-text); font-weight: var(--fw-semibold); }
+.en-import .naslag-import__actions { flex-wrap: wrap; align-items: center; }
+.en-import__outcome:empty { display: none; }
+.en-import__outcome { display: grid; gap: var(--space-2); }
+@media (prefers-reduced-motion: reduce) {
+  .en-box__chevron { transition: none; }
+}

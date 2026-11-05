@@ -28,7 +28,7 @@
     return el('article', { className: 'uc-card ' + accentClass(usecase.accent), dataset: { kind: 'usecase', id: usecase.id } }, [
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(usecase.icon)]),
-        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), ns.cockpit.sharedBadge(usecase), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })]),
+        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), ns.ui.dutchBadge(usecase), ns.cockpit.sharedBadge(usecase), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })]),
         saveButton('usecase', usecase.id, usecase.title)
       ]),
       el('div', { className: 'uc-card__body' }, [

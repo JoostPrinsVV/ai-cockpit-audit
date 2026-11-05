@@ -525,16 +525,18 @@
      Een plaatshouder begint met een hoofdletter. Alles na ', bijv.' is een
      voorbeeld (wordt de hint in het invulveld). */
   const PLACEHOLDER = /\[([A-ZÀ-ÖØ-Þ][^[\]\n]{0,140})\]/g;
+  // Waar het voorbeeld begint, ook in een Engelse prompt: [PROCESS, e.g. purchasing process]
+  const HINT_SPLIT = /,\s*(?=bijv\.|bijvoorbeeld|zoals|e\.g\.|for example|such as)/i;
 
   function parsePlaceholders(text) {
     const found = new Map();
     String(text).replace(PLACEHOLDER, (match, inner) => {
       if (!found.has(inner)) {
-        const split = inner.split(/,\s*(?=bijv\.|bijvoorbeeld|zoals)/i);
+        const split = inner.split(HINT_SPLIT);
         const label = split[0].trim();
         const hint = split.slice(1).join(', ').trim();
         const options = / \/ /.test(label) ? label.split(' / ').map((part) => part.trim()).filter(Boolean) : [];
-        found.set(inner, { key: inner, label, hint, options, long: /^PLAK\b/.test(label) });
+        found.set(inner, { key: inner, label, hint, options, long: /^(PLAK|PASTE)\b/.test(label) });
       }
       return match;
     });
@@ -609,6 +611,12 @@
     const change = CHANGES[item.change];
     if (change) return el('span', { className: 'badge badge--change', attrs: { title: change.title } }, [icon('pencil-line'), change.text]);
     return item.draft ? el('span', { className: 'badge badge--draft', attrs: { title: 'Concept: alleen zichtbaar voor beheerders' } }, [icon('pencil-line'), 'Concept']) : null;
+  }
+
+  /** Met de cockpit in het Engels: 'Dutch only' bij een item zonder Engelse versie (js/content-en.js). */
+  function dutchBadge(item) {
+    if (!item || !item.dutchOnly || !ns.i18n || !ns.i18n.english()) return null;
+    return el('span', { className: 'badge badge--dutch', attrs: { title: 'Not translated yet: shown in Dutch', translate: 'no' } }, [icon('globe'), 'Dutch only']);
   }
 
   function chip(text, options) {
@@ -711,6 +719,7 @@
     formatDate,
     isNew,
     parsePlaceholders,
+    HINT_SPLIT,
     fillPlaceholders,
     promptNodes,
     ACCENTS,
@@ -720,6 +729,7 @@
     newBadge,
     CHANGES,
     draftBadge,
+    dutchBadge,
     chip,
     pageHeader,
     toggleGroup,

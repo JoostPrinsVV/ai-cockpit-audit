@@ -25,6 +25,7 @@
   function chipsFor(prompt, withTask) {
     return [
       ns.ui.draftBadge(prompt),
+      ns.ui.dutchBadge(prompt),
       ns.cockpit.sharedBadge(prompt),
       prompt.tool ? chip(prompt.tool, { icon: 'robot' }) : null,
       prompt.task && withTask !== false ? chip(prompt.task) : null,

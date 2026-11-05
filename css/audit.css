@@ -2210,6 +2210,10 @@ ol.slides__strip {
 
 .shared-note .icon { flex: none; width: 1.1rem; height: 1.1rem; margin-top: 0.15em; }
 
+/* In het Engels: een item zonder Engelse versie (js/content-en.js) */
+.badge--dutch { background: var(--accent-rose-wash, var(--accent-rose-tint)); color: var(--accent-rose-ink); }
+.shared-note--dutch { background: var(--accent-rose-wash, var(--accent-rose-tint)); color: var(--accent-rose-ink); }
+
 /* ---- Reviews bij usecases en prompts ('Wat vond je ervan?') ---- */
 .review { margin-top: var(--space-7); padding: var(--space-5) var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
 .review__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); }

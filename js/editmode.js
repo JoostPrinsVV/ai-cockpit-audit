@@ -36,9 +36,15 @@
   }
   let dragging = null; // { namespace, type, id, slot }
 
-  const isOn = () => on && ns.editor.available();
+  // In het Engels niet: dan zou een Engelse tekst in het Nederlandse veld belanden (de Engelse versie staat in Beheer)
+  const english = () => Boolean(ns.i18n && ns.i18n.english());
+  const isOn = () => on && ns.editor.available() && !english();
 
   function toggle() {
+    if (!on && english()) {
+      ns.ui.toast('Bewerken op de pagina kan alleen in het Nederlands. Zet je taal op Nederlands (Mijn gegevens), of pas de Engelse versie aan in Beheer → Inhoud.', { tone: 'warning', duration: 8000 });
+      return;
+    }
     on = !on;
     // Bewerken gaat over je werkversie: niet tegelijk 'Als collega' (de gepubliceerde versie) bekijken
     if (on) ns.editor.setVisitorView(false);

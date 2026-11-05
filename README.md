@@ -730,8 +730,31 @@ tussen). Zet ze in `js/i18n-en.js` (sleutel zonder spaties eromheen; de tests co
 Let op: de teksten over het AI-beleid (*Mag dit?*, de checkride, Werk-modus) zijn een eerste vertaling en moeten nog
 langs Compliance voordat het Zuid-Afrikaanse team ermee werkt.
 
-**Fase 2 (volgt): de inhoud.** Prompts, usecases, tips, trainingen en agents krijgen per item een Engelse versie in
-Beheer. Zonder Engelse versie toont de cockpit het Nederlandse item met het label *Dutch only*.
+**Fase 2 (klaar): de inhoud.** Iedere usecase, prompt, tip, training, agent en fase, en de teksten van de site, kan
+naast het Nederlands een Engelse versie hebben (veld `en` in de data; `js/content-en.js`). In het Engels legt de
+cockpit die over het Nederlands heen; wat niet vertaald is, blijft Nederlands. Een item zonder Engelse versie krijgt
+het label *Dutch only* op de kaart en een regel uitleg op de pagina. Afbeeldingen, tijden, links en keuzes komen altijd
+uit het Nederlands. Bij een lijst met onderdelen (de prompts van een usecase, de acties van een training) hoort het
+eerste Engelse onderdeel bij het eerste Nederlandse.
+
+- **Eén item vertalen:** onderaan ieder formulier in Beheer → Inhoud staat het blok *Engelse versie*, met de
+  Nederlandse tekst in grijs in ieder veld. *Kopieer de prompt en open Copilot* geeft Copilot de Nederlandse teksten
+  als JSON; plak het antwoord terug en klik op *Vertaling invullen*. De cockpit waarschuwt als er plaatshouders
+  ontbreken of nog Nederlands in staat. Daarna opslaan en publiceren zoals altijd.
+- **Bijwerken:** de Engelse versie onthoudt welke Nederlandse tekst er vertaald is. Verandert het Nederlands daarna,
+  dan staat er *EN bijwerken* in de lijst en *Nederlands gewijzigd: bijwerken* in het formulier. Klopt het Engels toch
+  nog, vink dan *Het Engels klopt weer met het Nederlands* aan.
+- **Tabblad Engels** (Beheer → Inhoud): wat er nog vertaald of bijgewerkt moet worden, met per item een link naar het
+  Engelse blok. *Veel items in één keer vertalen*: exporteer de Nederlandse teksten (JSON), laat ze vertalen in Copilot
+  Chat (de prompt staat erbij) of door het AI-team, en importeer het resultaat. Je ziet eerst wat er verandert.
+- **Plaatshouders in het Engels:** `[CLIENT NAME]`, `[PROCESS, e.g. purchasing process]`, `[PASTE THE TEXT HERE]`.
+  Mijn gegevens vult ook de Engelse namen in: `[NAME]`, `[ROLE]`, `[OFFICE]`, `[TEAM]`, `[YEAR]`, `[FINANCIAL YEAR]`,
+  `[PREVIOUS YEAR]`.
+- Bewerken op de pagina zelf (de bewerkmodus) kan alleen met de cockpit in het Nederlands; anders zou Engelse tekst
+  in een Nederlands veld belanden.
+
+**Fase 3 (volgt):** de eerste vertaling van alle inhoud van Audit (een importbestand voor het tabblad Engels), en de
+teksten over het AI-beleid laten nalezen door Compliance.
 
 ## Nieuwsbrief (Beheer → Nieuwsbrief)
 

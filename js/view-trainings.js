@@ -74,6 +74,7 @@
         training.subtitle ? el('p', { className: 'tr-card__subtitle', text: training.subtitle }) : null,
         el('div', { className: 'chips' }, [
           ns.ui.draftBadge(training),
+          ns.ui.dutchBadge(training),
           ns.cockpit.sharedBadge(training),
           ...audienceChips(training),
           training.hasNaslag ? chip('Naslagwerk', { icon: 'book' }) : null,

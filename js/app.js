@@ -129,12 +129,21 @@
   /** Detailpagina van een gedeeld item: een regel uitleg onder de titel. */
   function sharedNote(parsed, node) {
     const subject = pageSubject(parsed);
-    const note = subject ? ns.cockpit.sharedNote(subject.item, subject.kind.subject) : null;
+    const note = subject ? ns.cockpit.sharedNote(subject.item, subject.kind.subject) || dutchNote(subject.item) : null;
     if (!note) return;
     // Onder de kop; staat de kop in een rij met de bladwijzer, dan onder die rij
     const heading = node.querySelector('h1');
     const anchor = heading ? heading.closest('.detail__title-row') || heading : null;
     if (anchor) anchor.insertAdjacentElement('afterend', note);
+  }
+
+  /** In het Engels, bij een item zonder Engelse versie (js/content-en.js): dat het (nog) Nederlands is. */
+  function dutchNote(item) {
+    if (!item || !item.dutchOnly || item.locked || !ns.i18n.english()) return null;
+    return ns.ui.el('p', { className: 'shared-note shared-note--dutch', attrs: { translate: 'no' } }, [
+      ns.ui.icon('globe'),
+      ns.ui.el('span', { text: 'Dutch only: this page hasn\'t been translated yet, so the content is in Dutch. Buttons and explanations are in English.' })
+    ]);
   }
 
   /**
@@ -398,7 +407,7 @@
      Bezoekers laden de beheercode niet (ruim een derde van alle JavaScript, plus css/admin.css).
      Wie ingelogd is of naar #/beheer gaat, krijgt hem erbij, met de bestanden in data/ (voor
      Overzetten en inrichten). De volgorde van de scripts is belangrijk. */
-  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-saves.js', 'js/admin-naslag.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-goals.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/admin-improve.js', 'js/admin-brevet.js', 'js/admin-specialist.js', 'js/admin-launch.js', 'js/view-admin.js', 'js/editmode.js'];
+  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-saves.js', 'js/admin-naslag.js', 'js/admin-english.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-goals.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/admin-improve.js', 'js/admin-brevet.js', 'js/admin-specialist.js', 'js/admin-launch.js', 'js/view-admin.js', 'js/editmode.js'];
   let adminLoading = null;
 
   function loadAdmin() {

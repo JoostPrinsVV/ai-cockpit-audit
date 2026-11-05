@@ -68,6 +68,8 @@
     const own = (ns.seasons || {})[ctx.where.id || (match ? match.id : '')] || [];
     return own.map((season) => JSON.parse(JSON.stringify(season)));
   };
+  // De Engelse versie (js/admin-english.js), onderaan ieder formulier; niet in het zijpaneel van de bewerkmodus
+  const EN_FIELD = { key: 'en', label: 'Engelse versie', type: 'english', panel: false };
   const PUBLIC_WARNING ='De site is openbaar bereikbaar: zet hier alleen informatie voor gebruikers. Geen configuratie, systeemprompts, technische instellingen of goedkeuringsdocumenten; voor de formele registratie link je naar het AI-register.';
 
   /* ---- Velden per soort ---------------------------------------------------------- */
@@ -98,7 +100,8 @@
         { key: 'promptNote', label: 'Toelichting onder de prompts', type: 'textarea' },
         { key: 'watchOut', label: 'Let op', type: 'list', hint: 'Eén aandachtspunt per regel' },
         { key: 'tip', label: 'Tip', type: 'textarea' },
-        { key: 'relatedTips', label: 'Handige tips hierbij', type: 'refs', ref: 'tip' }
+        { key: 'relatedTips', label: 'Handige tips hierbij', type: 'refs', ref: 'tip' },
+        EN_FIELD
       ]
     },
     prompt: {
@@ -124,7 +127,8 @@
         { key: 'noteBasic', label: 'Toelichting bij de versie zonder licentie', type: 'textarea' },
         { key: 'tip', label: 'Tip', type: 'textarea' },
         { key: 'added', label: 'Toegevoegd op', type: 'date', half: true },
-        { key: 'author', label: 'Aangedragen door', type: 'text', half: true }
+        { key: 'author', label: 'Aangedragen door', type: 'text', half: true },
+        EN_FIELD
       ]
     },
     tip: {
@@ -148,7 +152,8 @@
           { key: 'text', label: 'Tekst', type: 'code' }
         ] },
         { key: 'note', label: 'Kleine lettertjes', type: 'textarea', hint: 'Beschikbaarheid, beleid, menunamen' },
-        { key: 'usecases', label: 'Zie het in de praktijk (usecases)', type: 'refs', ref: 'usecase' }
+        { key: 'usecases', label: 'Zie het in de praktijk (usecases)', type: 'refs', ref: 'usecase' },
+        EN_FIELD
       ]
     },
     training: {
@@ -220,7 +225,8 @@
           { key: 'text', label: 'Tekst', type: 'text' },
           { key: 'training', label: 'Link naar de training', type: 'select', options: () => ns.content.trainings.map((t) => ({ value: t.id, label: t.title })), half: true },
           { key: 'current', label: 'Dit is deze training', type: 'bool' }
-        ] }
+        ] },
+        EN_FIELD
       ]
     },
     agent: {
@@ -247,7 +253,8 @@
         { key: 'trainings', label: 'Trainingen hierover', type: 'refs', ref: 'training' },
         { key: 'tips', label: 'Tips hierbij', type: 'refs', ref: 'tip' },
         { key: 'added', label: 'Toegevoegd op', type: 'date', half: true },
-        { key: 'registerUrl', label: 'Link naar het AI-register', type: 'url', half: true, hint: 'Optioneel. Alleen de link naar de registratie in de afgeschermde omgeving.' }
+        { key: 'registerUrl', label: 'Link naar het AI-register', type: 'url', half: true, hint: 'Optioneel. Alleen de link naar de registratie in de afgeschermde omgeving.' },
+        EN_FIELD
       ]
     },
     phase: {
@@ -258,7 +265,8 @@
         { key: 'id', label: 'Code (id)', type: 'id', titleKey: 'label' },
         { key: 'short', label: 'Korte naam (filters, mobiel)', type: 'text', half: true },
         { key: 'accent', label: 'Kleur', type: 'select', options: kit.accentOptions, half: true },
-        { key: 'icon', label: 'Icoon', type: 'icon', half: true }
+        { key: 'icon', label: 'Icoon', type: 'icon', half: true },
+        EN_FIELD
       ]
     },
     setting: {
@@ -306,7 +314,8 @@
         { key: 'promisePrompt', label: 'Prompt op maat (Vraag een prompt aan)', type: 'text', half: true, placeholder: 'Een prompt op maat binnen 1 werkdag' },
         { key: 'promisePromptDays', label: 'Termijn (werkdagen)', type: 'number', max: 30, half: true, placeholder: '1' },
         { key: 'promisesOff', label: 'Geen beloftes tonen', type: 'bool' },
-        { key: '_brevet', label: 'AI-brevetten', type: 'heading', hint: 'Brevetten, voordelen, checkrides en AI-miles pas je aan in Beheer → AI-brevetten → Regels: voor alle disciplines, of alleen voor deze.' }
+        { key: '_brevet', label: 'AI-brevetten', type: 'heading', hint: 'Brevetten, voordelen, checkrides en AI-miles pas je aan in Beheer → AI-brevetten → Regels: voor alle disciplines, of alleen voor deze.' },
+        EN_FIELD
       ]
     }
   };
@@ -479,7 +488,7 @@
         const what = mine ? 'uit Mijn gegevens (' + mine.toLowerCase() + ')'
           : p.options.length ? 'keuzelijst: ' + p.options.join(' of ')
             : p.long ? 'groot tekstvak om te plakken'
-              : p.hint ? 'invulveld, met als voorbeeld "' + p.hint.replace(/^(bijv\.|bijvoorbeeld|zoals)\s*/i, '') + '"'
+              : p.hint ? 'invulveld, met als voorbeeld "' + p.hint.replace(/^(bijv\.|bijvoorbeeld|zoals|e\.g\.|for example|such as)\s*/i, '') + '"'
                 : 'invulveld';
         return el('li', { className: 'ph-preview__item' }, [el('mark', { className: 'ph' + (mine ? ' ph--filled ph--mine' : ''), text: '[' + p.label + ']' }), el('span', { text: what })]);
       });
@@ -555,7 +564,7 @@
       case 'list': {
         const input = el('textarea', {
           className: 'field__input field__textarea' + (field.type === 'code' ? ' field__input--mono field__textarea--code' : ''),
-          attrs: { id, rows: field.type === 'code' ? '12' : field.type === 'list' ? '5' : '3', spellcheck: field.type === 'code' ? 'false' : null, 'aria-describedby': described }
+          attrs: { id, rows: field.type === 'code' ? '12' : field.type === 'list' ? '5' : '3', spellcheck: field.type === 'code' ? 'false' : null, placeholder: field.placeholder || null, 'aria-describedby': described }
         });
         input.value = field.type === 'list' ? (Array.isArray(value) ? value.join('\n') : '') : value == null ? '' : String(value);
         return {
@@ -690,7 +699,8 @@
         };
       }
       case 'object': {
-        const sub = field.fields.map((f) => control(f, value ? value[f.key] : '', ctx));
+        // Engelse versie (js/admin-english.js): met de Nederlandse tekst per veld als voorbeeld
+        const sub = field.fields.map((f) => control(field.mirror ? field.mirror(f, field.dutch) : f, value ? value[f.key] : '', ctx));
         return {
           node: el('fieldset', { className: 'field field--wide group-box' }, [el('legend', { className: 'field__label', text: field.label }), el('div', { className: 'form-grid' }, sub.map((s) => s.node))]),
           get: () => {
@@ -721,13 +731,16 @@
           });
         }
         function addItem(itemValue) {
-          const sub = field.fields.map((f) => control(f, itemValue ? itemValue[f.key] : '', ctx));
+          // Engelse versie: ieder onderdeel met het Nederlandse onderdeel op dezelfde plek als voorbeeld
+          const dutchItem = field.mirror ? (field.dutch || [])[items.length] : null;
+          const sub = field.fields.map((f) => control(field.mirror ? field.mirror(f, dutchItem) : f, itemValue ? itemValue[f.key] : '', ctx));
           const title = el('span', { className: 'repeater__title' });
           const up = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omhoog' } }, [icon('arrow-up')]);
           const down = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Omlaag' } }, [icon('arrow-down')]);
           const remove = el('button', { className: 'btn btn--quiet btn--icon btn--tiny', attrs: { type: 'button', 'aria-label': 'Verwijderen' } }, [icon('trash')]);
+          // fixed (Engelse versie): net zoveel onderdelen als het Nederlands, niet verplaatsen of verwijderen
           const node = el('div', { className: 'repeater__item' }, [
-            el('div', { className: 'repeater__head' }, [title, el('span', { className: 'repeater__actions' }, [up, down, remove])]),
+            el('div', { className: 'repeater__head' }, [title, field.fixed ? null : el('span', { className: 'repeater__actions' }, [up, down, remove])]),
             el('div', { className: 'form-grid' }, sub.map((s) => s.node))
           ]);
           const item = { node, sub, title, up, down, remove };
@@ -765,7 +778,8 @@
           if (used.disabled) (delta < 0 ? item.down : item.up).focus();
           ns.ui.announce(`Nu ${item.title.textContent}`);
         }
-        (Array.isArray(value) ? value : []).forEach((v) => addItem(v));
+        if (field.fixed) (field.dutch || []).forEach((dutch, index) => addItem(Array.isArray(value) && value[index] ? value[index] : null));
+        else (Array.isArray(value) ? value : []).forEach((v) => addItem(v));
         if (!items.length && field.min) addItem(null);
         const add = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('message-plus'), el('span', { text: (field.itemLabel || 'Item') + ' toevoegen' })]);
         add.addEventListener('click', () => {
@@ -796,16 +810,19 @@
         }) : null;
         const bulkHint = bulk && field.bulk.hint ? el('p', { className: 'field__hint', text: field.bulk.hint }) : null;
         return {
-          node: el('fieldset', { className: 'field field--wide repeater' }, [el('legend', { className: 'field__label', text: field.label }), listNode, el('div', { className: 'repeater__buttons' }, [add, bulk]), bulkHint, fill, groupError]),
+          node: el('fieldset', { className: 'field field--wide repeater' }, [el('legend', { className: 'field__label', text: field.label }), listNode, field.fixed ? null : el('div', { className: 'repeater__buttons' }, [add, bulk]), bulkHint, fill, groupError]),
           get: () => {
-            const result = items.map((item) => {
+            const all = items.map((item) => {
               const obj = {};
               field.fields.forEach((f, index) => {
                 const v = item.sub[index].get();
                 if (!isEmpty(v)) obj[f.key] = v;
               });
               return obj;
-            }).filter((obj) => Object.keys(obj).length);
+            });
+            // keepEmpty (Engelse versie): lege onderdelen blijven staan, anders schuift de volgorde op
+            const result = field.keepEmpty ? all : all.filter((obj) => Object.keys(obj).length);
+            while (field.keepEmpty && result.length && !Object.keys(result[result.length - 1]).length) result.pop();
             return result.length ? result : undefined;
           },
           validate: () => {
@@ -816,6 +833,14 @@
           }
         };
       }
+      case 'skip':
+        // Niet tonen (Engelse versie: een groep die in het Nederlands leeg is); bewaart niets
+        return { node: el('span', { attrs: { hidden: true } }), get: () => undefined, validate: () => null };
+      case 'english':
+        // De Engelse versie van dit item (js/admin-english.js)
+        return ns.adminEnglish
+          ? ns.adminEnglish.control(field, value, ctx, { control, isEmpty, fields: SCHEMAS[ctx.type].fields })
+          : { node: el('p', { className: 'field__hint', text: 'Engelse versie: nog aan het laden. Herlaad de pagina.' }), get: () => value, validate: () => null };
       case 'heading': {
         // Tussenkop in het formulier (geen veld: er wordt niets bewaard)
         return {
@@ -850,9 +875,12 @@
    */
   function schemaForm(o) {
     const schema = SCHEMAS[o.type];
-    const ctx = { where: o.where, idTaken: (value) => idTaken(o.type, o.where.namespace, o.ownId, value) };
-    // Een veld met 'scope' alleen in die omgeving (bijv. het seizoenskompas: per discipline, niet in de basis)
-    const fields = schema.fields.filter((field) => !field.scope || field.scope === o.where.kind);
+    // type, data, dutch() en focus: voor de Engelse versie (js/admin-english.js)
+    const ctx = { where: o.where, type: o.type, data: o.data, focus: Boolean(o.focus), idTaken: (value) => idTaken(o.type, o.where.namespace, o.ownId, value), dutch: () => collect(true) };
+    // Een veld met 'scope' alleen in die omgeving (bijv. het seizoenskompas: per discipline, niet in de basis).
+    // In het zijpaneel (compact) niet de velden met panel: false; die bewaren we zoals ze waren (zie collect).
+    const fields = schema.fields.filter((field) => (!field.scope || field.scope === o.where.kind) && !(o.compact && field.panel === false));
+    const kept = o.compact ? schema.fields.filter((field) => field.panel === false && !isEmpty(o.data[field.key])) : [];
     const controls = fields.map((field) => ({ field, ctl: control(field, o.data[field.key], ctx) }));
     const byKey = (key) => (controls.find((c) => c.field.key === key) || {}).ctl;
     const idCtl = byKey('id');
@@ -869,12 +897,15 @@
       }
     }
     const error = kit.formError();
-    function collect() {
+    /** De velden als item. dutchOnly: zonder de Engelse versie (die rekent zelf met de Nederlandse velden). */
+    function collect(dutchOnly) {
       const record = {};
       controls.forEach(({ field, ctl }) => {
+        if (dutchOnly && field.type === 'english') return;
         const value = ctl.get();
         if (field.key !== 'id' && !isEmpty(value)) record[field.key] = value;
       });
+      if (!dutchOnly) kept.forEach((field) => { record[field.key] = o.data[field.key]; });
       return record;
     }
     return {
@@ -938,8 +969,8 @@
     prefill = { type, data: Object.assign({}, data) };
   }
 
-  /** In Beheer: het hele item, met opslaan (en publiceren), verwijderen en de status. */
-  function editor(type, id) {
+  /** In Beheer: het hele item, met opslaan (en publiceren), verwijderen en de status. focus 'engels': de Engelse versie open. */
+  function editor(type, id, focus) {
     const schema = SCHEMAS[type];
     const isNew = id === 'nieuw';
     const existing = schema.single ? findRow(type, schema.single) : isNew ? null : findRow(type, id);
@@ -956,7 +987,7 @@
     const canDelete = may('verwijderen', type);
     const canPublish = drafting() && ns.rights.can('publiceren', scope.namespace, type);
     // let: 'Naslagwerk maken met Copilot' bouwt de velden opnieuw op met wat Copilot gaf
-    let fields = schemaForm({ type, data, where: scope, ownId: existing ? existing.id : '', isNew });
+    let fields = schemaForm({ type, data, where: scope, ownId: existing ? existing.id : '', isNew, focus: focus === 'engels' });
     let saving = false;
 
     // Zonder werkversies kies je hier de status; met werkversies regelt Publiceren wat live staat
@@ -1044,7 +1075,7 @@
           if (renamed) await ns.central.deleteContent(type, existing.id, scope.namespace);
         }
         changes.saved();
-        const target = schema.single ? `${scope.base}/setting` : `${scope.base}/${type}/${newId}`;
+        const target = schema.single ? `${scope.base}/setting${focus === 'engels' ? '/engels' : ''}` : `${scope.base}/${type}/${newId}${focus === 'engels' ? '/engels' : ''}`;
         if (window.location.hash !== target) window.history.replaceState(window.history.state, '', target);
         // Na publiceren is de inhoud al opnieuw opgehaald (js/editor.js)
         if (!(drafting() && publishNow)) await afterChange(drafting() ? (canPublish ? 'Opgeslagen. Nog niet live: publiceer via de bewerkbalk.' : 'Voorstel opgeslagen. Een beheerder publiceert het.') : isNew ? 'Toegevoegd' : 'Opgeslagen');
@@ -1103,7 +1134,7 @@
     const isNew = !id;
     const current = isNew ? null : ns.editor.effective(namespace, type, id);
     const data = current ? Object.assign({}, current.data, schema.single ? {} : { id }) : {};
-    const fields = schemaForm({ type, data, where, ownId: id, isNew });
+    const fields = schemaForm({ type, data, where, ownId: id, isNew, compact: true });
     const changes = changeTracker(fields.snapshot);
     const apply = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('check'), el('span', { text: 'Toepassen' })]);
     const cancel = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [el('span', { text: 'Annuleren' })]);
@@ -1253,6 +1284,8 @@
           }
         }
         const pendingLabel = drafting() ? changeText(row) : '';
+        // Engelse versie (js/content-en.js): 'EN' als hij er is, 'EN bijwerken' als het Nederlands daarna veranderde
+        const english = ns.contentEn && ns.contentEn.SPEC[type] ? ns.contentEn.status(type, data) : '';
         return el('div', { className: 'cms-row' + (row.status === 'draft' ? ' cms-row--draft' : '') }, [
           el('div', { className: 'cms-row__main' }, [
             el('a', { className: 'cms-row__title', attrs: { href: row.status === 'trash' ? null : `${scope.base}/${type}/${row.id}` }, text: name }),
@@ -1263,6 +1296,7 @@
               row.draft_by ? ' · wijziging van ' + row.draft_by.split('@')[0] : ''
             ])
           ]),
+          english ? el('a', { className: 'badge badge--en' + (english === 'verouderd' ? ' badge--en-old' : ''), attrs: { href: `${scope.base}/${type}/${row.id}/engels`, title: english === 'ok' ? 'Heeft een Engelse versie' : 'Het Nederlands is veranderd sinds de vertaling: werk de Engelse versie bij' }, text: english === 'ok' ? 'EN' : 'EN bijwerken' }) : null,
           pendingLabel ? el('span', { className: 'badge badge--change', text: pendingLabel }) : null,
           el('span', { className: 'status status--' + (row.status === 'published' ? 'success' : row.status === 'draft' ? 'info' : 'muted'), text: row.status === 'draft' && row.draft ? 'Nog niet live' : STATUS_LABEL[row.status] || row.status }),
           el('div', { className: 'cms-row__actions' }, actions)
@@ -1714,6 +1748,30 @@
     return { node, canLeave: () => busy || !changed().length };
   }
 
+  /** Wat het tabblad Engels nodig heeft uit deze module (js/admin-english.js). */
+  function englishApi(allowed) {
+    const types = ORDER.filter((key) => allowed.includes(key) && ns.contentEn.SPEC[key]);
+    return {
+      types,
+      // Bij de instellingen alleen de teksten van de site (niet de regels van de brevetten)
+      rowsOf: (type) => rowsOf(type).filter((row) => type !== 'setting' || row.id === SCHEMAS.setting.single),
+      stateOf,
+      nameOf,
+      label: (type) => SCHEMAS[type].label,
+      base: scope.base,
+      namespace: scope.namespace,
+      scopeId: scope.id,
+      drafting,
+      canPublish: drafting() && types.every((key) => ns.rights.can('publiceren', scope.namespace, key)),
+      stage,
+      publish: (items) => ns.editor.publish(items),
+      saveContent: (rows) => ns.central.saveContent(rows, scope.namespace),
+      afterChange,
+      changeText,
+      failed: kit.failed
+    };
+  }
+
   function render(params, state, where) {
     if (where) scope = where;
     // De inhoud kon niet worden opgehaald (bijv. even geen netwerk): niet doen alsof de database
@@ -1738,7 +1796,10 @@
     // Tijdwinst: een eigen tabblad (geen soort inhoud), voor wie usecases of prompts mag bewerken
     const savesAllowed = SAVES_TYPES.some((key) => allowed.includes(key));
     const savesTab = savesAllowed && params[0] === 'tijdwinst';
-    const type = savesTab ? 'tijdwinst' : SCHEMAS[params[0]] && allowed.includes(params[0]) ? params[0] : allowed[0];
+    // Engels: wat er vertaald is, voor de soorten die je mag bewerken (js/admin-english.js)
+    const english = ns.adminEnglish ? englishApi(allowed) : null;
+    const englishTab = Boolean(english) && params[0] === 'engels';
+    const type = savesTab ? 'tijdwinst' : englishTab ? 'engels' : SCHEMAS[params[0]] && allowed.includes(params[0]) ? params[0] : allowed[0];
     const seeded = isSeeded();
     const tabs = el('nav', { className: 'toggles cms-tabs', attrs: { 'aria-label': 'Soort inhoud' } }, allowed.map((key) => {
       const count = SCHEMAS[key].single ? null : rowsOf(key).filter((row) => row.status !== 'trash').length;
@@ -1753,6 +1814,13 @@
         el('span', { text: 'Tijdwinst' }),
         saves && saves.total ? el('span', { className: 'toggle__count', text: `${saves.filled}/${saves.total}` }) : null
       ]);
+    })()] : []).concat(english ? [(() => {
+      const tally = seeded ? ns.adminEnglish.tally(english) : null;
+      return el('a', { className: 'toggle', attrs: { href: `${scope.base}/engels`, 'aria-current': englishTab ? 'page' : null, title: 'De Engelse versie van de inhoud (team Zuid-Afrika)' } }, [
+        icon('globe'),
+        el('span', { text: 'Engels' }),
+        tally && tally.total ? el('span', { className: 'toggle__count', text: `${tally.done}/${tally.total}` }) : null
+      ]);
     })()] : []));
     // Voor welke omgeving dit is, staat al bovenaan de pagina (js/view-admin.js)
     if (!seeded) {
@@ -1764,13 +1832,15 @@
 
     let body;
     let canLeave = null;
-    const editing = !savesTab && Boolean(SCHEMAS[type].single || params[1]);
-    if (savesTab) {
-      const result = savesView();
+    const editing = !savesTab && !englishTab && Boolean(SCHEMAS[type].single || params[1]);
+    if (savesTab || englishTab) {
+      const result = savesTab ? savesView() : ns.adminEnglish.view(english);
       body = result.node;
       canLeave = result.canLeave;
     } else if (editing) {
-      const result = editor(type, SCHEMAS[type].single ? SCHEMAS[type].single : params[1]);
+      // .../<soort>/<id>/engels (of .../setting/engels): met de Engelse versie open
+      const single = SCHEMAS[type].single;
+      const result = editor(type, single || params[1], single ? params[1] : params[2]);
       body = result.node || result;
       canLeave = result.canLeave || null;
     } else {

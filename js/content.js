@@ -11,6 +11,9 @@
    uit de usecases komen automatisch in de promptdatabase.
    Links naar video's, demo's en bijlagen moeten een eigen bestand zijn
    (relatief pad) of beginnen met https://; al het andere wordt genegeerd.
+   Met de cockpit in het Engels gaat de Engelse versie van een item (veld
+   'en', js/content-en.js) over het Nederlands heen; zonder krijgt het item
+   dutchOnly (label 'Dutch only').
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -164,6 +167,7 @@
         watchOut: list(item.watchOut),
         tip: text(item.tip),
         relatedTips: list(item.relatedTips),
+        dutchOnly: item._dutchOnly === true,
         draft: item._draft === true,
         change: item._change || '',
         shared: item._shared === true
@@ -218,6 +222,7 @@
         added: text(item.added),
         author: text(item.author),
         usecase: null,
+        dutchOnly: item._dutchOnly === true,
         draft: item._draft === true,
         change: item._change || '',
         shared: item._shared === true
@@ -260,6 +265,7 @@
           usecase,
           step: n + 1,
           steps: usecase.prompts.length,
+          dutchOnly: usecase.dutchOnly,
           draft: usecase.draft,
           change: usecase.change,
           shared: usecase.shared
@@ -314,6 +320,7 @@
         added: text(item.added),
         release: '',
         usecases: list(item.usecases),
+        dutchOnly: item._dutchOnly === true,
         draft: item._draft === true,
         change: item._change || '',
         shared: item._shared === true
@@ -408,7 +415,8 @@
         else warn(`${where}: actie '${title}' verwijst naar slide '${rawSlide}', maar er zijn ${slides.length} slides; link weggelaten.`);
       }
       return {
-        key: actionKey(title, keys),
+        // In het Engels: de sleutel van de Nederlandse kop (js/content-en.js), zodat het vinkje in beide talen hetzelfde is
+        key: actionKey(text(action._key) || title, keys),
         title,
         text: text(action.text),
         slide,
@@ -476,6 +484,7 @@
         // Voor wie (rollen uit js/profile.js); leeg = voor iedereen
         audience: list(item.audience).filter((role) => !ns.profile || ns.profile.ROLE_IDS.includes(role)),
         added: text(item.added) || text(item.date),
+        dutchOnly: item._dutchOnly === true,
         draft: item._draft === true,
         change: item._change || '',
         shared: item._shared === true
@@ -551,6 +560,7 @@
         icon: text(item.icon) || 'robot',
         added: text(item.added),
         registerUrl: HTTPS_URL.test(registerUrl) ? registerUrl : '',
+        dutchOnly: item._dutchOnly === true,
         draft: item._draft === true,
         change: item._change || '',
         shared: item._shared === true
@@ -772,10 +782,25 @@
       brevetRules: { basis: general.brevet || null, own: own.brevet || null },
       updatedAt: general.updatedAt > own.updatedAt ? general.updatedAt : own.updatedAt
     };
+    // De Engelse teksten per veld samenvoegen (die van de discipline gaan voor), niet als één blok vervangen
+    if ((general.setting && general.setting.en) || (own.setting && own.setting.en)) {
+      source.setting.en = Object.assign({}, general.setting && general.setting.en, own.setting && own.setting.en);
+    }
     TYPES.forEach((type) => {
       source[type] = OWN_FIRST[type] ? own[type].concat(general[type]) : general[type].concat(own[type]);
     });
     return source;
+  }
+
+  /** Met de cockpit in het Engels: iedere soort met de Engelse versie erover (js/content-en.js). Anders zoals hij is. */
+  function localize(src) {
+    if (!ns.contentEn || !ns.i18n || !ns.i18n.english()) return src;
+    const out = Object.assign({}, src);
+    TYPES.forEach((type) => {
+      out[type] = (Array.isArray(src[type]) ? src[type] : []).map((item) => ns.contentEn.apply(type, item));
+    });
+    if (src.setting) out.setting = ns.contentEn.apply('setting', src.setting);
+    return out;
   }
 
   /**
@@ -811,7 +836,7 @@
 
   /** Inhoud (opnieuw) inlezen. source: uit fromRows(); zonder: de bestanden. */
   function load(source) {
-    const src = source || fromFiles();
+    const src = localize(source || fromFiles());
     reset();
     state.settings = src.setting || {};
     state.brevetRules = src.brevetRules || { basis: null, own: src.brevet || null };
