@@ -1175,3 +1175,13 @@ ul.en-list__items { display: grid; margin: 0; padding: 0; list-style: none; bord
 @media (prefers-reduced-motion: reduce) {
   .en-box__chevron { transition: none; }
 }
+/* Beheer → Wrapped (js/admin-wrapped.js) */
+.wr-admin { display: grid; gap: var(--space-5); }
+.wr-admin__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.wr-admin__head .section__lead { flex: 1 1 30rem; max-width: 75ch; }
+.wr-admin__stats { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+.wr-admin__summary { display: grid; gap: var(--space-2); }
+.wr-admin__table { max-width: 40rem; }
+.wr-admin__table th[scope='row'] { font-weight: var(--fw-normal, 400); color: var(--color-text-body); }
+.wr-admin__top { margin: 0; padding-left: 1.4rem; display: grid; gap: 2px; }
+.wr-admin__screens { flex-direction: column; gap: var(--space-2); }

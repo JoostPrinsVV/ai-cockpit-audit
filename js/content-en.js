@@ -37,6 +37,8 @@
       ideas: { title: T, text: T }, questions: T, timelineIntro: T, timeline: { month: T, title: T, text: T }
     },
     agent: { title: T, summary: T, description: T, access: T, owner: T, useFor: T, notFor: T },
+    // Cockpit Wrapped (Beheer → Wrapped; js/wrapped.js): de teksten van het AI-team
+    wrapped: { title: T, intro: T, highlights: { title: T, text: T }, closing: T },
     setting: {
       applicationTitle: T, tagline: T, applicationSubtitle: T, rules: T,
       routeIntro: T, route: { title: T, who: T, text: T, exit: T }, routeRoles: { name: T, text: T },

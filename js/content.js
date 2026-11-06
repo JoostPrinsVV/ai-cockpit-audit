@@ -674,6 +674,8 @@
   // de standaardseizoenen van het seizoenskompas uit data/seizoenen.js)
   // Eigen instelling per naamruimte met de regels van de AI-brevetten (Beheer → AI-brevetten → Regels)
   const BREVET_RULES_ID = 'brevet';
+  // Eigen instelling per discipline met Cockpit Wrapped (Beheer → Wrapped, js/wrapped.js)
+  const WRAPPED_ID = 'wrapped';
   const SETTING_KEYS = ['applicationTitle', 'tagline', 'applicationSubtitle', 'rules', 'policyUrl', 'routeIntro', 'route', 'routeRoles', 'routeLink', 'seasons', 'brevet'];
   // Bij het samenvoegen: eigen fasen, usecases en prompts vóór die van de basis; tips, trainingen en agents erna
   const OWN_FIRST = { phase: true, usecase: true, prompt: true };
@@ -687,7 +689,7 @@
       tips: [], tipById: new Map(), tipCategories: [], openTips: [], currentWeeklyTip: null, nextWeeklyTip: null,
       trainings: [], trainingById: new Map(), trainingCategories: [],
       agents: [], agentById: new Map(),
-      settings: {}, updatedAt: '', issues: []
+      settings: {}, wrapped: null, updatedAt: '', issues: []
     });
   }
 
@@ -760,6 +762,8 @@
           if (row.id === 'site' && row.status === 'published') source.setting = row.data || {};
           // De regels van de AI-brevetten (Beheer → AI-brevetten → Regels; js/brevet.js)
           if (row.id === BREVET_RULES_ID && row.status === 'published') source.brevet = row.data || null;
+          // Cockpit Wrapped: gepubliceerd voor iedereen; een concept zien alleen beheerders (die krijgen concepten mee)
+          if (row.id === WRAPPED_ID && (row.status === 'published' || row.status === 'draft')) source.wrapped = Object.assign({}, row.data, row.status === 'draft' ? { _draft: true } : {});
           return;
         }
         if (!TYPES.includes(row.type)) return;
@@ -780,6 +784,8 @@
       setting: Object.assign({}, general.setting, own.setting),
       // Brevetten: de regels voor alle disciplines en die van de discipline, apart (js/brevet.js legt ze op elkaar)
       brevetRules: { basis: general.brevet || null, own: own.brevet || null },
+      // Wrapped gaat over één discipline: alleen die van de discipline zelf
+      wrapped: own.wrapped || null,
       updatedAt: general.updatedAt > own.updatedAt ? general.updatedAt : own.updatedAt
     };
     // De Engelse teksten per veld samenvoegen (die van de discipline gaan voor), niet als één blok vervangen
@@ -800,6 +806,7 @@
       out[type] = (Array.isArray(src[type]) ? src[type] : []).map((item) => ns.contentEn.apply(type, item));
     });
     if (src.setting) out.setting = ns.contentEn.apply('setting', src.setting);
+    if (src.wrapped) out.wrapped = ns.contentEn.apply('wrapped', src.wrapped);
     return out;
   }
 
@@ -840,6 +847,7 @@
     reset();
     state.settings = src.setting || {};
     state.brevetRules = src.brevetRules || { basis: null, own: src.brevet || null };
+    state.wrapped = src.wrapped && typeof src.wrapped === 'object' ? src.wrapped : null;
     state.updatedAt = src.updatedAt || '';
     loadPhases(src.phase);
     loadUsecases(src.usecase);
@@ -852,7 +860,7 @@
     return state;
   }
 
-  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, BREVET_RULES_ID, AGENT_KINDS, AGENT_STATUSES, DATA_LEVELS,
+  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, BREVET_RULES_ID, WRAPPED_ID, AGENT_KINDS, AGENT_STATUSES, DATA_LEVELS,
     // Dezelfde controles in Beheer (js/admin-content.js)
     patterns: { ID_PATTERN, LOCAL_PATH, HTTPS_URL, LEGACY_ASSETS } });
 })(window.AIAudit);

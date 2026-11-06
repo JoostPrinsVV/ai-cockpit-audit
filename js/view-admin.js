@@ -62,6 +62,7 @@
     { id: 'gebruik', group: 'cijfers', label: 'Gebruik van de cockpit', icon: 'chart', perDiscipline: true, lead: (name) => `Hoe vaak usecases, demo's, prompts, tips, trainingen en agents in ${name} worden bekeken en gekopieerd. Anoniem.` },
     { id: 'copilot', group: 'cijfers', label: 'Copilot-gebruik', icon: 'sparkle', perDiscipline: true, lead: (name) => `Het Copilot-gebruik van ${name} per import, met de belangrijke momenten erbij.` },
     { id: 'nieuwsbrief', group: 'communicatie', label: 'Nieuwsbrief', icon: 'mail', perDiscipline: true, lead: (name) => `Een weekupdate of maandnieuwsbrief over ${name}, als PDF of als e-mail.` },
+    { id: 'wrapped', group: 'communicatie', label: 'Wrapped', icon: 'sparkle', perDiscipline: true, lead: (name) => `Cockpit Wrapped van ${name}: het jaar of seizoen in cijfers en hoogtepunten. Jij kiest de periode, kijkt het na en publiceert.` },
     { id: 'disciplines', group: 'instellingen', label: 'Disciplines', icon: 'layers', lead: () => 'Welke disciplines er zijn, en welke open staan voor collega\'s of nog op slot.' },
     { id: 'beheerders', group: 'instellingen', label: 'Beheerders', icon: 'users', lead: () => 'Wie mag beheren: in welke discipline, en welke onderdelen.' }
   ];
@@ -817,6 +818,11 @@
     else if (tab === 'inzendingen') ideasTab(panel);
     else if (tab === 'reviews') reviewsTab(panel);
     else if (tab === 'nieuwsbrief') panel.append(ns.adminNewsletter.render().node);
+    else if (tab === 'wrapped') {
+      const result = ns.adminWrapped.render();
+      panel.append(result.node);
+      canLeave = result.canLeave;
+    }
     else if (tab === 'disciplines') {
       const result = ns.adminDisciplines.render();
       panel.append(result.node);

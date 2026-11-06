@@ -786,6 +786,29 @@ onderwerp, inleiding, afsluiting en ondertekening aan. Dat onthoudt de browser p
 Er wordt niets automatisch verstuurd en niets in de database opgeslagen. Alle links gaan naar `siteUrl` uit
 `js/config.js` (de live cockpit), ook als je de nieuwsbrief lokaal maakt.
 
+## Cockpit Wrapped (Beheer → Wrapped, `#/wrapped`)
+
+Het jaar (of seizoen) van de discipline in de cockpit, en daaronder het jaar van de collega zelf. Alleen voor
+hoofdbeheerders; geen extra databasestap (opgeslagen als instelling `wrapped` van de discipline).
+
+1. **Periode en naam:** bijv. *Cockpit Wrapped 2026* van 1 januari tot en met 31 december, of *Seizoen 2026-2027*
+   van september tot en met juni. *Op de startpagina tot*: tot die dag staat er een aankondiging op de startpagina.
+2. **Cijfers ophalen:** de cockpit telt uit de anonieme tellers en de ideeënhub wat er in die periode gebeurde: hoe
+   vaak er gekopieerd en bekeken is, de tijdwinst (de tijdsindicaties maal de keren "Ja, dat scheelde tijd"), de
+   top 5 prompts en de meest bekeken usecase, tip en training, de drukste maand, wat er nieuw bij kwam, en de ideeën,
+   antwoorden en keren invliegen. Nooit namen van collega's. De cijfers worden een momentopname: ze veranderen pas
+   als je ze opnieuw ophaalt.
+3. **Teksten:** een inleiding, tot vier hoogtepunten en een afsluiting, plus eventueel de Engelse versie (met
+   Copilot-vertaalprompt). Een scherm zonder cijfers (zoals tijdwinst onder de 5 uur) valt vanzelf weg; andere
+   schermen zet je hier uit.
+4. **Opslaan als concept** (alleen beheerders zien hem, ook de aankondiging) of **Publiceren**. Is de periode
+   veranderd sinds je de cijfers ophaalde, dan vraagt de cockpit eerst om ze opnieuw op te halen.
+
+**Jouw jaar:** vanaf nu houdt de cockpit in de browser van iedere collega bij wat die kopieert en bekijkt
+(`ai-snackbar-audit:mijn-jaar`: per dag het aantal per soort, per maand per item; hoogstens 14 maanden). Samen met de
+eigen tijdwinst wordt daar op `#/wrapped` het eigen jaar uit berekend, met een knop om het als tekst te delen. Dit gaat
+nooit naar het AI-team of de database.
+
 ## Copilot-gebruik (Beheer → Copilot-gebruik, stap 9)
 
 Hoe het gebruik van Copilot zich ontwikkelt, van periode tot periode. Alleen voor hoofdbeheerders.

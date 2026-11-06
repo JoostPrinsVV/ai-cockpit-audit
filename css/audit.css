@@ -3470,3 +3470,76 @@ html::-webkit-scrollbar-corner,
 @media (prefers-reduced-motion: reduce) { .lang-offer { animation: none; } }
 /* Mijn gegevens: de taal bovenaan, met een lijn eronder */
 .mine__language { padding-bottom: var(--space-4); border-bottom: 1px solid var(--color-border); }
+/* ---- Cockpit Wrapped (#/wrapped, js/wrapped.js) ---- */
+.wrapped__inner { display: grid; gap: var(--space-5); padding-block: var(--space-6) var(--space-7); }
+.wr-screen { display: grid; gap: var(--space-4); align-content: start; padding: clamp(1.5rem, 1rem + 2.5vw, 3rem); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-card); min-width: 0; }
+.wr-screen__eyebrow { margin: 0; color: var(--vv-link); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.1em; text-transform: uppercase; }
+.wr-screen__title { margin: 0; color: var(--color-text); font-size: var(--fs-xl); text-wrap: balance; }
+.wr-screen__text { margin: 0; max-width: 60ch; color: var(--color-text-body); font-size: var(--fs-md); }
+.wr-screen__note { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; max-width: 62ch; color: var(--color-text-muted); font-size: var(--fs-sm); }
+.wr-screen__note .icon { flex: none; margin-top: 0.15em; }
+.wr-screen__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+/* Openingsscherm: donkerblauw, zoals de startpagina */
+.wr-screen--intro { padding-block: clamp(2.5rem, 1.5rem + 5vw, 5rem); border: 0; background: var(--color-chrome); color: var(--vv-white); box-shadow: var(--shadow-lg); }
+.wr-screen--intro .wr-screen__eyebrow { color: var(--vv-teal); }
+.wr-intro__title { margin: 0; color: var(--vv-white); font-size: var(--fs-display); line-height: 1.02; letter-spacing: -0.02em; text-wrap: balance; }
+.wr-intro__period { margin: 0; color: var(--vv-teal); font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+.wr-intro__text { margin: 0; max-width: 58ch; color: rgba(255, 255, 255, 0.86); font-size: var(--fs-md); }
+.wr-intro__draft { display: inline-flex; gap: var(--space-2); align-items: center; width: fit-content; margin: 0; padding: 0.3rem 0.8rem; border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+/* Het grote getal */
+.wr-big { display: grid; gap: var(--space-1); }
+.wr-big__number { margin: 0; color: var(--color-text); font-size: var(--fs-display); font-weight: var(--fw-bold); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.wr-big__caption { margin: 0; max-width: 40ch; color: var(--color-text-body); font-size: var(--fs-lg); }
+.wr-screen--totals .wr-big__number, .wr-screen--ideas .wr-big__number { color: var(--vv-link); }
+.wr-screen--saved .wr-big__number { color: var(--vv-teal); }
+.wr-screen--months .wr-big__number { color: var(--accent-rose-ink); text-transform: capitalize; }
+.wr-screen--personal { border-color: var(--vv-teal); background: linear-gradient(160deg, var(--color-surface) 55%, var(--accent-teal-wash, var(--color-surface-muted))); }
+.wr-screen--personal .wr-big__number { color: var(--vv-teal); }
+/* Kleine cijfers in een rij */
+ul.wr-facts { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); margin: 0; padding: 0; list-style: none; }
+.wr-fact { display: grid; gap: 2px; min-width: 9rem; max-width: 18rem; }
+.wr-fact__number { color: var(--color-text); font-size: var(--fs-2xl); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.wr-fact__label { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.wr-screen--grid ul.wr-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); }
+/* Top 5 */
+ol.wr-rank { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.wr-rank__item { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-3) var(--space-4); border-radius: var(--radius); background: var(--color-surface-muted); }
+.wr-rank__place { color: var(--vv-link); font-size: var(--fs-xl); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+.wr-rank__item:first-child .wr-rank__place { color: var(--accent-rose-ink); }
+.wr-rank__title { min-width: 0; color: var(--color-text); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+.wr-rank__count { color: var(--color-text-muted); font-size: var(--fs-sm); white-space: nowrap; }
+.wr-rank__count strong { color: var(--color-text); }
+ul.wr-picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.wr-pick { display: grid; gap: 2px; min-width: 0; padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.wr-pick__label { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: 0.06em; text-transform: uppercase; }
+.wr-pick__title { color: var(--color-text); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+/* Door het jaar heen: een staaf per maand */
+.wr-chart { display: flex; align-items: flex-end; gap: clamp(3px, 1vw, 10px); height: 9rem; padding-top: var(--space-2); }
+.wr-chart__col { display: grid; grid-template-rows: 1fr auto; flex: 1 1 0; min-width: 0; height: 100%; gap: var(--space-1); }
+.wr-chart__bar { align-self: end; height: var(--h, 4%); border-radius: 4px 4px 0 0; background: var(--color-border-strong); }
+.wr-chart__bar.is-top { background: var(--accent-rose-ink); }
+.wr-chart__label { overflow: hidden; color: var(--color-text-muted); font-size: var(--fs-xs); text-align: center; text-overflow: clip; white-space: nowrap; }
+/* Hoogtepunten */
+ul.wr-highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.wr-highlight { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-4); border-top: 4px solid var(--vv-teal); border-radius: var(--radius); background: var(--color-surface-muted); }
+.wr-highlight:nth-child(2) { border-top-color: var(--accent-rose-ink); }
+.wr-highlight:nth-child(3) { border-top-color: var(--vv-steel); }
+.wr-highlight__title { margin: 0; color: var(--color-text); font-size: var(--fs-md); }
+.wr-highlight__text { margin: 0; color: var(--color-text-body); }
+.wr-screen--closing { justify-items: start; background: var(--color-surface-muted); box-shadow: none; }
+.wr-closing__text { margin: 0; max-width: 56ch; color: var(--color-text); font-size: var(--fs-lg); font-weight: var(--fw-semibold); }
+/* Aankondiging op de startpagina */
+.wr-teaser-wrap { margin-block: var(--space-5) 0; }
+.wr-teaser { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); padding: var(--space-4) var(--space-5); border-radius: var(--radius-lg); background: var(--color-chrome); color: var(--vv-white); text-decoration: none; box-shadow: var(--shadow-card); }
+.wr-teaser:hover { box-shadow: var(--shadow-card-hover); }
+.wr-teaser:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: 3px; }
+.wr-teaser__icon { display: grid; flex: none; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 50%; background: rgba(255, 255, 255, 0.12); color: var(--vv-teal); }
+.wr-teaser__body { display: grid; flex: 1 1 16rem; gap: 2px; min-width: 0; }
+.wr-teaser__title { font-size: var(--fs-lg); font-weight: var(--fw-bold); }
+.wr-teaser__text { color: rgba(255, 255, 255, 0.82); font-size: var(--fs-sm); }
+.wr-teaser__go { display: inline-flex; gap: var(--space-2); align-items: center; color: var(--vv-teal); font-weight: var(--fw-semibold); }
+@media (max-width: 560px) {
+  .wr-rank__item { grid-template-columns: 2rem minmax(0, 1fr); }
+  .wr-rank__count { grid-column: 2; }
+  .wr-chart__label { font-size: 0.6rem; }
+}

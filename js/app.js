@@ -12,6 +12,7 @@
      #/zoeken/<woorden>      zoeken
      #/mijn                  mijn logboek (AI-brevetten) en mijn gegevens (naam, functie, boekjaar: alleen op dit apparaat)
      #/promptbouwer          zelf een prompt bouwen, met een meter
+     #/wrapped               Cockpit Wrapped: het jaar van de discipline en jouw jaar
      #/beheer                beheer (inloggen)      #/beheer/inhoud  inhoud aanpassen
    Andere discipline: ?d=<id> vóór de #, bijv. ?d=accountancy#/prompts (zie js/disciplines.js).
 
@@ -62,6 +63,7 @@
       zoeken: (params) => v.search.render(params),
       mijn: () => v.profile.render(),
       promptbouwer: () => v.builder.render(),
+      wrapped: () => v.wrapped.render(),
       beheer: (params) => v.admin.render(params)
     };
   }
@@ -407,7 +409,7 @@
      Bezoekers laden de beheercode niet (ruim een derde van alle JavaScript, plus css/admin.css).
      Wie ingelogd is of naar #/beheer gaat, krijgt hem erbij, met de bestanden in data/ (voor
      Overzetten en inrichten). De volgorde van de scripts is belangrijk. */
-  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-saves.js', 'js/admin-naslag.js', 'js/admin-english.js', 'js/admin-content.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-goals.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/admin-improve.js', 'js/admin-brevet.js', 'js/admin-specialist.js', 'js/admin-launch.js', 'js/view-admin.js', 'js/editmode.js'];
+  const ADMIN_SCRIPTS = ['js/admin-kit.js', 'js/rights.js', 'js/editor.js', 'js/admin-saves.js', 'js/admin-naslag.js', 'js/admin-english.js', 'js/admin-content.js', 'js/admin-wrapped.js', 'js/admin-disciplines.js', 'js/admin-newsletter.js', 'js/admin-sheets.js', 'js/admin-chart.js', 'js/admin-copilot.js', 'js/admin-goals.js', 'js/admin-portfolio.js', 'js/admin-overview.js', 'js/admin-improve.js', 'js/admin-brevet.js', 'js/admin-specialist.js', 'js/admin-launch.js', 'js/view-admin.js', 'js/editmode.js'];
   let adminLoading = null;
 
   function loadAdmin() {
@@ -654,6 +656,7 @@
       ns.brevetUi.init(); // de strepen van je brevet op de knop rechtsboven
       ns.tijdwinst.init(); // na het kopiëren: 'Scheelde dit tijd?'
       ns.kickstart.init(); // de stappen van de Kickstart afvinken
+      ns.wrapped.init(); // jouw jaar voor Cockpit Wrapped (alleen in deze browser)
       ns.palette.init(); // zoekvenster: Ctrl+K, / of de zoekknop
       fillChrome();
       ns.instruments.init();

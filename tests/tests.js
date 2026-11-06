@@ -210,6 +210,128 @@
       equal([text.placeholder, text.required], ['Vat samen voor [NAAM].', false], 'het Nederlandse onderdeel als grijze tekst, niet verplicht');
     });
 
+    /* ---- Cockpit Wrapped ---- */
+    describe('Cockpit Wrapped (js/wrapped.js, js/admin-wrapped.js)');
+    const wrappedSource = () => ({
+      phase: [{ id: 'planning', label: 'Planning' }, { id: 'afronding', label: 'Afronding' }],
+      usecase: [{ id: 'risico', title: 'Risico\'s in kaart', phase: 'planning', added: '2026-03-02', prompts: [{ label: 'Stap 1', text: 'Maak een tabel.' }] }],
+      prompt: [
+        { id: 'mail', title: 'Mail aan de klant', phase: 'afronding', prompt: 'Schrijf een mail.', added: '2026-05-01' },
+        { id: 'memo', title: 'Memo herschrijven', phase: 'planning', prompt: 'Herschrijf de memo.', added: '2025-05-01' },
+        { id: 'concept', title: 'Nog niet live', phase: 'planning', prompt: 'x', added: '2026-05-01', _draft: true }
+      ],
+      tip: [], training: [], agent: [],
+      setting: {}
+    });
+    await test('jouw jaar: bijhouden per dag en maand, en alleen binnen de periode tellen', () => {
+      const W = ns.wrapped;
+      const C = ns.content;
+      try {
+        C.load(wrappedSource());
+        let log = W.emptyLog();
+        log = W.record(log, 'copy_prompt', 'mail', '2026-03-10');
+        log = W.record(log, 'copy_prompt', 'mail', '2026-03-11');
+        log = W.record(log, 'copy_prompt', 'memo', '2026-03-11');
+        log = W.record(log, 'view_usecase', 'risico', '2026-04-01');
+        log = W.record(log, 'copy_prompt', 'mail', '2025-12-31');
+        log = W.record(log, 'onzin', 'x', '2026-03-11');
+        const me = W.mine({ from: '2026-01-01', to: '2026-12-31' }, log, [{ key: 'prompt:mail', day: '2026-03-10', minutes: 20 }, { key: 'prompt:mail', day: '2025-06-01', minutes: 20 }]);
+        equal([me.copies, me.views, me.days, me.saved.minutes, me.saved.count], [3, 1, 3, 20, 1], 'kopieën, bekeken, dagen en tijdwinst in 2026');
+        equal([me.prompt.item.id, me.prompt.n, me.usecase.item.id, me.phase.phase.id], ['mail', 2, 'risico', 'afronding'], 'meest gebruikte prompt, usecase en fase');
+        equal(W.mine({ from: '2027-01-01', to: '2027-12-31' }, log, []).any, false, 'een andere periode: niets');
+        let long = W.emptyLog();
+        for (let i = 0; i < 18; i++) long = W.record(long, 'copy_prompt', 'mail', `${2025 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, '0')}-01`);
+        equal([Object.keys(long.months).length, Object.keys(long.months).sort()[0], Object.keys(long.days).sort()[0]], [14, '2025-05', '2025-05-01'], 'hoogstens 14 maanden bewaard, de oudste weg');
+      } finally {
+        C.load();
+      }
+    });
+    await test('cijfers uit de tellers: alleen de periode, de top op volgorde, tijdwinst, nieuw en de ideeënhub', () => {
+      const A = ns.adminWrapped;
+      const C = ns.content;
+      try {
+        C.load(wrappedSource());
+        const events = [
+          { kind: 'copy_prompt', item_id: 'mail', occurred_at: '2026-03-10T09:00:00Z' },
+          { kind: 'copy_prompt', item_id: 'mail', occurred_at: '2026-03-12T09:00:00Z' },
+          { kind: 'copy_prompt', item_id: 'memo', occurred_at: '2026-04-01T09:00:00Z' },
+          { kind: 'copy_prompt', item_id: 'memo', occurred_at: '2025-12-31T09:00:00Z' },
+          { kind: 'view_usecase', item_id: 'risico', occurred_at: '2026-04-02T09:00:00Z' },
+          { kind: 'play_demo', item_id: 'risico', occurred_at: '2026-04-02T09:01:00Z' },
+          { kind: 'time_saved', item_id: 'prompt:mail', occurred_at: '2026-03-10T09:02:00Z' },
+          { kind: 'time_saved', item_id: 'prompt:mail', occurred_at: '2026-03-12T09:02:00Z' }
+        ];
+        const ideas = [
+          { kind: 'idee', created_at: '2026-02-01T10:00:00Z', answer: 'Goed idee', answered_at: '2026-02-03T10:00:00Z', status: 'gerealiseerd', updated_at: '2026-06-01T10:00:00Z' },
+          { kind: 'vraag', created_at: '2026-02-05T10:00:00Z', status: 'nieuw' },
+          { kind: 'invliegen', created_at: '2026-03-01T10:00:00Z', status: 'nieuw' },
+          { kind: 'idee', created_at: '2025-02-01T10:00:00Z', status: 'nieuw' }
+        ];
+        const s = A.compute({ from: '2026-01-01', to: '2026-12-31' }, events, ideas, C, (key) => (key === 'prompt:mail' ? 20 : 0));
+        equal([s.totals.copies, s.totals.views, s.totals.demos, s.events], [3, 1, 1, 7], 'totalen binnen 2026');
+        equal(s.top.prompt, [['mail', 2], ['memo', 1]], 'top prompts');
+        equal(s.top.usecase, [['risico', 2]], 'usecase: bekeken en demo samen');
+        equal(s.saved, { taps: 2, minutes: 40 }, 'tijdwinst: twee keer 20 minuten');
+        equal([s.fresh.usecase, s.fresh.prompt], [1, 1], 'nieuw in 2026 (geen concept, geen oude)');
+        equal(s.ideas, { submitted: 2, answered: 1, realised: 1, flyins: 1 }, 'ideeënhub en invliegen');
+        equal([s.months.length, s.months[2]], [12, ['2026-03', 4]], 'een rij per maand (alle tellingen)');
+        equal(A.monthsOf('2026-09-01', '2027-06-30').length, 10, 'een seizoen over de jaargrens');
+      } finally {
+        C.load();
+      }
+    });
+    await test('Wrapped laden en tonen: gepubliceerd of concept, schermen zonder cijfers weg, aankondiging tot de datum', () => {
+      const W = ns.wrapped;
+      const C = ns.content;
+      const data = { title: 'Cockpit Wrapped 2026', from: '2026-01-01', to: '2026-12-31', until: '2027-01-31', off: ['ideas', 'onzin'], stats: { totals: { copies: 12 }, saved: { taps: 3, minutes: 60 }, top: { prompt: [['mail', 5]] }, months: [['2026-01', 0], ['2026-02', 4]] }, en: { title: 'Cockpit Wrapped 2026 (EN)' } };
+      const rows = (status) => [{ namespace: 'ai-audit', type: 'meta', id: 'bron', data: {}, status: 'published' }, { namespace: 'ai-audit', type: 'setting', id: 'wrapped', data, status }];
+      try {
+        C.load(C.fromCockpitRows(rows('published'), { own: 'ai-audit', general: 'ai-algemeen', discipline: 'audit' }));
+        const w = W.current();
+        equal([w.title, w.draft, w.off], ['Cockpit Wrapped 2026', false, ['ideas']], 'gepubliceerd, onbekende schermen weg');
+        equal(W.screensFor(w), ['totals', 'top', 'mine'], 'tijdwinst onder 5 uur en maar één maand met gebruik: weg');
+        equal([W.showOnHome(w, '2027-01-31'), W.showOnHome(w, '2027-02-01')], [true, false], 'aankondiging tot en met de datum');
+        C.load(C.fromCockpitRows(rows('draft'), { own: 'ai-audit', general: 'ai-algemeen', discipline: 'audit' }));
+        equal(W.current().draft, true, 'concept (alleen beheerders krijgen concepten)');
+        C.load(C.fromCockpitRows(rows('trash'), { own: 'ai-audit', general: 'ai-algemeen', discipline: 'audit' }));
+        equal(W.current(), null, 'prullenbak: geen Wrapped');
+        ns.i18n.use('en');
+        C.load(C.fromCockpitRows(rows('published'), { own: 'ai-audit', general: 'ai-algemeen', discipline: 'audit' }));
+        equal(W.current().title, 'Cockpit Wrapped 2026 (EN)', 'in het Engels: de Engelse naam');
+        equal(W.normalize({ title: 'x', from: '2026-12-31', to: '2026-01-01' }), null, 'een periode die niet klopt: niets');
+      } finally {
+        ns.i18n.use('nl');
+        C.load();
+      }
+    });
+    await test('de Wrapped-pagina is in het Engels helemaal vertaald', () => {
+      const C = ns.content;
+      const source = wrappedSource();
+      source.wrapped = { title: 'Cockpit Wrapped 2026', from: '2026-01-01', to: '2026-12-31', intro: 'Inleiding', highlights: [{ title: 'Kop', text: 'Tekst' }], stats: {
+        totals: { copies: 12, views: 30, demos: 4, trainings: 2, agents: 1 }, saved: { taps: 20, minutes: 600 },
+        top: { prompt: [['mail', 5], ['memo', 2]], usecase: [['risico', 3]] }, months: [['2026-01', 4], ['2026-02', 9]],
+        fresh: { usecase: 1, prompt: 2, tip: 1, training: 1, agent: 1 }, ideas: { submitted: 5, answered: 3, realised: 1, flyins: 2 }
+      } };
+      const content = new Set(['Cockpit Wrapped 2026', 'Inleiding', 'Kop', 'Tekst', 'Risico\'s in kaart', 'Mail aan de klant', 'Memo herschrijven', 'Planning', 'Afronding']);
+      try {
+        ns.i18n.use('en');
+        C.load(source);
+        const node = ns.views.wrapped.render().node;
+        const missing = [];
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const textNode = walker.currentNode;
+          const value = textNode.nodeValue.trim();
+          if (!value || !/[A-Za-zÀ-ÿ]/.test(value) || textNode.parentElement.closest('[translate="no"]') || content.has(value)) continue;
+          if (ns.i18n.lookup(value) == null) missing.push(value);
+        }
+        equal(missing, [], 'zonder vertaling');
+      } finally {
+        ns.i18n.use('nl');
+        C.load();
+      }
+    });
+
     /* ---- ui: tekst, zoeken en plaatshouders ---- */
     describe('Tekst en zoeken (js/ui.js)');
     await test('normalize: kleine letters, zonder accenten, één spatie', () => {

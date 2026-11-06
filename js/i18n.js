@@ -124,7 +124,7 @@
       if (typeof value === 'object') Object.values(value).forEach((item) => walk(item, depth + 1));
     };
     const c = ns.content || {};
-    [c.usecases, c.prompts, c.tips, c.trainings, c.agents, c.phases, c.settings].forEach((list) => walk(list, 0));
+    [c.usecases, c.prompts, c.tips, c.trainings, c.agents, c.phases, c.settings, c.wrapped].forEach((list) => walk(list, 0));
     return found;
   }
 
