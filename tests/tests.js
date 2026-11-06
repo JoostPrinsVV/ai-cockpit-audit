@@ -613,6 +613,62 @@
       equal([result.level, result.next.level.id, result.next.milesNeeded], [0, 'copilot', 0], 'veel miles, maar zonder checkride geen Co-pilot');
       equal(result.next.checks.map((check) => check.stat), ['prompts', 'demos', 'trainings', 'weeks']);
     });
+    await test('puntenitems: eigen items per laag, automatische items, eigen namen en checkrides samenstellen', () => {
+      const saved = ns.content.brevetRules;
+      try {
+        ns.content.brevetRules = {
+          basis: {
+            items: [{ id: 'agent-gebouwd', name: 'Agent gebouwd', miles: 75 }, { id: 'demo-team', name: 'Demo in het teamoverleg', miles: 30, repeat: true }],
+            activities: { tip_read: { miles: 2 } },
+            labels: { prompt_used: 'Prompt gebruikt' },
+            checks: { copilot: { demos: 0, 'activity:tip_read': 3, 'item:agent-gebouwd': 1 } }
+          },
+          own: {
+            items: [{ id: 'agent-gebouwd', miles: 100 }, { id: 'demo-team', off: true }, { id: 'eigen', name: 'Alleen hier', miles: 10 }, { id: 'ONGELDIG', name: 'x', miles: 1 }],
+            activities: { tip_read: { miles: 4, name: 'Tip uitgelezen' } },
+            checks: { copilot: { 'activity:tip_read': 0 } }
+          }
+        };
+        const r = B.rules();
+        equal(r.items.map((i) => [i.id, i.name, i.miles, i.repeat, i.off]), [['agent-gebouwd', 'Agent gebouwd', 100, false, false], ['demo-team', 'Demo in het teamoverleg', 30, true, true], ['eigen', 'Alleen hier', 10, false, false]], 'items samengevoegd op id; een ongeldig adres telt niet');
+        equal([r.activities.tip_read.miles, r.activities.tip_read.name, r.activities.agent_opened.miles], [4, 'Tip uitgelezen', 0], 'automatisch: aan bij de discipline, de rest uit');
+        equal(r.checks.copilot.map((c) => [c.stat, c.need]), [['prompts', 10], ['trainings', 1], ['weeks', 4], ['item:agent-gebouwd', 1]], 'demo\'s weg, tip_read eerst erbij en bij de discipline weer weg, het eigen item erbij');
+        equal(r.checks.copilot[3].label, 'Agent gebouwd', 'de naam van het eigen item');
+        equal([B.label({ kind: 'prompt_used', item: 'a', detail: {} }, r), B.label({ kind: 'activity', item: 'tip_read:x', detail: { activity: 'tip_read' } }, r), B.label({ kind: 'item_awarded', item: 'oud', detail: { item: 'oud', name: 'Oud item' } }, r)], ['Prompt gebruikt', 'Tip uitgelezen', 'Oud item'], 'namen in het logboek');
+        const facts = [
+          fact('activity', 'tip_read:t1', '2026-10-05', { activity: 'tip_read' }),
+          fact('activity', 'tip_read:t1', '2026-10-05', { activity: 'tip_read' }),
+          fact('activity', 'tip_read:t2', '2026-10-05', { activity: 'tip_read' }),
+          fact('activity', 'agent_opened:a1', '2026-10-05', { activity: 'agent_opened' }),
+          fact('item_awarded', 'agent-gebouwd', '2026-10-06', { item: 'agent-gebouwd', name: 'Agent gebouwd', miles: 75 }),
+          fact('item_awarded', 'demo-team-1', '2026-10-06', { item: 'demo-team', name: 'Demo', miles: 30 }),
+          fact('item_awarded', 'weg', '2026-10-06', { item: 'weg', name: 'Bestaat niet meer', miles: 20 })
+        ];
+        const result = B.compute(facts, { rules: r, today: '2026-10-06' });
+        equal([result.stats['activity:tip_read'], result.stats['activity:agent_opened'], result.stats['item:agent-gebouwd']], [2, 1, 1], 'tellen voor een checkride (ook een item dat uit staat)');
+        equal(result.miles, 8 + 100 + 0 + 20, 'tip 2× 4, agent-item 100 (miles van nu), demo uit, verdwenen item: de miles van toen');
+        equal(result.entries.filter((e) => e.kind === 'activity').length, 2, 'een automatisch item dat uit staat, geeft geen regel in het logboek');
+        const capped = B.compute(Array.from({ length: 10 }, (u, i) => fact('activity', 'tip_read:x' + i, '2026-10-07', { activity: 'tip_read' })), { rules: r, today: '2026-10-07' });
+        equal(capped.miles, 25, 'automatische items vallen onder het plafond per dag');
+      } finally {
+        ns.content.brevetRules = saved;
+      }
+    });
+    await test('automatische items: alleen als ze aan staan, en de tip van de week alleen in zijn eigen week', () => {
+      const C = ns.content;
+      const r = B.rules({ activities: { weekly_tip: { miles: 10 }, tip_read: { miles: 2 } } });
+      try {
+        C.load({ phase: [], usecase: [], prompt: [], tip: [{ id: 'week', title: 'Tip', summary: 's', steps: ['a'], release: '2026-10-02' }, { id: 'gewoon', title: 'Tip 2', summary: 's', steps: ['a'] }], training: [], agent: [], setting: {} });
+        equal(B.activitiesFor('view_tip', 'week', r, '2026-10-05').map((a) => a.activity), ['tip_read', 'weekly_tip'], 'binnen de week');
+        equal(B.activitiesFor('view_tip', 'week', r, '2026-10-09').map((a) => a.activity), ['tip_read'], 'een week later niet meer');
+        equal(B.activitiesFor('view_tip', 'gewoon', r, '2026-10-05').map((a) => a.item), ['tip_read:gewoon'], 'een gewone tip');
+        equal(B.activitiesFor('open_agent', 'x', r, '2026-10-05'), [], 'uit: niets vastleggen');
+        const asCheck = B.rules({ checks: { captain: { 'activity:agent_opened': 2 } } });
+        equal(B.activitiesFor('open_agent', 'x', asCheck, '2026-10-05').map((a) => a.activity), ['agent_opened'], 'zonder miles, maar een eis in een checkride: wel vastleggen');
+      } finally {
+        C.load();
+      }
+    });
     await test('insturen hoogstens 3 keer per week; vliegritme bij 3 actieve dagen in een week', () => {
       const sent = ['r1', 'r2', 'r3', 'r4'].map((ref) => fact('idea_sent', ref, '2026-10-06'));
       equal(B.compute(sent, { today: '2026-10-06' }).miles, 30);
@@ -651,7 +707,7 @@
           ['First Officer', 200, ['Voorrang op een licentie'], 8, 200, 40, 12]);
         const basisOnly = B.rules(null, { basisOnly: true });
         equal([basisOnly.levels[1].miles, basisOnly.miles.prompt_used, basisOnly.caps.usagePerDay], [300, 6, 25], 'zonder de eigen laag');
-        equal(B.rules({ checks: { copilot: { prompts: 0 } } }).checks.copilot[0].need, 1, 'een checkride vraagt minstens 1');
+        equal(B.rules({ checks: { copilot: { prompts: 0 } } }).checks.copilot.map((check) => check.stat), ['demos', 'trainings', 'weeks'], 'een eis op 0: weggehaald uit de checkride');
         equal(B.defaults().checks.copilot[0].need, 10, 'de standaard verandert niet mee');
       } finally {
         ns.content.settings = saved.settings;

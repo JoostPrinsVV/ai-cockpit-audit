@@ -1185,3 +1185,22 @@ ul.en-list__items { display: grid; margin: 0; padding: 0; list-style: none; bord
 .wr-admin__table th[scope='row'] { font-weight: var(--fw-normal, 400); color: var(--color-text-body); }
 .wr-admin__top { margin: 0; padding-left: 1.4rem; display: grid; gap: 2px; }
 .wr-admin__screens { flex-direction: column; gap: var(--space-2); }
+
+/* Beheer → AI-brevetten → Regels: puntenitems (namen, automatische en eigen items, checkrides samenstellen) */
+.bvr-table .bvr-name { width: 100%; min-width: 12rem; margin-left: 0; text-align: left; }
+.bvr-check > span { flex: 1; min-width: 0; }
+.bvr-check .btn--icon { flex: none; }
+.bvr-check.is-removed > span { color: var(--color-text-muted); text-decoration: line-through; }
+.bvr-check.is-removed .field__input { opacity: 0.5; }
+.bvr-level select.field__input { width: 100%; font-size: var(--fs-sm); }
+.bvr-own { display: grid; gap: var(--space-2); }
+.bvr-items { display: grid; gap: var(--space-2); }
+.bvr-item { display: grid; grid-template-columns: minmax(12rem, 1fr) 6rem 11rem auto 9rem; gap: var(--space-2); align-items: center; }
+.bvr-item--head { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); letter-spacing: 0.06em; text-transform: uppercase; }
+.bvr-item--inherited .field__input:disabled { color: var(--color-text); opacity: 1; }
+.bvr-item__from { color: var(--color-text-muted); font-size: var(--fs-xs); }
+.bvr-own > .btn { justify-self: start; }
+@media (max-width: 760px) {
+  .bvr-item { grid-template-columns: minmax(0, 1fr) 6rem; }
+  .bvr-item--head { display: none; }
+}

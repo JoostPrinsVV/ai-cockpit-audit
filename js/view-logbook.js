@@ -31,7 +31,16 @@
       case 'training_attended': return title(c.trainingById, entry.item);
       case 'contribution_adopted':
       case 'session_given': return entry.detail.title || '';
-      case 'bonus': return entry.detail.reason || '';
+      case 'bonus':
+      case 'item_awarded': return entry.detail.reason || '';
+      case 'activity': {
+        // 'tip_read:<tip>': de titel van de tip (of usecase, training, agent) waar het over ging
+        const split = entry.item.indexOf(':');
+        const activity = entry.item.slice(0, split);
+        const id = entry.item.slice(split + 1);
+        const map = activity.startsWith('tip_') || activity === 'weekly_tip' ? c.tipById : activity.startsWith('agent_') ? c.agentById : activity === 'usecase_viewed' ? c.usecaseById : activity === 'training_viewed' ? c.trainingById : null;
+        return title(map, id);
+      }
       case 'royalty': return `${entry.detail.users} ${entry.detail.users === 1 ? 'collega' : 'collega\'s'} in ${MONTH.format(new Date(entry.item + '-15T12:00:00'))}`;
       default: return '';
     }
@@ -185,7 +194,7 @@
         return el('li', { className: 'logbook__entry' }, [
           el('span', { className: 'logbook__date', text: formatDate(entry.day) }),
           el('span', { className: 'logbook__what' }, [
-            el('span', { text: ns.brevet.LABELS[entry.kind] || entry.kind }),
+            el('span', { text: ns.brevet.label(entry, result.rules) }),
             about ? el('span', { className: 'logbook__about', text: about }) : null
           ]),
           el('span', { className: 'logbook__plus' + (entry.miles ? '' : ' is-zero'), text: entry.miles ? '+' + NUMBER.format(entry.miles) : entry.capped ? 'plafond' : '·', attrs: { title: entry.capped ? 'Boven het plafond (per dag of per maand)' : null } })

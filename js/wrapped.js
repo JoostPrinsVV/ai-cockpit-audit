@@ -371,6 +371,8 @@
         title: 'Cockpit Wrapped'
       };
     }
+    // Voor de AI-brevetten (js/brevet.js): Wrapped bekeken, per editie één keer
+    document.dispatchEvent(new CustomEvent('ai:wrapped', { detail: { id: w.from + '_' + w.to } }));
     return { node: el('div', { className: 'page wrapped' }, [el('div', { className: 'container wrapped__inner' }, screens(w))]), title: w.title };
   }
 

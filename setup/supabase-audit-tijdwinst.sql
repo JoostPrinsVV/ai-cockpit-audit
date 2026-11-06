@@ -59,9 +59,9 @@ begin
   alter table public.audit_brevet_facts add constraint audit_brevet_facts_kind_check
     check (kind in (
       'active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done',
-      'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done',
+      'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity',
       'contribution_adopted', 'training_registered', 'training_attended', 'session_given',
-      'nominated', 'prompt_author', 'bonus'));
+      'nominated', 'prompt_author', 'bonus', 'item_awarded'));
 
   drop policy if exists "audit_brevet_facts toevoegen" on public.audit_brevet_facts;
   create policy "audit_brevet_facts toevoegen" on public.audit_brevet_facts
@@ -72,7 +72,7 @@ begin
         email = public.audit_email()
         and public.audit_brevet_allowed()
         and kind in ('active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done',
-                     'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done')
+                     'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity')
         and exists (select 1 from public.audit_accounts a where a.email = public.audit_email() and a.joined_at is not null)
       )
     );

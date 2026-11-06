@@ -605,6 +605,24 @@ instelling `brevet` per naamruimte); miles en brevetten worden opnieuw berekend,
 Deelnemers rekenen met de regels van de cockpit waarin ze kijken. Een discipline zonder eigen inhoud in de database
 volgt de regels van alle disciplines.
 
+**Puntenitems** (ook in *Regels*, op beide niveaus):
+- **Naam in het logboek:** bij iedere vaste actie een eigen naam (leeg = de standaard).
+- **Automatische items:** wat de cockpit al ziet maar standaard niets oplevert: usecase bekeken, tip gelezen, tip van
+  de week in zijn eigen week, voorbeeld uit een tip gekopieerd, training bekeken, agent bekeken of geopend, Cockpit
+  Wrapped bekeken. Elk per item één keer, met een eigen naam; 0 miles = uit. Staat een item aan (miles, of als eis in
+  een checkride), dan legt de cockpit het vanaf dat moment vast bij wie meedoet (feit `activity`); de miles tellen mee
+  voor het plafond per dag. Wat iemand eerder deed, telt niet mee.
+- **Eigen items:** iets wat het AI-team toekent, bijv. *Agent gebouwd in Copilot Studio*: naam, miles en hoe vaak
+  (één keer per persoon, of vaker). Je kent ze toe bij een deelnemer (*Deelnemers → Logboek → Miles toekennen*, feit
+  `item_awarded`); in het logboek staat de naam. Bij een discipline zet je de items van alle disciplines uit of geef
+  je ze andere miles, en voeg je eigen items toe. Verandert het aantal miles, dan rekent het logboek met het nieuwe
+  aantal; een verwijderd item houdt de miles van toen.
+- **Checkrides samenstellen:** per brevet een eis weghalen (kruisje) of toevoegen (*Eis toevoegen…*): alles wat de
+  cockpit telt, de automatische items en de eigen items.
+
+Met echte accounts vraagt dit eenmalig `setup/supabase-audit-puntenitems.sql` (stap 15, na stap 12), zodat de
+database de feiten `activity` en `item_awarded` accepteert. In de demo werkt het meteen.
+
 **Demo of echt** (`js/config.js`, `brevet.mode`):
 - `'demo'` (nu): jij plus ruim dertig verzonnen collega's (adressen op `@demo.cockpit`), alles alleen in deze browser.
   Op Mijn logboek kun je *kijken als* een collega en de demo opnieuw beginnen. Geen echte persoonsgegevens buiten
@@ -934,8 +952,9 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    `setup/supabase-audit-portfolio.sql` (stap 10) en voor de verbetervoorstellen bij prompts
    `setup/supabase-audit-verbeteringen.sql` (stap 11); alle drie mogen op ieder moment na stap 1 en opnieuw. Voor
    de AI-brevetten met echte accounts `setup/supabase-audit-brevetten.sql` (stap 12; zie 'AI-brevetten'), en voor
-   de AI-specialist invliegen `setup/supabase-audit-invliegen.sql` (stap 13), en voor de tijdwinst
-   `setup/supabase-audit-tijdwinst.sql` (stap 14).
+   de AI-specialist invliegen `setup/supabase-audit-invliegen.sql` (stap 13), voor de tijdwinst
+   `setup/supabase-audit-tijdwinst.sql` (stap 14), en voor de puntenitems van de brevetten
+   `setup/supabase-audit-puntenitems.sql` (stap 15, na stap 12).
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').

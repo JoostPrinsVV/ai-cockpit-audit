@@ -106,9 +106,9 @@ create table if not exists public.audit_brevet_facts (
   email      text not null references public.audit_accounts (email) on delete cascade on update cascade,
   kind       text not null check (kind in (
                'active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done',
-               'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done',
+               'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity',
                'contribution_adopted', 'training_registered', 'training_attended', 'session_given',
-               'nominated', 'prompt_author', 'bonus')),
+               'nominated', 'prompt_author', 'bonus', 'item_awarded')),
   item_id    text not null default '' check (char_length(item_id) <= 80),
   namespace  text check (namespace is null or namespace ~ '^ai-[a-z0-9-]{1,57}$'),
   detail     jsonb check (detail is null or (jsonb_typeof(detail) = 'object' and octet_length(detail::text) <= 2000)),
@@ -137,7 +137,7 @@ create policy "audit_brevet_facts toevoegen" on public.audit_brevet_facts
       email = public.audit_email()
       and public.audit_brevet_allowed()
       and kind in ('active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done',
-                   'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done')
+                   'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity')
       and exists (select 1 from public.audit_accounts a where a.email = public.audit_email() and a.joined_at is not null)
     )
   );

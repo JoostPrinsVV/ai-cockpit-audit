@@ -30,9 +30,46 @@
     { id: 'commander', name: 'Commander', stripes: 4, miles: 2500, insignia: true, perks: ['Een agent op maat voor je team', 'Een plek in het AI-panel', 'Aanspreekpunt voor AI in je team'] }
   ];
 
-  // Wat een deelnemer zelf laat vastleggen; de rest legt beheer vast (zie setup/supabase-audit-brevetten.sql)
-  const SELF_KINDS = ['active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done', 'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done'];
-  const ADMIN_KINDS = ['contribution_adopted', 'training_registered', 'training_attended', 'session_given', 'nominated', 'prompt_author', 'bonus'];
+  // Wat een deelnemer zelf laat vastleggen; de rest legt beheer vast (zie setup/supabase-audit-brevetten.sql).
+  // 'activity': een automatisch puntenitem (ACTIVITIES); 'item_awarded': een eigen item van het AI-team (stap 15).
+  const SELF_KINDS = ['active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done', 'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity'];
+  const ADMIN_KINDS = ['contribution_adopted', 'training_registered', 'training_attended', 'session_given', 'nominated', 'prompt_author', 'bonus', 'item_awarded'];
+
+  /* Automatische puntenitems: wat de cockpit al ziet en wat het AI-team per discipline aan kan zetten
+     (Beheer → AI-brevetten → Regels; standaard uit = 0 miles). on: de teller uit js/central.js (of een eigen
+     signaal), per item één keer. count/one: hoe hij in een checkride heet (meer dan één keer, of precies één). */
+  const ACTIVITIES = [
+    { id: 'usecase_viewed', label: 'Usecase bekeken', rule: 'per usecase één keer', on: 'view_usecase', count: 'usecases bekeken', one: 'Een usecase bekeken' },
+    { id: 'tip_read', label: 'Tip gelezen', rule: 'per tip één keer', on: 'view_tip', count: 'tips gelezen', one: 'Een tip gelezen' },
+    { id: 'weekly_tip', label: 'Tip van de week in zijn eigen week gelezen', rule: 'per tip één keer, in de week dat hij uitkomt', on: 'view_tip', weekly: true, count: 'tips van de week op tijd gelezen', one: 'Een tip van de week op tijd gelezen' },
+    { id: 'tip_copied', label: 'Voorbeeld uit een tip gekopieerd', rule: 'per tip één keer', on: 'copy_tip', count: 'voorbeelden uit tips gekopieerd', one: 'Een voorbeeld uit een tip gekopieerd' },
+    { id: 'training_viewed', label: 'Training bekeken', rule: 'per training één keer', on: 'view_training', count: 'trainingen bekeken', one: 'Een training bekeken' },
+    { id: 'agent_viewed', label: 'Agent of tool bekeken', rule: 'per agent één keer', on: 'view_agent', count: 'agents en tools bekeken', one: 'Een agent of tool bekeken' },
+    { id: 'agent_opened', label: 'Agent of tool geopend', rule: 'per agent één keer', on: 'open_agent', count: 'agents en tools geopend', one: 'Een agent of tool geopend' },
+    { id: 'wrapped_viewed', label: 'Cockpit Wrapped bekeken', rule: 'per editie één keer', on: 'wrapped', count: 'edities van Wrapped bekeken', one: 'Cockpit Wrapped bekeken' }
+  ];
+  const ACTIVITY_IDS = ACTIVITIES.map((activity) => activity.id);
+  const ITEM_ID = /^[a-z0-9-]{1,40}$/;
+
+  // Wat je aan een checkride kunt toevoegen (naast de automatische en eigen items): [stat, meer dan één, precies één]
+  const STATS = {
+    prompts: ['verschillende prompts gebruikt', 'Een prompt gebruikt'],
+    demos: ['demo\'s bekeken', 'Een demo bekeken'],
+    rated: ['keer beoordeeld met sterren', 'Iets beoordeeld met sterren'],
+    trainings: ['trainingen gevolgd (live of opname)', 'Een training gevolgd (live of opname)'],
+    live: ['live trainingen bijgewoond', 'Een live training bijgewoond'],
+    weeks: ['weken actief in de cockpit', 'Een week actief in de cockpit'],
+    adopted: ['bijdragen overgenomen door het AI-team', 'Een bijdrage overgenomen door het AI-team'],
+    colleagues: ['keer dat een collega jouw prompt gebruikte', 'Een collega gebruikte jouw prompt'],
+    sessions: ['sessies gegeven in je team', 'Een sessie gegeven in je team'],
+    tour: [null, 'Rondleiding door de cockpit'],
+    profile: [null, 'Mijn gegevens ingevuld'],
+    policy: [null, 'Check "Veilig vliegen" gehaald'],
+    kickstart: [null, 'Kickstart afgerond'],
+    nominated: [null, 'Voorgedragen door het AI-team']
+  };
+  // Wat maar één keer kan: geen aantal om in te stellen
+  const ONCE_STATS = ['tour', 'profile', 'policy', 'kickstart', 'nominated'];
   // Gebruik: samen hoogstens caps.usagePerDay per dag
   const USAGE = ['prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong'];
 
@@ -89,6 +126,8 @@
     session_given: 'Sessie gegeven in je team',
     nominated: 'Voorgedragen door het AI-team',
     bonus: 'Miles van het AI-team',
+    item_awarded: 'Van het AI-team',
+    activity: 'Activiteit in de cockpit',
     rhythm: 'Vliegritme: 3 dagen actief in één week',
     royalty: 'Royalty\'s: collega\'s gebruikten jouw prompts'
   };
@@ -108,8 +147,31 @@
       miles: Object.assign({}, MILES, { adopted: Object.assign({}, MILES.adopted) }),
       caps: Object.assign({}, CAPS),
       checks: Object.fromEntries(Object.entries(CHECKS).map(([id, list]) => [id, list.map((check) => Object.assign({}, check))])),
-      recencyDays: RECENCY_DAYS
+      recencyDays: RECENCY_DAYS,
+      // Puntenitems: eigen namen in het logboek, automatische items (standaard uit) en eigen items van het AI-team
+      labels: {},
+      activities: Object.fromEntries(ACTIVITIES.map((activity) => [activity.id, { miles: 0, name: '' }])),
+      items: []
     };
+  }
+
+  /** Hoe een onderdeel van een checkride heet ('3 van 5 …' als need > 1, anders één zin). */
+  function statLabel(stat, need, r) {
+    const many = need > 1;
+    if (stat.startsWith('activity:')) {
+      const activity = ACTIVITIES.find((a) => a.id === stat.slice(9));
+      const own = r && r.activities[stat.slice(9)] && text(r.activities[stat.slice(9)].name);
+      if (!activity) return stat;
+      return own ? (many ? 'keer: ' + own : own) : (many ? activity.count : activity.one);
+    }
+    if (stat.startsWith('item:')) {
+      const item = r && r.items.find((i) => i.id === stat.slice(5));
+      const name = item ? item.name : stat.slice(5);
+      return many ? 'keer: ' + name : name;
+    }
+    const known = STATS[stat];
+    if (!known) return stat;
+    return many && known[0] ? known[0] : known[1];
   }
 
   /**
@@ -158,13 +220,58 @@
     Object.keys(CAPS).forEach((cap) => {
       r.caps[cap] = num((layer.caps || {})[cap], r.caps[cap]);
     });
+    r.recencyDays = num(layer.recencyDays, r.recencyDays) || r.recencyDays;
+    // Eigen namen in het logboek (alleen voor de vaste soorten)
+    const labels = layer.labels || {};
+    Object.keys(LABELS).forEach((kind) => {
+      if (text(labels[kind])) r.labels[kind] = text(labels[kind]).slice(0, 60);
+    });
+    // Automatische items: miles (0 = uit) en een eigen naam
+    const activities = layer.activities || {};
+    ACTIVITIES.forEach((activity) => {
+      const own = activities[activity.id] || {};
+      r.activities[activity.id].miles = Math.min(1000, num(own.miles, r.activities[activity.id].miles));
+      if (text(own.name)) r.activities[activity.id].name = text(own.name).slice(0, 60);
+    });
+    // Eigen items van het AI-team: op id samengevoegd (de discipline kan ze aanpassen of uitzetten, en er bij maken)
+    (Array.isArray(layer.items) ? layer.items : []).forEach((raw) => {
+      const id = text(raw && raw.id);
+      if (!ITEM_ID.test(id)) return;
+      const existing = r.items.find((item) => item.id === id);
+      const next = {
+        id,
+        name: text(raw.name).slice(0, 60) || (existing ? existing.name : ''),
+        miles: Math.min(1000, num(raw.miles, existing ? existing.miles : 0)),
+        repeat: typeof raw.repeat === 'boolean' ? raw.repeat : existing ? existing.repeat : false,
+        off: raw.off === true
+      };
+      if (!next.name) return;
+      if (existing) Object.assign(existing, next);
+      else if (r.items.length < 40) r.items.push(next);
+    });
+    // Checkrides: een aantal per onderdeel; 0 = weghalen, een nieuw onderdeel = toevoegen
     Object.keys(r.checks).forEach((id) => {
       const own = (layer.checks || {})[id] || {};
-      r.checks[id].forEach((check) => {
-        check.need = Math.max(1, num(own[check.stat], check.need));
+      Object.keys(own).forEach((stat) => {
+        const known = STATS[stat] || (stat.startsWith('activity:') && ACTIVITY_IDS.includes(stat.slice(9))) || (stat.startsWith('item:') && ITEM_ID.test(stat.slice(5)));
+        const n = num(own[stat], null);
+        if (!known || n == null) return;
+        const existing = r.checks[id].find((check) => check.stat === stat);
+        if (n === 0) r.checks[id] = r.checks[id].filter((check) => check.stat !== stat);
+        else if (existing) existing.need = ONCE_STATS.includes(stat) ? 1 : Math.min(999, n);
+        else if (r.checks[id].length < 8) r.checks[id].push({ stat, need: ONCE_STATS.includes(stat) ? 1 : Math.min(999, n), label: '', added: true });
       });
     });
-    r.recencyDays = num(layer.recencyDays, r.recencyDays) || r.recencyDays;
+    return r;
+  }
+
+  /** Na alle lagen: de namen van toegevoegde onderdelen van een checkride (een eigen item kan intussen hernoemd zijn). */
+  function finish(r) {
+    Object.keys(r.checks).forEach((id) => {
+      r.checks[id].forEach((check) => {
+        if (check.added || check.stat.startsWith('activity:') || check.stat.startsWith('item:')) check.label = statLabel(check.stat, check.need, r);
+      });
+    });
     return r;
   }
 
@@ -175,12 +282,28 @@
    */
   function rules(custom, options) {
     const opts = options || {};
-    if (custom) return apply(defaults(), custom);
+    if (custom) return finish(apply(defaults(), custom));
     const content = ns.content || {};
     const stored = content.brevetRules || {};
     const layers = [content.settings && content.settings.brevet, stored.basis];
     if (!opts.basisOnly) layers.push(stored.own);
-    return layers.reduce(apply, defaults());
+    return finish(layers.reduce(apply, defaults()));
+  }
+
+  /** Hoe een feit heet in het logboek: de eigen naam uit Beheer, of de standaard. */
+  function label(entry, rules) {
+    const r = rules || (state.result && state.result.rules) || ns.brevet.rules();
+    const detail = (entry && entry.detail) || {};
+    if (entry.kind === 'activity') {
+      const id = text(detail.activity) || String(entry.item || '').split(':')[0];
+      const activity = ACTIVITIES.find((a) => a.id === id);
+      return text(r.activities[id] && r.activities[id].name) || (activity ? activity.label : LABELS.activity);
+    }
+    if (entry.kind === 'item_awarded') {
+      const item = r.items.find((i) => i.id === text(detail.item));
+      return (item && item.name) || text(detail.name) || LABELS.item_awarded;
+    }
+    return text(r.labels[entry.kind]) || LABELS[entry.kind] || entry.kind;
   }
 
   /* ---- Datums ------------------------------------------------------------------------ */
@@ -229,7 +352,8 @@
         return true;
       });
 
-    const stats = { prompts: 0, demos: 0, rated: 0, trainings: 0, live: 0, weeks: 0, adopted: 0, colleagues: 0, sessions: 0, nominated: 0, tour: 0, profile: 0, policy: 0, registered: [] };
+    // Ook 'activity:<id>' en 'item:<id>' (automatische en eigen items) komen erbij als ze voorkomen
+    const stats = { prompts: 0, demos: 0, rated: 0, trainings: 0, live: 0, weeks: 0, adopted: 0, colleagues: 0, sessions: 0, nominated: 0, tour: 0, profile: 0, policy: 0, kickstart: 0, registered: [] };
     const entries = [];
     const usage = {}; // miles uit gebruik per dag
     const sent = {}; // insturen per week
@@ -259,7 +383,24 @@
           break;
         }
         case 'recording_watched': trainings.add(fact.item); miles = r.miles.recording_watched; break;
-        case 'kickstart_done': miles = r.miles.kickstart_done || 0; break;
+        case 'kickstart_done': stats.kickstart = 1; miles = r.miles.kickstart_done || 0; break;
+        case 'activity': {
+          // Een automatisch item: telt altijd mee voor een checkride; miles alleen als het AI-team hem aanzette
+          const id = text(fact.detail.activity) || fact.item.split(':')[0];
+          if (!ACTIVITY_IDS.includes(id)) return;
+          stats['activity:' + id] = (stats['activity:' + id] || 0) + 1;
+          miles = r.activities[id].miles || 0;
+          if (!miles) return;
+          break;
+        }
+        case 'item_awarded': {
+          // Een eigen item van het AI-team: de miles van nu; bestaat het item niet meer, dan wat er toen gold
+          const id = text(fact.detail.item);
+          const item = r.items.find((i) => i.id === id);
+          if (ITEM_ID.test(id)) stats['item:' + id] = (stats['item:' + id] || 0) + 1;
+          miles = item ? (item.off ? 0 : item.miles) : num(fact.detail.miles, 0);
+          break;
+        }
         case 'training_attended': trainings.add(fact.item); live.add(fact.item); miles = r.miles.training_attended; break;
         case 'training_registered': stats.registered.push(fact.item); return;
         case 'contribution_adopted': {
@@ -273,7 +414,7 @@
         case 'bonus': miles = Math.max(0, Math.round(Number(fact.detail.miles) || 0)); break;
         default: return; // prompt_author (voor de royalty's) en onbekende soorten
       }
-      if (USAGE.includes(fact.kind)) {
+      if (USAGE.includes(fact.kind) || fact.kind === 'activity') {
         const used = usage[fact.day] || 0;
         const room = Math.max(0, r.caps.usagePerDay - used);
         if (miles > room) {
@@ -450,7 +591,7 @@
       if (outcome === 'ok') {
         await load();
         const gained = state.result ? state.result.miles - before : 0;
-        if (gained > 0 && kind !== 'active_day') ns.ui.toast(`+${gained} AI-miles · ${LABELS[kind] || 'Logboek'}`, { tone: 'success' });
+        if (gained > 0 && kind !== 'active_day') ns.ui.toast(`+${gained} AI-miles · ${label({ kind, item: id, detail: detail || {} })}`, { tone: 'success' });
       }
       return outcome;
     } finally {
@@ -503,6 +644,23 @@
     return () => document.removeEventListener(EVENT, handler);
   }
 
+  /**
+   * De automatische items die bij een signaal horen (on: de teller of 'wrapped') en die aan staan (miles > 0 of
+   * een eis in een checkride):
+   * [{ activity, item }]. Een tip van de week telt alleen in de week dat hij uitkomt.
+   */
+  function activitiesFor(on, id, r, day) {
+    const rulesNow = r || rules();
+    const now = day || today();
+    // Aan = miles, of een eis in een checkride (dan telt hij mee, ook zonder miles)
+    const inCheck = (id) => Object.values(rulesNow.checks).some((list) => list.some((check) => check.stat === 'activity:' + id));
+    return ACTIVITIES.filter((activity) => activity.on === on && ((rulesNow.activities[activity.id].miles || 0) > 0 || inCheck(activity.id))).filter((activity) => {
+      if (!activity.weekly) return true;
+      const tip = ns.content && ns.content.tipById && ns.content.tipById.get(id);
+      return Boolean(tip && tip.weekly && tip.release && now >= tip.release && daysBetween(tip.release, now) < 7);
+    }).map((activity) => ({ activity: activity.id, item: (activity.id + ':' + String(id || '')).slice(0, 80) }));
+  }
+
   /* ---- Haakjes in de rest van de cockpit ----------------------------------------------- */
   function listen() {
     // Tellers (js/central.js): kopiëren en demo's; een video telt pas als hij helemaal is bekeken (js/player.js)
@@ -513,6 +671,13 @@
         const usecase = ns.content.usecaseById && ns.content.usecaseById.get(id);
         if (!usecase || !usecase.video) record('demo_watched', id);
       }
+      // Automatische puntenitems die het AI-team aanzette (Beheer → AI-brevetten → Regels)
+      if (joined() && id) activitiesFor(kind, id).forEach((found) => record('activity', found.item, { activity: found.activity }));
+    });
+    // Cockpit Wrapped bekeken (js/wrapped.js)
+    document.addEventListener('ai:wrapped', (event) => {
+      const edition = (event.detail || {}).id;
+      if (joined() && edition) activitiesFor('wrapped', edition).forEach((found) => record('activity', found.item, { activity: found.activity }));
     });
     document.addEventListener('ai:demo-af', (event) => record('demo_watched', (event.detail || {}).id));
     document.addEventListener('ai:ingestuurd', (event) => record('idea_sent', (event.detail || {}).ref));
@@ -559,6 +724,12 @@
     ADMIN_KINDS,
     LABELS,
     CHECKS,
+    ACTIVITIES,
+    STATS,
+    ONCE_STATS,
+    statLabel,
+    label,
+    activitiesFor,
     rules,
     compute,
     royaltiesFrom,
