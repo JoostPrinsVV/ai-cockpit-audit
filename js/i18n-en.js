@@ -981,6 +981,10 @@
     "Opgenomen demo met fictieve gegevens": "Recorded demo with fictitious data",
     "Probeer het meteen in de promptbouwer": "Try it straight away in the prompt builder",
 
+    /* ---- Check 'Veilig vliegen' (js/brevet-ui.js): uitleg bij het antwoord ---- */
+    "Klanten door elkaar gebruiken is veilig in Copilot. Let er wel op dat je antwoord alleen over de juiste klant gaat.": "Using information from different clients in Copilot is safe. Do make sure your answer only concerns the right client.",
+    "Bij twijfel niet gebruiken voordat je het hebt nagevraagd.": "If in doubt, don't use it until you've checked.",
+
     /* ---- Radar op de startpagina ---- */
     "in de cockpit": "in the cockpit",
     "sinds je vorige bezoek": "since your last visit",
@@ -1043,6 +1047,17 @@
     [/^Nieuw: (.+) \((Usecase|Prompt|Tip|Training|Agent)\)$/, (m, tr) => `New: ${m[1]} (${tr(m[2])})`],
     [/^Meer over (.+)$/, 'More about $1'],
     [/^Aan de slag met (.+)$/, (m, tr) => `Getting started with ${tr(m[1])}`],
+    // 'Mag dit?' (js/check.js): de uitkomst per tool, met de naam van de tool erin. Beleidstekst: laten nalezen door Compliance.
+    [/^(.+) is niet meer in gebruik\.$/, '$1 is no longer in use.'],
+    [/^(.+) is nog in ontwikkeling en nog niet te gebruiken\.$/, '$1 is still in development and can\'t be used yet.'],
+    [/^(.+) is in pilot: alleen als je in de pilotgroep zit\.$/, '$1 is in pilot: only if you\'re in the pilot group.'],
+    [/^Hoog-risico-data hoort niet in (.+)\. Haal het weg, anonimiseer of gebruik een \[PLAATSHOUDER\]; is verwerking onvermijdelijk, stem dan eerst af met de CTO\.$/, 'High-risk data doesn\'t belong in $1. Remove it, anonymise it or use a [PLACEHOLDER]; if processing is unavoidable, consult the CTO first.'],
+    [/^Voor (.+) is nog niet vastgelegd welke data erin mag\. Gebruik hem voorlopig alleen met algemene data\.$/, 'It hasn\'t been decided yet which data may be used in $1. For now, only use it with general data.'],
+    [/^In (.+) mag alleen algemene data, geen (persoonsgegevens|vertrouwelijke klantgegevens)\. Anonimiseer de gegevens zodat ze niet naar een klant of persoon te herleiden zijn, of gebruik \[PLAATSHOUDERS\]\.$/, (m) => `Only general data may be used in ${m[1]}, no ${m[2] === 'persoonsgegevens' ? 'personal data' : 'confidential client data'}. Anonymise the data so it can't be traced back to a client or person, or use [PLACEHOLDERS].`],
+    [/^Persoonsgegevens mogen in (.+), mits je alleen deelt wat nodig is voor de opdracht \(dataminimalisatie\) en anonimiseert waar het kan\.$/, 'Personal data may be used in $1, provided you only share what is necessary for the engagement (data minimisation) and anonymise where possible.'],
+    [/^Vertrouwelijke klantgegevens mogen in (.+), binnen de beheerde omgeving van V&V en je eigen toegangsrechten\. Deel niet meer dan nodig\.$/, 'Confidential client data may be used in $1, within V&V\'s managed environment and your own access rights. Share no more than necessary.'],
+    [/^(.+) gebruikt ook webbronnen \(Work \+ Web\): deel alleen wat hiervoor uitdrukkelijk is toegestaan\.$/, '$1 also uses web sources (Work + Web): only share what has been expressly permitted for this.'],
+    [/^Algemene data kun je in (.+) gebruiken\.$/, 'You can use general data in $1.'],
     // Een voorbeeld in een Engelse plaatshouder ('e.g. total revenue'): al Engels
     [/^e\.g\. .+$/, '$&'],
     // Al Engels of in beide talen gelijk (datums in en-GB, tellers): laten staan

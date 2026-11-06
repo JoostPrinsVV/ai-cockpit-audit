@@ -88,6 +88,25 @@
         I.use('nl');
       }
     });
+    await test('Mag dit?: iedere uitkomst heeft een Engelse vertaling, voor iedere soort tool', () => {
+      const C = ns.check;
+      const tools = [
+        { title: 'Testtool A', kind: 'Microsoft-standaard', status: 'Beschikbaar' },
+        { title: 'Testtool B', kind: 'Eigen agent', status: 'Pilot', web: true },
+        { title: 'Testtool C', kind: 'Eigen agent', status: 'Beschikbaar' },
+        { title: 'Testtool D', kind: 'Extern product', status: 'In ontwikkeling' },
+        { title: 'Testtool E', kind: 'Extern product', status: 'Beschikbaar', dataLevel: 'hoog' },
+        { title: 'Testtool F', kind: 'Onbekend', status: 'Beschikbaar' },
+        { title: 'Testtool G', kind: 'Microsoft-standaard', status: 'Gestopt', stopped: true },
+        C.OTHER
+      ];
+      const texts = new Set();
+      const walk = (value) => {
+        if (typeof value === 'string') { if (/\s/.test(value.trim())) texts.add(value.trim()); } else if (Array.isArray(value)) value.forEach(walk); else if (value && typeof value === 'object') Object.values(value).forEach(walk);
+      };
+      tools.forEach((tool) => C.DATA.forEach((data) => (C.DESTINATIONS || []).map((d) => d.id).concat([undefined]).forEach((destination) => walk(C.verdict(tool, data.id, destination)))));
+      equal(Array.from(texts).filter((text) => ns.i18n.lookup(text) == null), [], 'zonder vertaling');
+    });
     await test('vertaallijst: geen sleutels met spaties eromheen, en elk patroon is een geldig paar', () => {
       const keys = Object.keys(ns.i18nEn.words);
       equal(keys.filter((key) => key !== key.trim()), [], 'sleutels zonder spaties eromheen (zo wordt er gezocht)');
