@@ -753,8 +753,13 @@ eerste Engelse onderdeel bij het eerste Nederlandse.
 - Bewerken op de pagina zelf (de bewerkmodus) kan alleen met de cockpit in het Nederlands; anders zou Engelse tekst
   in een Nederlands veld belanden.
 
-**Fase 3 (volgt):** de eerste vertaling van alle inhoud van Audit (een importbestand voor het tabblad Engels), en de
-teksten over het AI-beleid laten nalezen door Compliance.
+**Fase 3: de eerste vertaling.** Alle gepubliceerde inhoud (november 2026: 44 items van Audit en 11 van de gedeelde
+basis) is in één keer vertaald, als twee importbestanden buiten deze repository. Importeren: Beheer → Inhoud → Engels →
+*Veel items in één keer vertalen* → kies het bestand van Audit, *Controleren*, dan opslaan en publiceren; daarna
+hetzelfde in Beheer → Gedeelde basis → Engels met het bestand van de gedeelde basis. Items die na de export zijn
+toegevoegd, staan als *Nog niet vertaald* in het tabblad Engels. De teksten over het AI-beleid (gouden regels, *Mag
+dit?*, de checkride, *Let op* en *Niet gebruiken voor*) laat het AI-team nalezen door Compliance voordat het
+Zuid-Afrikaanse team ermee werkt.
 
 ## Nieuwsbrief (Beheer → Nieuwsbrief)
 

@@ -82,7 +82,7 @@
             el('div', { className: 'p-group__head' }, [
               el('h2', { className: 'p-group__title', attrs: { id: 'uc-season' } }, [
                 el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(phases[0].phase.icon)]),
-                el('span', {}, [phases.map((entry) => entry.phase.label).join(' en ') + ' ', el('span', { className: 'p-group__count', text: String(seasonal.length) })])
+                el('span', {}, [phases.map((entry) => entry.phase.label).join(ns.i18n && ns.i18n.english() ? ' and ' : ' en ') + ' ', el('span', { className: 'p-group__count', text: String(seasonal.length) })])
               ]),
               ns.compass.badge(seasons)
             ]),
