@@ -519,8 +519,10 @@
       const name = el('input', { className: 'field__input', attrs: { type: 'text', maxlength: '40', placeholder: level.name, 'aria-label': 'Naam van brevet ' + (index + 1) } });
       name.value = pick(stored, `levels.${level.id}.name`) || '';
       inputs.push({ path: `levels.${level.id}.name`, input: name, kind: 'text' });
-      const perks = el('textarea', { className: 'field__input field__textarea', attrs: { rows: '4', maxlength: '600', placeholder: level.perks.join('\n'), 'aria-label': 'Voordelen van ' + level.name + ', één per regel' } });
-      perks.value = (pick(stored, `levels.${level.id}.perks`) || []).join('\n');
+      // Net zoveel regels als er voordelen zijn (geen scrollbalk in het vak)
+      const ownPerks = pick(stored, `levels.${level.id}.perks`) || [];
+      const perks = el('textarea', { className: 'field__input field__textarea', attrs: { rows: String(Math.min(8, Math.max(3, Math.max(ownPerks.length, level.perks.length) + 1))), maxlength: '600', placeholder: level.perks.join('\n'), 'aria-label': 'Voordelen van ' + level.name + ', één per regel' } });
+      perks.value = ownPerks.join('\n');
       inputs.push({ path: `levels.${level.id}.perks`, input: perks, kind: 'list' });
       // Wat je kunt tellen, heeft een aantal; wat maar één keer kan (rondleiding, voordracht), niet.
       // Met het kruisje haal je een eis weg; onderaan voeg je er een toe.
@@ -591,9 +593,9 @@
       return el('section', { className: 'bvr-level', attrs: { 'aria-label': level.name } }, [
         el('div', { className: 'bvr-level__head' }, [ns.brevetUi.insignia(index, 'md', { rules: inherited }), name]),
         level.id === 'cadet'
-          ? el('p', { className: 'bvr-level__miles', text: 'Na de eerste stappen (geen drempel)' })
-          : el('label', { className: 'bvr-level__miles' }, [number(`levels.${level.id}.miles`, 'AI-miles voor ' + level.name, 100000), el('span', { text: 'AI-miles nodig' })]),
-        el('p', { className: 'bv-level__label', text: 'Voordelen (één per regel)' }),
+          ? el('p', { className: 'bvr-level__miles', text: 'Geen drempel: het eerste brevet, na de eerste stappen' })
+          : el('label', { className: 'bvr-level__miles' }, [el('span', { text: 'Drempel' }), number(`levels.${level.id}.miles`, 'AI-miles voor ' + level.name, 100000), el('span', { text: 'AI-miles' })]),
+        el('p', { className: 'bv-level__label' }, ['Voordelen', el('span', { className: 'bvr-level__sub', text: ' · één per regel' })]),
         perks,
         el('p', { className: 'bv-level__label', text: 'Checkride' }),
         ...checks

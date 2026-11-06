@@ -1036,25 +1036,28 @@ ul.admin-roles { display: grid; gap: var(--space-2); margin: 0 0 var(--space-5);
 .bvr { gap: var(--space-5); }
 .bvr-scope { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
 .bvr-status { color: var(--color-text-body); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
-.bvr-levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
-.bvr-level { display: grid; align-content: start; gap: var(--space-2); padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
-.bvr-level__head { display: flex; align-items: center; gap: var(--space-3); }
-.bvr-level__head .field__input { flex: 1; min-width: 0; font-weight: var(--fw-bold); }
-.bvr-level__miles { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-sm); }
-.bvr-level__miles .field__input { width: 6.5rem; }
-.bvr-level .field__textarea { min-height: 6rem; font-size: var(--fs-sm); }
-.bvr-checks { display: grid; gap: var(--space-2); }
-.bvr-check { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-body); font-size: var(--fs-sm); }
-.bvr-check .field__input { flex: none; width: 4.5rem; }
-.bvr-check--once .icon { flex: none; color: var(--color-text-muted); }
+/* Vier brevetten: twee naast elkaar, zodat de checkride op één regel per eis past */
+.bvr-levels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.bvr-level { display: grid; align-content: start; gap: var(--space-3); min-width: 0; padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.bvr-level__head { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-3); }
+.bvr-level__head .field__input { min-width: 0; font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.bvr-level__miles { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; padding-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); color: var(--color-text-muted); font-size: var(--fs-sm); }
+.bvr-level__miles .field__input { width: 7rem; text-align: right; font-variant-numeric: tabular-nums; }
+.bvr-level .bv-level__label { margin: var(--space-1) 0 0; }
+.bvr-level__sub { color: var(--color-text-muted); font-weight: var(--fw-normal, 400); letter-spacing: 0; text-transform: none; }
+.bvr-level .field__textarea { min-height: 0; font-size: var(--fs-sm); line-height: 1.5; resize: vertical; }
+/* Checkride: een vaste kolom voor het aantal (of het vinkje), dan de eis, dan weghalen */
+.bvr-checks { display: grid; gap: 0; padding: 0 var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.bvr-checks:empty { display: none; }
+.bvr-check { display: grid; grid-template-columns: 4rem minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); min-height: 2.9rem; padding-block: var(--space-1); color: var(--color-text-body); font-size: var(--fs-sm); line-height: 1.35; }
+.bvr-check + .bvr-check { border-top: 1px solid var(--color-border); }
+.bvr-check .field__input { width: 100%; padding-inline: var(--space-2); text-align: right; font-variant-numeric: tabular-nums; }
+.bvr-check--once > .icon { justify-self: center; color: var(--vv-teal); }
 .bvr-table .field__input { width: 6rem; margin-left: auto; text-align: right; }
 .bvr-table td, .bvr-table th { vertical-align: middle; }
 .bvr-rule { color: var(--color-text-muted); }
 .bvr-caption { padding-bottom: var(--space-2); color: var(--color-text); font-size: var(--fs-md); font-weight: var(--fw-bold); text-align: left; }
-@media (max-width: 1100px) {
-  .bvr-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .bvr-levels { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -1192,7 +1195,7 @@ ul.en-list__items { display: grid; margin: 0; padding: 0; list-style: none; bord
 .bvr-check .btn--icon { flex: none; }
 .bvr-check.is-removed > span { color: var(--color-text-muted); text-decoration: line-through; }
 .bvr-check.is-removed .field__input { opacity: 0.5; }
-.bvr-level select.field__input { width: 100%; font-size: var(--fs-sm); }
+.bvr-level select.field__input { justify-self: start; width: auto; min-width: 13rem; max-width: 100%; font-size: var(--fs-sm); }
 .bvr-own { display: grid; gap: var(--space-2); }
 .bvr-items { display: grid; gap: var(--space-2); }
 .bvr-item { display: grid; grid-template-columns: minmax(12rem, 1fr) 6rem 11rem auto 9rem; gap: var(--space-2); align-items: center; }
