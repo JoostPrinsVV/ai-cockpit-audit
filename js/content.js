@@ -504,7 +504,11 @@
 
   /* ---- Agents & tools ------------------------------------------------------------------ */
   const AGENT_KINDS = ['Microsoft-standaard', 'Eigen agent', 'Extern product'];
-  const AGENT_STATUSES = ['Beschikbaar', 'Pilot', 'In ontwikkeling', 'Gestopt'];
+  // Testfase: nog geen geaccepteerde agent; collega's testen hem en delen hun ervaring (js/agent-test.js).
+  // Vroeger 'Pilot': die waarde lezen we als Testfase.
+  const AGENT_STATUSES = ['Beschikbaar', 'Testfase', 'In ontwikkeling', 'Gestopt'];
+  // Vaktechniek (bijv. via een workflow in AFAS), tijdens de testfase: waar staat de beoordeling?
+  const AGENT_REVIEWS = ['niet-nodig', 'loopt', 'goedgekeurd'];
   // Welke data erin mag, in de termen van het AI-beleid (vastgesteld door het AI-team; uitleg en 'Mag dit?' in js/check.js)
   const DATA_LEVELS = ['algemeen', 'vertrouwelijk', 'hoog'];
   const KIND_ACCENTS = { 'Microsoft-standaard': 'steel', 'Eigen agent': 'deepteal', 'Extern product': 'rose' };
@@ -523,6 +527,7 @@
         kind = AGENT_KINDS[0];
       }
       let status = text(item.status);
+      if (status === 'Pilot') status = 'Testfase';
       if (!AGENT_STATUSES.includes(status)) {
         warn(`Agent '${id}': onbekende status '${status}' (${AGENT_STATUSES.join(', ')}); '${AGENT_STATUSES[0]}' is gebruikt.`);
         status = AGENT_STATUSES[0];
@@ -560,12 +565,18 @@
         icon: text(item.icon) || 'robot',
         added: text(item.added),
         registerUrl: HTTPS_URL.test(registerUrl) ? registerUrl : '',
+        // Testfase: waar testers op letten (elk een score in 'Deel je testervaring'), tot wanneer, wie, en vaktechniek
+        testCriteria: list(item.testCriteria).slice(0, 8),
+        testUntil: DATE.test(text(item.testUntil)) ? text(item.testUntil) : '',
+        testGroup: text(item.testGroup),
+        review: AGENT_REVIEWS.includes(text(item.review)) ? text(item.review) : '',
         dutchOnly: item._dutchOnly === true,
         draft: item._draft === true,
         change: item._change || '',
         shared: item._shared === true
       };
       agent.stopped = agent.status === 'Gestopt';
+      agent.testing = agent.status === 'Testfase';
       state.agents.push(agent);
       state.agentById.set(id, agent);
     });
@@ -860,7 +871,7 @@
     return state;
   }
 
-  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, BREVET_RULES_ID, WRAPPED_ID, AGENT_KINDS, AGENT_STATUSES, DATA_LEVELS,
+  ns.content = Object.assign(state, { load, ensureFiles, needsFiles, fromFiles, fromRows, fromCockpitRows, toRows, search, recent, today, daysUntil, TYPES, SETTING_KEYS, BREVET_RULES_ID, WRAPPED_ID, AGENT_KINDS, AGENT_STATUSES, AGENT_REVIEWS, DATA_LEVELS,
     // Dezelfde controles in Beheer (js/admin-content.js)
     patterns: { ID_PATTERN, LOCAL_PATH, HTTPS_URL, LEGACY_ASSETS } });
 })(window.AIAudit);

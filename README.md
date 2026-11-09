@@ -388,8 +388,9 @@ elders; een agent kan er met `registerUrl` naar linken (afgeschermde omgeving).
 
 - **Soort:** *Microsoft-standaard* (onderdeel van Microsoft 365), *Eigen agent* (gemaakt door of voor Visser & Visser)
   of *Extern product* (van een andere leverancier). Op de overzichtspagina filter je op soort en status.
-- **Status:** *Beschikbaar*, *Pilot*, *In ontwikkeling* of *Gestopt*. Een gestopte agent blijft vindbaar, staat
-  onderaan en heeft geen knop 'Openen'.
+- **Status:** *Beschikbaar*, *Testfase*, *In ontwikkeling* of *Gestopt*. Een gestopte agent blijft vindbaar, staat
+  onderaan en heeft geen knop 'Openen'. *Testfase* heette eerder *Pilot*; een opgeslagen *Pilot* telt als *Testfase*
+  (zie hieronder).
 - **Licentie:** bij Microsoft en eigen agents de Microsoft 365 Copilot-licentie; bij een extern product een eigen
   licentie of account.
 - **Link:** de knop 'Openen' opent hem in een nieuw tabblad (alleen `https://`). Een Copilot-agent moet in Copilot zelf
@@ -406,6 +407,34 @@ elders; een agent kan er met `registerUrl` naar linken (afgeschermde omgeving).
   (`newDays` in `js/config.js`); inhoud van vóór de lancering (`launchDate`) krijgt het niet.
 - **Niet gebruiken voor:** een paar korte punten; ze staan als waarschuwing op de pagina.
 - Alle velden staan uitgelegd bovenin `data/agents.js`; in Beheer → Inhoud → Agents & tools vul je dezelfde velden in.
+
+### Agents in testfase (stap 16)
+
+Een nieuwe agent is niet meteen een geaccepteerde agent. Raakt hij de kwaliteit, dan gaat hij eerst langs vaktechniek
+(bijv. via een workflow in AFAS); zo niet, dan halen we in ieder geval eerst testfeedback op. Daarvoor is er de status
+*Testfase* (`js/agent-test.js`).
+
+- **In Beheer** (Inhoud → Agents & tools, kopje *Testfase*): *Waar testers op letten* (een punt per regel, hoogstens
+  8; elk krijgt een score in het formulier), *Testen tot*, *Wie test mee* en *Vaktechniek* (nog niet bekeken, niet
+  nodig, beoordeling loopt, goedgekeurd). Er staat geen link naar AFAS: de site is openbaar. Klaar met testen (en
+  goedgekeurd waar nodig)? Zet de status op *Beschikbaar*.
+- **Goed zichtbaar:** in de lijst een gele, gestreepte band *Testfase · nog niet geaccepteerd* boven op de kaart, een
+  geel kader en het label *Testfase*; bovenaan de lijst een melding met het aantal en een knop *Toon alleen de
+  testfase*; op de startpagina (recent toegevoegd) ook het label. In *Mag dit?* is een agent in testfase *ja, mits*:
+  test hem zoals op zijn pagina staat en controleer de uitkomst extra. Wat erin mag, volgt gewoon *Data in deze tool*.
+- **Op de pagina van de agent:** bovenaan een geel blok *Nog geen geaccepteerde agent* met de stand bij vaktechniek,
+  tot wanneer, wie meetest, waar we op letten, hoe vaak er al een ervaring is gedeeld (alleen het aantal) en de knop
+  **Deel je testervaring**.
+- **Het formulier:** per testcriterium een score van 1 (slecht) tot 5 (uitstekend) of n.v.t. (zonder criteria één
+  algemene vraag), *Zou je hem gebruiken in je werk?* (ja, misschien, nee), *Wat ging goed?*, *Wat kan beter?* en
+  naar keuze naam en e-mailadres. Het wordt een inzending van de soort *Testervaring*, met de scores in `details`.
+- **Alleen voor het AI-team:** een testervaring wordt nooit gepubliceerd (ook de database staat het niet toe). In
+  Beheer staat boven het formulier van de agent het blok *Testervaringen* (`js/admin-testfase.js`): het aantal, hoe
+  vaak ja, misschien of nee, de gemiddelde score per criterium en de laatste zes ervaringen. Beantwoorden doe je in
+  Beheer → Inzendingen.
+- **Eenmalig:** voer `setup/supabase-audit-testfase.sql` uit (stap 16, na stap 13). Dat zet de soort *testfeedback*
+  erbij en de functie die per agent alleen het aantal ervaringen teruggeeft. Beheer → Start (*Klaar voor livegang?*)
+  controleert of het gebeurd is.
 
 ## Reviews bij usecases en prompts
 
@@ -506,7 +535,7 @@ Geen eigen pagina: het beleid staat waar je de vraag hebt.
   vertrouwelijke klantgegevens, hoog-risico-data) en waar de uitkomst terechtkomt. Het antwoord (groen ja, oranje ja
   mits of nog niet vastgesteld, rood nee) volgt het AI-beleid en wat per tool is vastgelegd: een tool via de browser is
   voor je werk altijd nee, hoog-risico-data nee (behalve in een in-house-app, na afstemming met de CTO), een tool in
-  ontwikkeling nee, een pilot 'mits', en persoonsgegevens en klantdata volgens *Data in deze tool*. Naar de klant of in
+  ontwikkeling nee, een agent in testfase 'mits', en persoonsgegevens en klantdata volgens *Data in deze tool*. Naar de klant of in
   het dossier: met de herinnering om na te lezen en vast te leggen. Onderaan: *Het beleid in het kort*, de tabel met
   tools en soorten data uit het beleid.
 - **Per agent** (Beheer → Agents & tools): *Data in deze tool* (alleen algemene data; ook persoonsgegevens en
@@ -530,7 +559,7 @@ deze lijst dan na (en `js/check.js`: `DATA`, `LEVELS`, `POLICY_TABLE` en `verdic
 | Tools vs. type data: in-house-apps (Ilse) alles, hoog-risico alleen na afstemming met de CTO; Copilot (alleen Werk-modus) t/m klantdata; LLM's via de browser en overige tools alleen persoonlijk met algemene data | *Het beleid in het kort* (tabel in *Mag dit?*), de niveaus bij *Data in deze tool* en het antwoord van de check |
 | Zakelijk gebruik van LLM's alleen via Copilot of Ilse; ChatGPT, Claude, Gemini via de browser niet, ook niet betaald | Keuze *ChatGPT, Claude, Gemini of een andere tool via de browser* in de check: altijd nee voor je werk, met de uitzondering voor persoonlijke algemene ondersteuning; gouden regel 1 |
 | Copilot alleen in de Werk-modus; extra alert bij webbronnen | Bij persoonsgegevens of klantdata in een Microsoft-tool: *gebruik de Werk-modus*; bij een agent met webtoegang: label *Work + Web* en *controleer extra* |
-| Agents in Copilot Studio als pilot, binnen de beheerde omgeving; *Work + Web* zichtbaar via naam of toelichting | Status *Pilot* (check: *alleen voor de pilotgroep*), veld *Gebruikt ook webbronnen (Work + Web)* met het label op kaart en pagina |
+| Agents in Copilot Studio als pilot, binnen de beheerde omgeving; *Work + Web* zichtbaar via naam of toelichting | Status *Testfase* (gele band in de lijst; check: *ja, mits*, test en controleer extra), veld *Gebruikt ook webbronnen (Work + Web)* met het label op kaart en pagina |
 | Dataminimalisatie, anonimiseren, fictieve gegevens en gevoelige informatie pas zelf invullen in de definitieve versie | De [PLAATSHOUDERS] in alle prompts (wat je invult wordt niet bewaard), *Mag dit?* bij persoonsgegevens (*ja, mits*), gouden regel 4, de BSN/IBAN-waarschuwing in de promptbouwer en de ideeënhub |
 | AI is een hulpmiddel; output is een concept; controleer harde feiten aan de bron; niet letterlijk overnemen; jij blijft verantwoordelijk | Gouden regels 2 en 3, en in de check bij *intern* of *naar de klant* |
 | Bij twijfel niet gebruiken tot afstemming (het beleid noemt leidinggevende, disciplinedirectie, Business IT, Legal & Risk of de CTO, en één AI-aanspreekpunt per discipline als eerste aanspreekpunt) | Onder ieder *ja, mits* en *nog niet vastgesteld* in de check, en in *Het beleid in het kort*: *navragen bij de AI-specialist van je discipline, je leidinggevende of IT* (het eerste aanspreekpunt; zij schalen zo nodig op) |
@@ -954,7 +983,8 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    de AI-brevetten met echte accounts `setup/supabase-audit-brevetten.sql` (stap 12; zie 'AI-brevetten'), en voor
    de AI-specialist invliegen `setup/supabase-audit-invliegen.sql` (stap 13), voor de tijdwinst
    `setup/supabase-audit-tijdwinst.sql` (stap 14), en voor de puntenitems van de brevetten
-   `setup/supabase-audit-puntenitems.sql` (stap 15, na stap 12).
+   `setup/supabase-audit-puntenitems.sql` (stap 15, na stap 12), en voor de testervaringen bij agents in testfase
+   `setup/supabase-audit-testfase.sql` (stap 16, na stap 13).
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').

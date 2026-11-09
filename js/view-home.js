@@ -132,8 +132,10 @@
         el('span', { className: 'recent__icon', attrs: { 'aria-hidden': 'true' } }, [icon(info.icon)]),
         el('span', { className: 'recent__body' }, [
           el('span', { className: 'recent__kind' }, kicker || [info.label]),
-          el('span', { className: 'recent__title', text: item.title })
-        ]),
+          el('span', { className: 'recent__title', text: item.title }),
+          // Een agent in testfase: ook hier zichtbaar dat hij nog niet geaccepteerd is (js/agent-test.js)
+          kind === 'agent' && item.testing ? el('span', { className: 'status status--test recent__test' }, [icon('flask'), el('span', { text: 'Testfase' })]) : null
+        ].filter(Boolean)),
         icon('arrow-right', { className: 'recent__go' })
       ])
     ]);

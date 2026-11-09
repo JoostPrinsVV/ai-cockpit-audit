@@ -236,7 +236,7 @@
         { key: 'title', label: 'Naam', type: 'text', required: true },
         { key: 'id', label: 'Adres (id)', type: 'id' },
         { key: 'kind', label: 'Soort', type: 'select', options: () => asOptions(ns.content.AGENT_KINDS), required: true, half: true },
-        { key: 'status', label: 'Status', type: 'select', options: () => asOptions(ns.content.AGENT_STATUSES), required: true, half: true, hint: 'Gestopt: blijft vindbaar, onderaan en zonder Open-knop.' },
+        { key: 'status', label: 'Status', type: 'select', options: () => asOptions(ns.content.AGENT_STATUSES), required: true, half: true, hint: 'Testfase: nog geen geaccepteerde agent; collega\'s testen hem en delen hun ervaring (zie Testfase hieronder). Gestopt: blijft vindbaar, onderaan en zonder Open-knop.' },
         { key: 'icon', label: 'Icoon', type: 'icon', half: true },
         { key: 'license', label: 'Licentie', type: 'license', half: true, choices: ['Geen licentie nodig (ook met de gratis Copilot Chat)', 'Licentie nodig (Microsoft 365 Copilot, of bij een extern product een eigen licentie)'] },
         { key: 'summary', label: 'Samenvatting', type: 'textarea', required: true, hint: 'Eén of twee zinnen: wat is het en wat heb je eraan?' },
@@ -254,6 +254,12 @@
         { key: 'tips', label: 'Tips hierbij', type: 'refs', ref: 'tip' },
         { key: 'added', label: 'Toegevoegd op', type: 'date', half: true },
         { key: 'registerUrl', label: 'Link naar het AI-register', type: 'url', half: true, hint: 'Optioneel. Alleen de link naar de registratie in de afgeschermde omgeving.' },
+        // Testfase (js/agent-test.js): wat er getest wordt; de ervaringen staan boven dit formulier en in Inzendingen
+        { key: '_test', label: 'Testfase', type: 'heading', hint: 'Alleen bij de status Testfase. De agent krijgt dan een gele band "Testfase · nog niet geaccepteerd" in de lijst, en op zijn pagina een blok met wat er getest wordt en de knop "Deel je testervaring". Testen gaat volgens de datacategorie hierboven. Klaar met testen (en goedgekeurd waar nodig)? Zet de status op Beschikbaar.' },
+        { key: 'testCriteria', label: 'Testcriteria: waar letten testers op', type: 'list', hint: 'Eén per regel, hoogstens 8. Elk krijgt een score van 1 tot 5 in "Deel je testervaring". Bijv. "De notulen kloppen met het transcript" of "Het scheelt tijd ten opzichte van zelf doen". Leeg = één algemene vraag.' },
+        { key: 'testUntil', label: 'Testen tot', type: 'date', half: true, hint: 'Optioneel.' },
+        { key: 'testGroup', label: 'Wie test mee', type: 'text', half: true, placeholder: 'Leeg = iedereen die hem kan gebruiken', hint: 'Optioneel, bijv. "Assistenten van team Noord". Noem rollen of teams, geen namen.' },
+        { key: 'review', label: 'Vaktechniek', type: 'select', half: true, options: () => [{ value: '', label: 'Nog niet bekeken' }, { value: 'niet-nodig', label: 'Niet nodig: raakt de kwaliteit niet' }, { value: 'loopt', label: 'Beoordeling loopt (bijv. workflow in AFAS)' }, { value: 'goedgekeurd', label: 'Goedgekeurd door vaktechniek' }], hint: 'Raakt de agent de kwaliteit van het werk, dan gaat hij eerst langs vaktechniek. Staat zichtbaar op de pagina; zonder link naar AFAS (de site is openbaar).' },
         EN_FIELD
       ]
     },
@@ -983,6 +989,8 @@
     const ready = isNew && prefill && prefill.type === type ? prefill.data : null;
     if (ready) prefill = null;
     const data = existing ? Object.assign({}, base.data, schema.single ? {} : { id: existing.id }) : Object.assign({}, ready);
+    // Vroeger heette de testfase 'Pilot' (js/content.js)
+    if (type === 'agent' && data.status === 'Pilot') data.status = 'Testfase';
     const canEdit = may('bewerken', type);
     const canDelete = may('verwijderen', type);
     const canPublish = drafting() && ns.rights.can('publiceren', scope.namespace, type);
@@ -1039,6 +1047,8 @@
       return true;
     }
     const naslagImport = type === 'training' && canEdit && ns.adminNaslag ? ns.adminNaslag.panel(importNaslag) : null;
+    // Agent: de testervaringen van collega's (js/admin-testfase.js)
+    const testPanel = type === 'agent' && existing && ns.adminTestfase ? ns.adminTestfase.panel(existing.id, data) : null;
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -1116,6 +1126,7 @@
       unsaved ? notice({ title: 'Met je niet-opgeslagen wijzigingen', text: 'Hieronder staat ook wat je op de pagina hebt aangepast maar nog niet hebt opgeslagen. Opslaan bewaart alles samen.' }) : null,
       warningNotice(schema),
       naslagImport,
+      testPanel,
       form
     ]);
     // Melding als een andere beheerder dit item ook open heeft
@@ -1134,6 +1145,7 @@
     const isNew = !id;
     const current = isNew ? null : ns.editor.effective(namespace, type, id);
     const data = current ? Object.assign({}, current.data, schema.single ? {} : { id }) : {};
+    if (type === 'agent' && data.status === 'Pilot') data.status = 'Testfase';
     const fields = schemaForm({ type, data, where, ownId: id, isNew, compact: true });
     const changes = changeTracker(fields.snapshot);
     const apply = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('check'), el('span', { text: 'Toepassen' })]);

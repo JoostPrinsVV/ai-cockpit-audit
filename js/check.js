@@ -103,9 +103,10 @@
       if (tool.status === 'In ontwikkeling' || tool.stopped) {
         worse('nee');
         reasons.push(`${tool.title} is ${tool.stopped ? 'niet meer in gebruik' : 'nog in ontwikkeling en nog niet te gebruiken'}.`);
-      } else if (tool.status === 'Pilot') {
+      } else if (tool.status === 'Testfase' || tool.status === 'Pilot') {
+        // Nog geen geaccepteerde agent (js/agent-test.js): testen mag, volgens de datacategorie hieronder
         worse('mits');
-        reasons.push(`${tool.title} is in pilot: alleen als je in de pilotgroep zit.`);
+        reasons.push(`${tool.title} zit in de testfase: nog geen geaccepteerde agent. Test hem zoals op de pagina van de agent staat, en controleer de uitkomst extra.`);
       }
       const level = levelOf(tool);
       if (data === 'hoog') {

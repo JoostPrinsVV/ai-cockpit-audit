@@ -24,7 +24,8 @@
      summary*     Eén of twee zinnen: wat is het en wat heb je eraan?
      description  Uitgebreidere uitleg (lege regel = nieuwe alinea).
      phases       Fasen waarin je het gebruikt: id's uit data/phases.js.
-     status*      'Beschikbaar', 'Pilot', 'In ontwikkeling' of 'Gestopt'.
+     status*      'Beschikbaar', 'Testfase', 'In ontwikkeling' of 'Gestopt'. Testfase = nog geen
+                  geaccepteerde agent: collega's testen hem en delen hun ervaring ('Pilot' telt als Testfase).
      license      true = er is een licentie nodig (Microsoft 365 Copilot, of bij
                   een extern product een eigen licentie); false = geen extra
                   licentie nodig. Weglaten = niets tonen.
@@ -45,6 +46,13 @@
      added        Datum van toevoegen (JJJJ-MM-DD), voor het label 'Nieuw'.
      registerUrl  Optioneel: link naar de registratie in het AI-register
                   (afgeschermde omgeving). Begint met https://.
+     Testfase (alleen bij status 'Testfase'):
+     testCriteria Waar testers op letten (lijst, hoogstens 8). Elk krijgt een score van 1 tot 5 in
+                  'Deel je testervaring' (js/agent-test.js).
+     testUntil    Optioneel: tot wanneer we testen (JJJJ-MM-DD).
+     testGroup    Optioneel: wie meetest, bijv. 'Assistenten van team Noord'. Leeg = iedereen.
+     review       Vaktechniek: 'niet-nodig' (raakt de kwaliteit niet), 'loopt' (beoordeling, bijv. via
+                  een workflow in AFAS) of 'goedgekeurd'. Leeg = nog niet bekeken.
    ========================================================================== */
 
 window.AIAudit = window.AIAudit || {};

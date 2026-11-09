@@ -50,13 +50,14 @@
   };
   const STATUS_INFO = {
     Beschikbaar: { tone: 'success', text: 'Te gebruiken, met de juiste licentie of toegang.' },
-    Pilot: { tone: 'info', text: 'Wordt getest met een beperkte groep collega\'s.', open: 'In pilot bij een beperkte groep collega\'s' },
+    Testfase: { tone: 'warning', text: 'Nog geen geaccepteerde agent: we testen hem en halen eerst feedback op.', open: 'In testfase: probeer hem en deel je ervaring' },
     'In ontwikkeling': { tone: 'neutral', text: 'Wordt voorbereid; nog niet te gebruiken.', open: 'In ontwikkeling: nog niet te gebruiken' },
     Gestopt: { tone: 'muted', text: 'Niet meer in gebruik.' }
   };
 
   function statusBadge(agent) {
     const info = STATUS_INFO[agent.status] || STATUS_INFO.Beschikbaar;
+    if (agent.testing) return el('span', { className: 'status status--test', attrs: { title: info.text } }, [icon('flask'), el('span', { text: 'Testfase' })]);
     return el('span', { className: 'status status--' + info.tone, text: agent.status, attrs: { title: info.text } });
   }
 
@@ -73,7 +74,9 @@
    * reikt: een schermlezer hoort dan de naam als link, niet de hele kaart.
    */
   function card(agent, headingTag) {
-    return el('article', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : ''), dataset: { kind: 'agent', id: agent.id } }, [
+    // In testfase: een duidelijke band bovenaan (js/agent-test.js), zodat niemand denkt dat hij al geaccepteerd is
+    return el('article', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : '') + (agent.testing ? ' is-testing' : ''), dataset: { kind: 'agent', id: agent.id } }, [
+      agent.testing ? ns.agentTest.ribbon() : null,
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(agent.icon)]),
         el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), ns.ui.dutchBadge(agent), ns.cockpit.sharedBadge(agent), newBadge(agent.added), agentLicense(agent, true)])
@@ -173,8 +176,25 @@
       list.hidden = items.length === 0;
     }
 
+    // Agents in testfase: bovenaan een melding, met een knop om alleen die te tonen
+    const testing = all.filter((agent) => agent.testing);
+    const showTesting = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('flask'), el('span', { text: filters.status === 'Testfase' ? 'Toon weer alles' : 'Toon alleen de testfase' })]);
+    showTesting.addEventListener('click', () => {
+      filters.status = filters.status === 'Testfase' ? 'all' : 'Testfase';
+      ns.app.refresh();
+    });
+    const testNotice = testing.length ? el('div', { className: 'test-notice' }, [
+      el('span', { className: 'test-notice__icon', attrs: { 'aria-hidden': 'true' } }, [icon('flask')]),
+      el('div', { className: 'test-notice__body' }, [
+        el('p', { className: 'test-notice__title' }, [el('strong', { attrs: { translate: 'no' }, text: String(testing.length) }), ' ', el('span', { text: testing.length === 1 ? 'agent in testfase: nog niet geaccepteerd' : 'agents in testfase: nog niet geaccepteerd' })]),
+        el('p', { className: 'test-notice__text', text: 'Je herkent ze aan de gele band. Test mee en deel je ervaring op de pagina van de agent: zo bepalen we samen of hij geaccepteerd wordt.' })
+      ]),
+      showTesting
+    ]) : null;
+
     const node = el('div', { className: 'page container' }, [
       head,
+      testNotice,
       el('div', { className: 'filters' }, [
         filterRow('Fase', phaseFilter(all, filters, update, inPhase)),
         filterRow('Soort', facet('soort', ns.content.AGENT_KINDS, all, 'kind', update)),
@@ -261,6 +281,8 @@
       }),
       el('div', { className: 'detail__layout' }, [
         el('div', { className: 'detail__main' }, [
+          // In testfase: eerst het testblok (wat getest wordt, vaktechniek, 'Deel je testervaring')
+          agent.testing ? ns.agentTest.block(agent) : null,
           openBlock(agent),
           agent.description ? el('div', { className: 'detail__text' }, paragraphs(agent.description, 'detail__intro')) : null,
           agent.access && !agent.stopped ? el('section', { className: 'why', attrs: { 'aria-labelledby': 'ag-access' } }, [

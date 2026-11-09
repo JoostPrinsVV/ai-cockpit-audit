@@ -98,6 +98,7 @@
         { title: 'Testtool E', kind: 'Extern product', status: 'Beschikbaar', dataLevel: 'hoog' },
         { title: 'Testtool F', kind: 'Onbekend', status: 'Beschikbaar' },
         { title: 'Testtool G', kind: 'Microsoft-standaard', status: 'Gestopt', stopped: true },
+        { title: 'Testtool H', kind: 'Eigen agent', status: 'Testfase', dataLevel: 'vertrouwelijk' },
         C.OTHER
       ];
       const texts = new Set();
@@ -755,6 +756,59 @@
       equal(ns.specialist.teamsLink('ai@voorbeeld.nl', 'Hoi & dag'), 'https://teams.microsoft.com/l/chat/0/0?users=ai%40voorbeeld.nl&message=Hoi%20%26%20dag');
       equal([ns.specialist.initials('Sanne de Vries'), ns.specialist.initials('Joost'), ns.specialist.initials('')], ['SV', 'J', 'AI']);
     });
+    /* ---- Agents in testfase ---- */
+    describe('Agents in testfase (js/agent-test.js)');
+    await test('status: Testfase (een oude Pilot ook), met criteria, datum, groep en vaktechniek', () => {
+      const saved = Object.assign({}, ns.content);
+      try {
+        ns.content.load({ phase: [], usecase: [], prompt: [], tip: [], training: [], setting: {}, agent: [
+          { id: 'oud', title: 'Oude pilot', kind: 'Eigen agent', status: 'Pilot' },
+          { id: 'nieuw', title: 'Nieuwe agent', kind: 'Eigen agent', status: 'Testfase', testCriteria: ['Klopt de samenvatting?', 'Scheelt het tijd?'], testUntil: '2026-12-01', testGroup: 'Team Noord', review: 'loopt' },
+          { id: 'fout', title: 'Rare waarden', kind: 'Eigen agent', status: 'Testfase', testUntil: 'volgende week', review: 'misschien' },
+          { id: 'klaar', title: 'Geaccepteerd', kind: 'Eigen agent', status: 'Beschikbaar' }
+        ] });
+        const A = ns.content.agentById;
+        equal([A.get('oud').status, A.get('oud').testing], ['Testfase', true], 'Pilot wordt Testfase');
+        equal([A.get('nieuw').testCriteria, A.get('nieuw').testUntil, A.get('nieuw').testGroup, A.get('nieuw').review], [['Klopt de samenvatting?', 'Scheelt het tijd?'], '2026-12-01', 'Team Noord', 'loopt']);
+        equal([A.get('fout').testUntil, A.get('fout').review, A.get('fout').testCriteria], ['', '', []], 'een onbekende datum of beoordeling valt weg');
+        equal(A.get('klaar').testing, false);
+        ok(!ns.content.AGENT_STATUSES.includes('Pilot'), 'Pilot is geen keuze meer');
+      } finally {
+        Object.assign(ns.content, saved);
+      }
+    });
+    await test('testervaring: details per criterium (n.v.t. = null), zonder criteria één algemene vraag', () => {
+      const T = ns.agentTest;
+      const agent = { id: 'a', title: 'Agent A', testCriteria: ['Klopt het?', 'Snel genoeg?'] };
+      equal(T.details(agent, ['4', 'nvt'], 'ja'), { agent: 'a', use: 'ja', scores: [{ c: 'Klopt het?', s: 4 }, { c: 'Snel genoeg?', s: null }] });
+      equal(T.details(agent, ['9', ''], 'zeker').use, 'misschien', 'een onbekend antwoord wordt misschien');
+      equal(T.details(agent, ['9', ''], 'ja').scores.map((s) => s.s), [null, null], 'alleen 1 tot 5');
+      equal(T.criteriaOf({ testCriteria: [] }), [T.GENERAL]);
+      ok(JSON.stringify(T.details({ id: 'x'.repeat(60), testCriteria: Array(8).fill('y'.repeat(200)) }, Array(8).fill('5'), 'nee')).length < 2000, 'past in de database (2000 tekens)');
+    });
+    await test('testervaringen samenvatten: gemiddelde per criterium, op tekst en anders op plek; andere agents tellen niet', () => {
+      const T = ns.agentTest;
+      const agent = { id: 'a', testCriteria: ['Klopt het?', 'Snel genoeg (aangepast)?'] };
+      const item = (id, use, scores) => ({ kind: 'testfeedback', details: { agent: id, use, scores } });
+      const summary = T.summarize(agent, [
+        item('a', 'ja', [{ c: 'Klopt het?', s: 4 }, { c: 'Snel genoeg?', s: 2 }]),
+        item('a', 'nee', [{ c: 'Snel genoeg (aangepast)?', s: 5 }, { c: 'Klopt het?', s: 5 }]),
+        item('a', 'ja', [{ c: 'Klopt het?', s: null }]),
+        item('b', 'ja', [{ c: 'Klopt het?', s: 1 }]),
+        { kind: 'idee', details: { agent: 'a' } }
+      ]);
+      equal([summary.count, summary.use], [3, { ja: 2, misschien: 0, nee: 1 }]);
+      equal(summary.criteria, [{ label: 'Klopt het?', average: 4.5, n: 2 }, { label: 'Snel genoeg (aangepast)?', average: 3.5, n: 2 }]);
+      equal(T.summarize(agent, null).criteria.map((c) => c.average), [null, null], 'nog niets: geen gemiddelde');
+    });
+    await test('op de kaart en de pagina: de band, en de knop "Deel je testervaring"', () => {
+      const T = ns.agentTest;
+      equal(T.ribbon().textContent, 'Testfase · nog niet geaccepteerd');
+      const agent = { id: 'kaart-test', title: 'Agent', testCriteria: ['Klopt het?'], testUntil: '', testGroup: '', review: 'goedgekeurd' };
+      const node = T.block(agent);
+      ok(node.querySelector('.test-panel__actions .btn--primary').textContent.includes('testervaring'), 'de knop');
+      equal([node.querySelector('.status--success').textContent, node.querySelectorAll('.test-panel__criteria li').length], ['Goedgekeurd door vaktechniek', 1]);
+    });
     await test('kaart op de promptdatabase: een link naar de bouwer, met de meter als versiering', () => {
       const teaser = ns.views.builder.teaser();
       equal([teaser.tagName, teaser.getAttribute('href'), teaser.querySelector('.builder-teaser__meter').getAttribute('aria-hidden')], ['A', '#/promptbouwer', 'true']);
@@ -886,7 +940,7 @@
       const content = { usecases: [uc, { id: 'uc2', saves: 0 }], prompts: [{ id: 'uc-1', usecase: uc, saves: 0 }, { id: 'p1', saves: 15 }, { id: 'p2', saves: 10 }, { id: 'p3', saves: 0, locked: true }] };
       equal(L.savesCount(content), { filled: 3, total: 4 });
       equal([L.savesState({ filled: 3, total: 4 }), L.savesState({ filled: 4, total: 5 }), L.savesState({ filled: 0, total: 0 })], ['todo', 'done', 'optional']);
-      equal(L.STEPS.map((step) => step.id), ['step13', 'step14', 'step12']);
+      equal(L.STEPS.map((step) => step.id), ['step13', 'step14', 'step16', 'step12']);
     });
     /* ---- Trainingen: voor wie, en naslagwerk met Copilot ---- */
     await test('rol: gekozen in Mijn gegevens, anders afgeleid uit je functie', () => {

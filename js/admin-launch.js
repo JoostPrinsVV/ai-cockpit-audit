@@ -102,6 +102,7 @@
   const STEPS = [
     { id: 'step13', label: 'Stap 13 · AI-specialist invliegen', file: 'setup/supabase-audit-invliegen.sql', fn: 'audit_invliegen_status', body: () => ({ p_refs: [] }), missing: 'todo', missingText: 'Nog uitvoeren, anders lukt een verzoek om in te vliegen niet.' },
     { id: 'step14', label: 'Stap 14 · Tijdwinst', file: 'setup/supabase-audit-tijdwinst.sql', fn: 'audit_time_saved', body: () => ({ p_namespace: ns.app.config().namespace }), missing: 'todo', missingText: 'Nog uitvoeren, anders blijven het totaal op de startpagina en de tijdwinst in Gebruik leeg.' },
+    { id: 'step16', label: 'Stap 16 · Agents in testfase', file: 'setup/supabase-audit-testfase.sql', fn: 'audit_testfeedback_count', body: () => ({ p_namespace: ns.app.config().namespace }), missing: 'todo', missingText: 'Nog uitvoeren (na stap 13), anders lukt "Deel je testervaring" bij een agent in testfase niet.' },
     { id: 'step12', label: 'Stap 12 · AI-brevetten met echte accounts', file: 'setup/supabase-audit-brevetten.sql', fn: 'audit_brevet_allowed', body: () => ({}), missing: 'later', missingText: 'Pas nodig bij echte accounts (de Microsoft-login), samen met stap 15 (puntenitems). Tot dan draaien de brevetten als demo.' }
   ];
 

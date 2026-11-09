@@ -227,7 +227,10 @@
         el('div', { className: 'admin-item__form' }, [
           el('div', { className: 'field' }, [el('label', { className: 'field__label', text: 'Status', attrs: { for: 'st-' + item.id } }), status]),
           el('div', { className: 'field field--wide' }, [el('label', { className: 'field__label', text: 'Reactie', attrs: { for: 'an-' + item.id } }), answer]),
-          el('label', { className: 'check', attrs: { for: 'pub-' + item.id } }, [publish, el('span', { text: item.allow_public ? 'Zichtbaar in de hub (zonder naam en e-mail)' : 'Niet publiceren: de inzender wil dit liever niet' })]),
+          // Een testervaring (js/agent-test.js) is alleen voor het AI-team: nooit publiceren
+          item.kind === 'testfeedback'
+            ? el('p', { className: 'field__hint' }, [icon('lock'), ' Een testervaring is alleen voor het AI-team en wordt nooit gepubliceerd. De samenvatting staat bij de agent in Beheer → Inhoud.'])
+            : el('label', { className: 'check', attrs: { for: 'pub-' + item.id } }, [publish, el('span', { text: item.allow_public ? 'Zichtbaar in de hub (zonder naam en e-mail)' : 'Niet publiceren: de inzender wil dit liever niet' })]),
           el('div', { className: 'admin-item__actions' }, [save, remove])
         ])
       ])

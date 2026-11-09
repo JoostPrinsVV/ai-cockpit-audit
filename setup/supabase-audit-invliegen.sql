@@ -29,20 +29,20 @@ set local lock_timeout = '5s';
 -- ---- 13. AI-specialist invliegen ------------------------------------------------------------
 alter table public.audit_ideas drop constraint if exists audit_ideas_kind_check;
 alter table public.audit_ideas add constraint audit_ideas_kind_check
-  check (kind in ('idee', 'vraag', 'verzoek', 'prompt', 'verbetering', 'invliegen'));
+  check (kind in ('idee', 'vraag', 'verzoek', 'prompt', 'verbetering', 'invliegen', 'testfeedback'));
 
 alter table public.audit_ideas add column if not exists details jsonb;
 alter table public.audit_ideas drop constraint if exists audit_ideas_details_check;
 alter table public.audit_ideas add constraint audit_ideas_details_check
   check (details is null or (jsonb_typeof(details) = 'object' and octet_length(details::text) <= 2000));
--- Alleen een verzoek om in te vliegen heeft details
+-- Alleen een verzoek om in te vliegen en een testervaring (stap 16) hebben details
 alter table public.audit_ideas drop constraint if exists audit_ideas_details_kind;
 alter table public.audit_ideas add constraint audit_ideas_details_kind
-  check ((kind = 'invliegen') = (details is not null));
+  check ((kind in ('invliegen', 'testfeedback')) = (details is not null));
 -- Nooit openbaar in de hub
 alter table public.audit_ideas drop constraint if exists audit_ideas_invliegen_private;
 alter table public.audit_ideas add constraint audit_ideas_invliegen_private
-  check (kind <> 'invliegen' or (not is_public and not allow_public));
+  check (kind not in ('invliegen', 'testfeedback') or (not is_public and not allow_public));
 
 -- Invullen bij het insturen; lezen en bijwerken alleen voor beheerders (de bestaande regels van audit_ideas)
 grant insert (details) on public.audit_ideas to anon, authenticated;

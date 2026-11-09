@@ -254,6 +254,14 @@
     return read(RPC + 'audit_invliegen_status', 'Status van je verzoeken', post({ p_refs: list }));
   }
 
+  /**
+   * Hoe vaak er per agent in testfase een testervaring is gedeeld (stap 16; js/agent-test.js). Alleen
+   * aantallen, geen inhoud of namen. @returns {Promise<{ status, items: [{ agent_id, testers }] }>}
+   */
+  function testerCounts() {
+    return read(RPC + 'audit_testfeedback_count', 'Testervaringen tellen', post({ p_namespace: config.namespace }));
+  }
+
   /** Gepubliceerde inzendingen (voor iedereen zichtbaar). */
   function listIdeas() {
     return read(tablePath(TABLES.ideas, { select: PUBLIC_COLUMNS, namespace: inNamespace(), is_public: 'eq.true', order: 'created_at.desc', limit: 500 }), 'Inzendingen lezen');
@@ -969,6 +977,7 @@
     isMediaUrl,
     submitIdea,
     requestStatuses,
+    testerCounts,
     listIdeas,
     vote,
     submitReview,

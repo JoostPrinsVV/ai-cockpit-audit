@@ -1207,3 +1207,21 @@ ul.en-list__items { display: grid; margin: 0; padding: 0; list-style: none; bord
   .bvr-item { grid-template-columns: minmax(0, 1fr) 6rem; }
   .bvr-item--head { display: none; }
 }
+
+/* Beheer → Inhoud → Agents & tools: testervaringen (js/admin-testfase.js) */
+.test-summary { border-left-color: var(--vv-amber-500); }
+.test-summary__icon { background: var(--vv-amber-300); color: #3d2800; }
+.test-summary__body { display: grid; gap: var(--space-3); padding: 0 var(--space-4) var(--space-4); }
+.test-summary__tiles { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.test-summary__tile { display: grid; gap: 2px; min-width: 8rem; padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); background: var(--color-surface-muted); }
+.test-summary__tile strong { color: var(--color-text); font-size: var(--fs-xl); font-variant-numeric: tabular-nums; }
+.test-summary__tile span { color: var(--color-text-muted); font-size: var(--fs-xs); }
+.test-summary__table th[scope='row'] { font-weight: var(--fw-normal, 400); color: var(--color-text-body); }
+.test-summary__score { display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.test-summary__bar { position: relative; display: inline-block; width: 5rem; height: 0.5rem; border-radius: 999px; background: var(--color-surface-muted); overflow: hidden; }
+.test-summary__bar::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--w, 0%); border-radius: 999px; background: var(--vv-amber-500); }
+.test-summary__h { margin: var(--space-2) 0 0; color: var(--color-text); font-size: var(--fs-md); }
+ul.test-summary__list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.test-summary__item { display: grid; gap: 2px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.test-summary__meta { margin: 0; color: var(--color-text-muted); font-size: var(--fs-xs); }
+.test-summary__text { margin: 0; color: var(--color-text-body); font-size: var(--fs-sm); white-space: pre-line; }

@@ -42,7 +42,9 @@
   const IMPROVEMENT = { id: 'verbetering', label: 'Verbetering', icon: 'wand', accent: 'deepteal' };
   // De AI-specialist invliegen (js/specialist.js): een eigen venster, nooit gepubliceerd
   const FLY_IN = { id: 'invliegen', label: 'Specialist invliegen', icon: 'plane', accent: 'navy' };
-  const ALL_KINDS = KINDS.concat(IMPROVEMENT, FLY_IN);
+  // Testervaring bij een agent in testfase (js/agent-test.js): alleen voor het AI-team, nooit openbaar
+  const TEST = { id: 'testfeedback', label: 'Testervaring', icon: 'flask', accent: 'teal' };
+  const ALL_KINDS = KINDS.concat(IMPROVEMENT, FLY_IN, TEST);
   const KIND_BY_ID = new Map(ALL_KINDS.map((kind) => [kind.id, kind]));
 
   const STATUSES = {
