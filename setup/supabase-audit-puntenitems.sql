@@ -29,7 +29,7 @@ begin
   alter table public.audit_brevet_facts add constraint audit_brevet_facts_kind_check
     check (kind in (
       'active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done',
-      'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity',
+      'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity', 'test_shared',
       'contribution_adopted', 'training_registered', 'training_attended', 'session_given',
       'nominated', 'prompt_author', 'bonus', 'item_awarded'));
 
@@ -42,7 +42,7 @@ begin
         email = public.audit_email()
         and public.audit_brevet_allowed()
         and kind in ('active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done',
-                     'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity')
+                     'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity', 'test_shared')
         and exists (select 1 from public.audit_accounts a where a.email = public.audit_email() and a.joined_at is not null)
       )
     );

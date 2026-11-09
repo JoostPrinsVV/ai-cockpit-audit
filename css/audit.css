@@ -3600,3 +3600,13 @@ ul.wr-highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax
 .test-scale__hint { color: var(--color-text-muted); font-size: 0.7rem; }
 .test-scale__option:has(input:checked) { border-color: var(--vv-amber-500); background: var(--color-warning-fill); box-shadow: inset 0 0 0 1px var(--vv-amber-500); }
 .test-scale__option:has(input:focus-visible) { outline: var(--focus-width) solid var(--color-focus); outline-offset: 2px; }
+
+/* Zoekvragen zonder resultaat (js/search-gaps.js): de zin bij 'niets gevonden' */
+.search-gap-note, .palette__gap { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0; color: var(--color-text-muted); font-size: var(--fs-xs); text-align: left; }
+.search-gap-note { max-width: 46ch; margin-inline: auto; }
+.search-gap-note .icon, .palette__gap .icon { flex: none; margin-top: 1px; width: 1rem; height: 1rem; }
+.palette__gap { padding: var(--space-2) var(--space-4); border-top: 1px solid var(--color-border); }
+.palette__gap[hidden] { display: none; }
+
+.test-panel__miles { display: flex; flex-basis: 100%; align-items: center; gap: var(--space-2); margin: 0; color: var(--color-text-body); font-size: var(--fs-sm); }
+.test-panel__miles .icon { flex: none; color: var(--color-warning); }

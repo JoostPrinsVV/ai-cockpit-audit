@@ -11,7 +11,9 @@
    - Het formulier: per testcriterium een score van 1 tot 5, 'Zou je hem
      gebruiken?' en wat goed ging en beter kan (open). Dat wordt een inzending
      van de soort 'testfeedback' (stap 16): alleen het AI-team ziet hem, nooit
-     openbaar. Op de pagina staat hoogstens hoe vaak er al getest is.
+     openbaar. Op de pagina staat hoogstens hoe vaak er al getest is. Wie
+     meedoet met de AI-brevetten, krijgt er AI-miles voor (per agent één keer,
+     'test_shared' in js/brevet.js; signaal 'ai:getest').
    - In Beheer, bij de agent: de gemiddelden per criterium (summarize, js/admin-testfase.js).
    ========================================================================== */
 (function (ns) {
@@ -104,6 +106,16 @@
     return el('p', { className: 'ag-test-ribbon' }, [icon('flask'), el('span', { text: 'Testfase · nog niet geaccepteerd' })]);
   }
 
+  /** Hoeveel AI-miles een eerste testervaring bij een agent oplevert (js/brevet.js; 0 = geen brevetten of uitgezet). */
+  function miles() {
+    if (!ns.brevet || !ns.brevet.enabled()) return 0;
+    try {
+      return ns.brevet.rules().miles.test_shared || 0;
+    } catch (error) {
+      return 0;
+    }
+  }
+
   /* ---- Het blok op de pagina van de agent --------------------------------------------------- */
   function block(agent) {
     const review = REVIEW[agent.review] || REVIEW[''];
@@ -121,6 +133,7 @@
       tested.hidden = false;
     });
     const last = sharedOn(agent.id);
+    const reward = last ? 0 : miles();
     const button = el('button', { className: 'btn btn--primary', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [icon('flask'), el('span', { text: last ? 'Nog een testervaring delen' : 'Deel je testervaring' })]);
     button.addEventListener('click', () => open(agent));
     return el('section', { className: 'test-panel', attrs: { 'aria-labelledby': 'ag-test-title' } }, [
@@ -139,7 +152,9 @@
       ]) : null,
       el('div', { className: 'test-panel__actions' }, [
         button,
-        last ? el('p', { className: 'test-panel__note' }, [icon('check-circle'), el('span', {}, ['Bedankt! Je deelde je ervaring op ', el('span', { attrs: { translate: 'no' }, text: longDate(last) }), '.'])]) : null
+        last ? el('p', { className: 'test-panel__note' }, [icon('check-circle'), el('span', {}, ['Bedankt! Je deelde je ervaring op ', el('span', { attrs: { translate: 'no' }, text: longDate(last) }), '.'])]) : null,
+        // AI-brevetten: een testervaring levert miles op (per agent één keer)
+        reward ? el('p', { className: 'test-panel__miles' }, [icon('cap'), el('span', { text: `Doe je mee met de AI-brevetten? Je testervaring bij deze agent levert ${reward} AI-miles op.` })]) : null
       ].filter(Boolean))
     ].filter(Boolean));
   }
@@ -277,6 +292,8 @@
       const result = await ns.central.submitIdea({ ref, kind: KIND, title, body, phase: null, name: name.value.trim() || null, email: email.value.trim() || null, allowPublic: false, details: info });
       if (result === 'ok') {
         rememberShared(agent.id);
+        // Voor je logboek (js/brevet.js): AI-miles, per agent één keer, als je meedoet
+        document.dispatchEvent(new CustomEvent('ai:getest', { detail: { id: agent.id } }));
         if (ns.ideas) ns.ideas.rememberSubmission({ ref, kind: KIND, title, at: new Date().toISOString() });
         done(true);
         return;
@@ -290,5 +307,5 @@
     dialog.scrollTop = 0;
   }
 
-  ns.agentTest = { KIND, REVIEW, USE, GENERAL, criteriaOf, details, summarize, loadCounts, ribbon, block, open };
+  ns.agentTest = { KIND, REVIEW, USE, GENERAL, criteriaOf, details, summarize, loadCounts, miles, ribbon, block, open };
 })(window.AIAudit);

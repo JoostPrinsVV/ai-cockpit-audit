@@ -1225,3 +1225,27 @@ ul.test-summary__list { display: grid; gap: var(--space-2); margin: 0; padding: 
 .test-summary__item { display: grid; gap: 2px; padding: var(--space-2) var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
 .test-summary__meta { margin: 0; color: var(--color-text-muted); font-size: var(--fs-xs); }
 .test-summary__text { margin: 0; color: var(--color-text-body); font-size: var(--fs-sm); white-space: pre-line; }
+
+/* Beheer → Onderhoud (js/admin-onderhoud.js) */
+.onderhoud { display: grid; gap: var(--space-6); }
+.onderhoud__section { display: grid; gap: var(--space-3); }
+.onderhoud__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); }
+.onderhoud__title { display: flex; align-items: center; gap: var(--space-2); margin: 0; color: var(--color-text); font-size: var(--fs-lg); }
+.onderhoud__title .icon { color: var(--color-primary); }
+.onderhoud__term { display: block; font-weight: var(--fw-semibold); overflow-wrap: break-word; }
+.onderhoud__found { margin-top: 4px; font-weight: var(--fw-normal, 400); }
+.onderhoud__table td:nth-child(2), .onderhoud__table td:nth-child(3) { white-space: nowrap; }
+.onderhoud__table .btn--icon { width: 2.25rem; height: 2.25rem; min-width: 0; min-height: 0; padding: 0; }
+.onderhoud__table tr.is-solved .onderhoud__term, .onderhoud__table tr.is-solved td:not(:last-child) { color: var(--color-text-muted); }
+.onderhoud__actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+ul.onderhoud-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.onderhoud-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--color-border); border-left: 4px solid var(--vv-teal); border-radius: var(--radius-sm); background: var(--color-surface); }
+.onderhoud-item.is-warning { border-left-color: var(--vv-amber-500); }
+.onderhoud-item.is-seen { opacity: 0.65; }
+.onderhoud-item__icon { flex: none; margin-top: 2px; color: var(--color-text-muted); }
+.onderhoud-item.is-warning .onderhoud-item__icon { color: var(--color-warning); }
+.onderhoud-item__body { display: grid; flex: 1 1 22rem; gap: 2px; min-width: 0; }
+.onderhoud-item__title { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-2); margin: 0; font-weight: var(--fw-semibold); }
+.onderhoud-item__type { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.06em; text-transform: uppercase; }
+.onderhoud-item__text { margin: 0; color: var(--color-text-body); font-size: var(--fs-sm); }
+.onderhoud-item__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }

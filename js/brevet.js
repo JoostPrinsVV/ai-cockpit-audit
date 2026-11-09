@@ -15,7 +15,8 @@
    - insturen levert weinig op (hoogstens 3 keer per week); het grootste deel
      komt pas als het AI-team je bijdrage overneemt (dat legt beheer vast);
    - royalty's: collega's die jouw prompt gebruiken, elk één keer en nooit jijzelf,
-     hoogstens 100 miles per maand.
+     hoogstens 100 miles per maand;
+   - een testervaring bij een agent in testfase telt per agent één keer.
 
    Opslag: js/brevet-data.js (demo in deze browser, of Supabase stap 12); wie je
    bent: js/account.js; schermen: js/brevet-ui.js en js/view-logbook.js.
@@ -32,7 +33,8 @@
 
   // Wat een deelnemer zelf laat vastleggen; de rest legt beheer vast (zie setup/supabase-audit-brevetten.sql).
   // 'activity': een automatisch puntenitem (ACTIVITIES); 'item_awarded': een eigen item van het AI-team (stap 15).
-  const SELF_KINDS = ['active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done', 'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity'];
+  // 'test_shared': een testervaring gedeeld bij een agent in testfase (js/agent-test.js), per agent één keer (stap 17).
+  const SELF_KINDS = ['active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done', 'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity', 'test_shared'];
   const ADMIN_KINDS = ['contribution_adopted', 'training_registered', 'training_attended', 'session_given', 'nominated', 'prompt_author', 'bonus', 'item_awarded'];
 
   /* Automatische puntenitems: wat de cockpit al ziet en wat het AI-team per discipline aan kan zetten
@@ -62,6 +64,7 @@
     adopted: ['bijdragen overgenomen door het AI-team', 'Een bijdrage overgenomen door het AI-team'],
     colleagues: ['keer dat een collega jouw prompt gebruikte', 'Een collega gebruikte jouw prompt'],
     sessions: ['sessies gegeven in je team', 'Een sessie gegeven in je team'],
+    tests: ['agents getest (testervaring gedeeld)', 'Een testervaring gedeeld bij een agent in testfase'],
     tour: [null, 'Rondleiding door de cockpit'],
     profile: [null, 'Mijn gegevens ingevuld'],
     policy: [null, 'Check "Veilig vliegen" gehaald'],
@@ -72,10 +75,12 @@
   const ONCE_STATS = ['tour', 'profile', 'policy', 'kickstart', 'nominated'];
   // Gebruik: samen hoogstens caps.usagePerDay per dag
   const USAGE = ['prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong'];
+  // Inzendingen die niet als 'ingestuurd in de ideeënhub' tellen (invliegen: pas bij een usecase; testervaring: test_shared)
+  const NOT_SENT = ['invliegen', 'testfeedback'];
 
   const MILES = {
     prompt_used: 5, demo_watched: 10, prompt_rated: 3, builder_strong: 5,
-    tour_done: 5, profile_done: 5, policy_check: 10, idea_sent: 10, recording_watched: 10, kickstart_done: 50,
+    tour_done: 5, profile_done: 5, policy_check: 10, idea_sent: 10, recording_watched: 10, kickstart_done: 50, test_shared: 25,
     training_attended: 25, session_given: 50, royalty: 5, rhythm: 15,
     // Overgenomen bijdrage, per soort inzending
     adopted: { prompt: 100, verbetering: 50, idee: 150, usecase: 250, verzoek: 20, vraag: 0 }
@@ -121,6 +126,7 @@
     idea_sent: 'Ingestuurd in de ideeënhub',
     recording_watched: 'Opname van een training bekeken',
     kickstart_done: 'Kickstart afgerond',
+    test_shared: 'Testervaring gedeeld bij een agent in testfase',
     training_attended: 'Training bijgewoond',
     contribution_adopted: 'Bijdrage overgenomen door het AI-team',
     session_given: 'Sessie gegeven in je team',
@@ -353,7 +359,7 @@
       });
 
     // Ook 'activity:<id>' en 'item:<id>' (automatische en eigen items) komen erbij als ze voorkomen
-    const stats = { prompts: 0, demos: 0, rated: 0, trainings: 0, live: 0, weeks: 0, adopted: 0, colleagues: 0, sessions: 0, nominated: 0, tour: 0, profile: 0, policy: 0, kickstart: 0, registered: [] };
+    const stats = { prompts: 0, demos: 0, rated: 0, trainings: 0, live: 0, weeks: 0, adopted: 0, colleagues: 0, sessions: 0, tests: 0, nominated: 0, tour: 0, profile: 0, policy: 0, kickstart: 0, registered: [] };
     const entries = [];
     const usage = {}; // miles uit gebruik per dag
     const sent = {}; // insturen per week
@@ -384,6 +390,8 @@
         }
         case 'recording_watched': trainings.add(fact.item); miles = r.miles.recording_watched; break;
         case 'kickstart_done': stats.kickstart = 1; miles = r.miles.kickstart_done || 0; break;
+        // Een testervaring bij een agent in testfase: een bijdrage, dus niet onder het plafond voor gebruik
+        case 'test_shared': stats.tests += 1; miles = r.miles.test_shared || 0; break;
         case 'activity': {
           // Een automatisch item: telt altijd mee voor een checkride; miles alleen als het AI-team hem aanzette
           const id = text(fact.detail.activity) || fact.item.split(':')[0];
@@ -680,7 +688,16 @@
       if (joined() && edition) activitiesFor('wrapped', edition).forEach((found) => record('activity', found.item, { activity: found.activity }));
     });
     document.addEventListener('ai:demo-af', (event) => record('demo_watched', (event.detail || {}).id));
-    document.addEventListener('ai:ingestuurd', (event) => record('idea_sent', (event.detail || {}).ref));
+    // Insturen in de ideeënhub; een verzoek om in te vliegen levert pas iets op als er een usecase van komt, en
+    // een testervaring telt apart (hieronder, per agent één keer)
+    document.addEventListener('ai:ingestuurd', (event) => {
+      const detail = event.detail || {};
+      if (!NOT_SENT.includes(detail.kind)) record('idea_sent', detail.ref);
+    });
+    document.addEventListener('ai:getest', (event) => {
+      const id = String((event.detail || {}).id || '');
+      if (id) record('test_shared', id);
+    });
     document.addEventListener('ai:beoordeeld', (event) => {
       const detail = event.detail || {};
       record('prompt_rated', detail.type + ':' + detail.id);
@@ -721,6 +738,7 @@
     RECENCY_DAYS,
     defaults,
     SELF_KINDS,
+    NOT_SENT,
     ADMIN_KINDS,
     LABELS,
     CHECKS,

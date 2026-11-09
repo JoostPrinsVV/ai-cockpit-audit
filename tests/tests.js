@@ -677,6 +677,15 @@
       const result = B.compute(days, { today: '2026-10-14' });
       equal([result.miles, result.stats.weeks, result.lastActive], [15, 2, '2026-10-14'], 'één week met 3 dagen, twee weken actief');
     });
+    await test('testervaring: per agent één keer miles, buiten het plafond per dag; telt niet als insturen', () => {
+      const prompts = ['a', 'b', 'c', 'd', 'e'].map((id) => fact('prompt_used', id, '2026-10-06'));
+      const tests = ['agent-1', 'agent-2', 'agent-1'].map((id) => fact('test_shared', id, '2026-10-06'));
+      const result = B.compute(prompts.concat(tests), { today: '2026-10-06' });
+      equal([result.stats.tests, result.miles], [2, 25 + 2 * 25], 'twee agents (de tweede keer bij dezelfde telt niet), en het plafond voor gebruik raakt hem niet');
+      equal(B.compute(tests, { rules: B.rules({ miles: { test_shared: 40 } }), today: '2026-10-06' }).miles, 80, 'instelbaar bij de regels');
+      ok(B.SELF_KINDS.includes('test_shared') && B.NOT_SENT.includes('testfeedback') && B.NOT_SENT.includes('invliegen'), 'zelf vast te leggen; een testervaring en een invliegverzoek tellen niet als insturen');
+      equal(B.statLabel('tests', 3), 'agents getest (testervaring gedeeld)', 'als eis in een checkride');
+    });
     await test('royalty\'s: collega\'s die jouw prompt gebruiken (elk één keer, nooit jijzelf), met een maandplafond', () => {
       const all = [
         { email: 'a@x.nl', kind: 'prompt_author', item: 'p1', at: noon('2026-09-01') },
@@ -809,6 +818,48 @@
       ok(node.querySelector('.test-panel__actions .btn--primary').textContent.includes('testervaring'), 'de knop');
       equal([node.querySelector('.status--success').textContent, node.querySelectorAll('.test-panel__criteria li').length], ['Goedgekeurd door vaktechniek', 1]);
     });
+    /* ---- Onderhoud: zoekvragen zonder resultaat en inhoud die aandacht vraagt ---- */
+    describe('Onderhoud (js/search-gaps.js, js/admin-onderhoud.js)');
+    await test('zoekterm opschonen: kleine letters, cijfers weg, geen e-mailadres, link of hele zin', () => {
+      const S = ns.searchGaps;
+      equal([S.clean('  Materialiteit  '), S.clean('VPB 2025 aangifte'), S.clean('"transcriptie"?')], ['materialiteit', 'vpb # aangifte', 'transcriptie']);
+      equal([S.clean('123456782'), S.clean('NL91 ABNA 0417 1643 00'), S.clean('jan@bakker.nl'), S.clean('https://x.nl/a'), S.clean('ab')], ['', '', '', '', ''], 'BSN, IBAN, e-mailadres, link en te kort tellen niet');
+      equal(S.clean('dit is een hele lange zin die iemand plakt in het zoekveld'), '', 'meer dan zes woorden: geplakte tekst');
+      ok(S.clean('x'.repeat(61)) === '' && S.clean('é'.repeat(5)) === 'ééééé', 'hoogstens 60 tekens; letters met accent blijven');
+    });
+    await test('zoektermen in Beheer: meest gezocht eerst, met wat ze nu vinden', () => {
+      const rows = [{ term: 'facturen', searches: 2, last_at: '2026-11-01T10:00:00Z' }, { term: 'notulen', searches: 5, last_at: '2026-10-01T10:00:00Z' }, { term: '', searches: 9 }];
+      equal(ns.adminOnderhoud.terms(rows, (term) => (term === 'notulen' ? 3 : 0)), [
+        { term: 'notulen', count: 5, last: '2026-10-01', found: 3 },
+        { term: 'facturen', count: 2, last: '2026-11-01', found: 0 }
+      ]);
+    });
+    await test('inhoud die aandacht vraagt: testfase verlopen, lage sterren, geen tijdwinst, open voorstellen, ongebruikt, verouderd, geen opname', () => {
+      const map = (list) => new Map(list.map((item) => [item.id, item]));
+      const agents = [
+        { id: 'test-oud', title: 'Oude test', status: 'Testfase', testing: true, testUntil: '2026-10-01', testCriteria: [], link: 'https://x', access: '' },
+        { id: 'geen-link', title: 'Zonder link', status: 'Beschikbaar', testing: false, testCriteria: [], link: '', access: '', added: '2026-11-01' }
+      ];
+      const usecases = [{ id: 'uc', title: 'Usecase', added: '2026-01-01' }];
+      const prompts = [{ id: 'p', title: 'Prompt', added: '2026-01-01' }, { id: 'uc-1', title: 'Stap 1', usecase: usecases[0], added: '2026-01-01' }, { id: 'concept', title: 'Concept', draft: true, added: '2026-01-01' }];
+      const trainings = [{ id: 't', title: 'Training', date: '2026-09-01', available: false, added: '2026-09-01' }];
+      const content = { agents, usecases, prompts, tips: [], trainings, agentById: map(agents), usecaseById: map(usecases), promptById: map(prompts), tipById: new Map(), trainingById: map(trainings) };
+      const filler = Array.from({ length: 120 }, (u, i) => ({ kind: 'view_tip', item_id: 'x' + i }));
+      const events = filler.concat(
+        Array.from({ length: 6 }, () => ({ kind: 'time_none', item_id: 'prompt:p' })),
+        [{ kind: 'time_saved', item_id: 'prompt:p' }, { kind: 'view_usecase', item_id: 'uc' }]
+      );
+      const reviews = [1, 2, 3].map((rating) => ({ item_type: 'usecase', item_id: 'uc', rating }));
+      const ideas = [{ kind: 'verbetering', status: 'nieuw', target: { type: 'prompt', id: 'p' } }, { kind: 'verbetering', status: 'gerealiseerd', target: { type: 'prompt', id: 'p' } }];
+      const rows = [{ type: 'prompt', id: 'p', status: 'published', updated_at: '2025-06-01T10:00:00Z' }, { type: 'usecase', id: 'uc', status: 'published', updated_at: '2026-10-01T10:00:00Z' }];
+      const list = ns.adminOnderhoud.issues({ content, events, reviews, ideas, rows, today: '2026-11-09' });
+      const ids = list.map((issue) => issue.id);
+      equal(ids.slice(0, 2), ['test-verlopen:agent:test-oud', 'sterren:usecase:uc'], 'het belangrijkste eerst');
+      ['test-criteria:agent:test-oud', 'toegang:agent:geen-link', 'tijdwinst:prompt:p', 'voorstellen:prompt:p', 'ongebruikt:prompt:p', 'verouderd:prompt:p', 'opname:training:t'].forEach((id) => ok(ids.includes(id), id));
+      ok(!ids.includes('ongebruikt:usecase:uc') && !ids.some((id) => id.endsWith(':uc-1') || id.endsWith(':concept')), 'bekeken, een stap van een usecase en een concept niet');
+      ok(!ids.includes('ongebruikt:agent:geen-link'), 'iets nieuws (minder dan 60 dagen) niet');
+      equal(ns.adminOnderhoud.issues({ content, events: events.slice(120), reviews: [], ideas: [], rows: [], today: '2026-11-09' }).filter((i) => i.check === 'ongebruikt'), [], 'zolang de tellers nauwelijks lopen: geen "niet bekeken"');
+    });
     await test('kaart op de promptdatabase: een link naar de bouwer, met de meter als versiering', () => {
       const teaser = ns.views.builder.teaser();
       equal([teaser.tagName, teaser.getAttribute('href'), teaser.querySelector('.builder-teaser__meter').getAttribute('aria-hidden')], ['A', '#/promptbouwer', 'true']);
@@ -940,7 +991,7 @@
       const content = { usecases: [uc, { id: 'uc2', saves: 0 }], prompts: [{ id: 'uc-1', usecase: uc, saves: 0 }, { id: 'p1', saves: 15 }, { id: 'p2', saves: 10 }, { id: 'p3', saves: 0, locked: true }] };
       equal(L.savesCount(content), { filled: 3, total: 4 });
       equal([L.savesState({ filled: 3, total: 4 }), L.savesState({ filled: 4, total: 5 }), L.savesState({ filled: 0, total: 0 })], ['todo', 'done', 'optional']);
-      equal(L.STEPS.map((step) => step.id), ['step13', 'step14', 'step16', 'step12']);
+      equal(L.STEPS.map((step) => step.id), ['step13', 'step14', 'step16', 'step17', 'step12']);
     });
     /* ---- Trainingen: voor wie, en naslagwerk met Copilot ---- */
     await test('rol: gekozen in Mijn gegevens, anders afgeleid uit je functie', () => {

@@ -26,7 +26,7 @@ set local lock_timeout = '5s';
 alter table public.audit_events drop constraint if exists audit_events_kind_check;
 alter table public.audit_events add constraint audit_events_kind_check
   check (kind in ('view_usecase', 'play_demo', 'copy_prompt', 'view_tip', 'copy_tip', 'view_training', 'play_training', 'view_agent', 'open_agent',
-                  'time_saved', 'time_none'));
+                  'time_saved', 'time_none', 'search_empty'));
 
 -- Hoe vaak 'ja, het scheelde tijd' per prompt of usecase: deze maand (Nederlandse tijd) en in totaal
 create or replace function public.audit_time_saved(p_namespace text)
@@ -59,7 +59,7 @@ begin
   alter table public.audit_brevet_facts add constraint audit_brevet_facts_kind_check
     check (kind in (
       'active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done',
-      'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity',
+      'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity', 'test_shared',
       'contribution_adopted', 'training_registered', 'training_attended', 'session_given',
       'nominated', 'prompt_author', 'bonus', 'item_awarded'));
 
@@ -72,7 +72,7 @@ begin
         email = public.audit_email()
         and public.audit_brevet_allowed()
         and kind in ('active_day', 'prompt_used', 'demo_watched', 'prompt_rated', 'builder_strong', 'tour_done',
-                     'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity')
+                     'profile_done', 'policy_check', 'idea_sent', 'recording_watched', 'kickstart_done', 'activity', 'test_shared')
         and exists (select 1 from public.audit_accounts a where a.email = public.audit_email() and a.joined_at is not null)
       )
     );

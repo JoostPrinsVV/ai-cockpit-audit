@@ -40,11 +40,17 @@
       const found = ns.content.search(query);
       const total = found.usecases.length + found.prompts.length + found.tips.length + found.trainings.length + found.agents.length;
       count.textContent = total === 1 ? '1 resultaat' : total + ' resultaten';
+      // Niets gevonden: anoniem meetellen, zodat het AI-team ziet wat er ontbreekt (js/search-gaps.js)
+      ns.searchGaps.note(query, total);
       if (!total) {
         // Meteen een prompt aanvragen, met wat je zocht (js/view-ideas.js)
         const ask = el('button', { className: 'btn btn--primary', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [icon('flag'), el('span', { text: 'Vraag een prompt aan' })]);
         ask.addEventListener('click', () => ns.ideas.quick({ kind: 'verzoek', title: query }));
-        results.replaceChildren(emptyState(`Niets gevonden voor "${query}"`, 'Probeer een ander woord. Of laat het ons weten: misschien is dit precies een goed idee voor een nieuwe prompt of usecase.', el('div', { className: 'empty__actions empty__actions--stack' }, [ask, ns.promises.line('prompt')])));
+        results.replaceChildren(emptyState(`Niets gevonden voor "${query}"`, 'Probeer een ander woord. Of laat het ons weten: misschien is dit precies een goed idee voor een nieuwe prompt of usecase.', el('div', { className: 'empty__actions empty__actions--stack' }, [
+          ask,
+          ns.promises.line('prompt'),
+          ns.searchGaps.active() ? el('p', { className: 'search-gap-note' }, [icon('shield'), el('span', { text: ns.searchGaps.NOTICE })]) : null
+        ].filter(Boolean))));
         return;
       }
       results.replaceChildren(...[

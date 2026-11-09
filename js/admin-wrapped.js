@@ -59,7 +59,8 @@
       const d = day(value);
       return DATE.test(d) && d >= period.from && d <= period.to;
     };
-    const list = (Array.isArray(events) ? events : []).filter((event) => event && inPeriod(event.occurred_at));
+    // Zoektermen zonder resultaat (stap 17) horen niet in Wrapped
+    const list = (Array.isArray(events) ? events : []).filter((event) => event && event.kind !== 'search_empty' && inPeriod(event.occurred_at));
     const kinds = {};
     const items = {};
     const months = new Map(monthsOf(period.from, period.to).map((m) => [m, 0]));

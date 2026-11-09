@@ -52,6 +52,7 @@
     { id: 'start', group: 'start', label: 'Start', icon: 'plane', lead: () => 'Wat er te doen is, en waar je alles vindt.' },
     { id: 'inhoud', group: 'inhoud', label: 'Inhoud', icon: 'pencil-line', perDiscipline: true, lead: (name) => `Usecases, prompts, tips, trainingen, agents en teksten die alleen in de cockpit van ${name} staan.` },
     { id: 'basis', group: 'inhoud', label: 'Gedeelde basis', icon: 'globe', lead: () => 'Wat in iedere cockpit staat: wat je hier aanpast, zien alle disciplines.' },
+    { id: 'onderhoud', group: 'inhoud', label: 'Onderhoud', icon: 'checklist', perDiscipline: true, lead: (name) => `Wat collega's in ${name} zoeken en niet vinden, en welke inhoud aandacht vraagt.` },
     { id: 'invliegen', group: 'collegas', label: 'Invliegen', icon: 'plane', perDiscipline: true, lead: (name) => `Teams in ${name} die de AI-specialist willen invliegen bij een klantcasus: op urgentie, met status en contact.` },
     { id: 'inzendingen', group: 'collegas', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true, lead: (name) => `Ideeën, vragen en verzoeken uit de ideeënhub van ${name}: beantwoorden, publiceren en beoordelen.` },
     { id: 'reviews', group: 'collegas', label: 'Reviews', icon: 'star', perDiscipline: true, lead: (name) => `Sterren en toelichtingen bij de usecases en prompts van ${name}. Een toelichting staat pas bij de usecase of prompt als jij hem publiceert.` },
@@ -176,7 +177,8 @@
         Object.assign(item, updated);
         toast('Opgeslagen', { tone: 'success' });
         // Gerealiseerd: AI-miles voor de indiener als die meedoet (js/admin-brevet.js)
-        if (!wasDone && item.status === 'gerealiseerd') ns.adminBrevet.awardFor(item).then(ns.adminBrevet.awardToast).catch((error) => kit.failed('AI-miles toekennen', error));
+        // (Niet bij een testervaring: die leverde al miles op bij het delen)
+        if (!wasDone && item.status === 'gerealiseerd' && item.kind !== ns.agentTest.KIND) ns.adminBrevet.awardFor(item).then(ns.adminBrevet.awardToast).catch((error) => kit.failed('AI-miles toekennen', error));
         onChanged();
       } catch (error) {
         kit.failed('Opslaan', error);
@@ -705,6 +707,11 @@
     if (has('nieuwsbrief')) task('nieuwsbrief', 'Nieuwsbrief maken', reminder ? 'De maandnieuwsbrief staat klaar' : 'Weekupdate of maandnieuwsbrief, als PDF of e-mail');
     if (has('inhoud')) task('inhoud', `Inhoud ${name} aanpassen`, 'Usecases, prompts, tips, trainingen en agents');
     if (has('basis')) task('basis', 'Gedeelde basis aanpassen', 'Wat in iedere cockpit staat');
+    // Wat collega's niet vinden, en inhoud die aandacht vraagt (js/admin-onderhoud.js)
+    if (has('onderhoud')) {
+      const status = task('onderhoud', 'Onderhoud', 'Even kijken…');
+      ns.adminOnderhoud.startStatus().then((result) => show(status, result.text, result.due)).catch(unreadable(status));
+    }
     if (has('copilot')) {
       const status = task('copilot', 'Copilot-gebruik bijhouden', 'Even kijken…');
       ns.central.listCopilotUsage().then((rows) => {
@@ -811,6 +818,7 @@
 
     if (tab === 'start') startTab(panel, allowedTabs);
     else if (tab === 'gebruik') usageTab(panel);
+    else if (tab === 'onderhoud') panel.append(ns.adminOnderhoud.render().node);
     else if (tab === 'overzicht') panel.append(ns.adminOverview.render().node);
     else if (tab === 'portfolio') panel.append(ns.adminPortfolio.render().node);
     else if (tab === 'brevetten') panel.append(ns.adminBrevet.render().node);

@@ -370,6 +370,8 @@
     "Je ervaring is binnen bij het AI-team. Samen met die van andere testers bepaalt hij of de agent geaccepteerd wordt.": "The AI team has received your experience. Together with those of other testers, it decides whether the agent gets accepted.",
     "Je ervaring is niet bewaard. Probeer het straks nog eens, of stuur hem via de ideeënhub.": "Your experience wasn't saved. Try again later, or send it via the ideas hub.",
     "Testervaring": "Test experience",
+    // Zoekvragen zonder resultaat (js/search-gaps.js)
+    "Zoektermen zonder resultaat tellen we anoniem mee (zonder cijfers), zodat het AI-team ziet wat er ontbreekt. Typ dus geen klant- of persoonsnamen.": "We count search terms without results anonymously (without numbers), so the AI team can see what's missing. So don't type client or personal names.",
     "Microsoft-standaard": "Microsoft standard",
     "Eigen agent": "Own agent",
     "Extern product": "External product",
@@ -1068,6 +1070,9 @@
     "Een collega gebruikte jouw prompt": "A colleague used your prompt",
     "sessies gegeven in je team": "sessions given in your team",
     "Een sessie gegeven in je team": "Gave a session in your team",
+    "agents getest (testervaring gedeeld)": "agents tested (test experience shared)",
+    "Een testervaring gedeeld bij een agent in testfase": "Shared a test experience for an agent in the testing phase",
+    "Testervaring gedeeld bij een agent in testfase": "Test experience shared for an agent in the testing phase",
     "Kickstart afgerond": "Kickstart completed",
 
     /* ---- Cockpit Wrapped (js/wrapped.js) ---- */
@@ -1169,6 +1174,8 @@
     [/^Nu in het seizoen: (.+)$/, (m, tr) => `In season now: ${tr(m[1])}`],
     [/^(.+), van het AI-team\.$/, (m, tr) => `${tr(m[1])}, from the AI team.`],
     [/^\+(\d+) AI-miles$/, '+$1 AI miles'],
+    [/^\+(\d+) AI-miles · (.+)$/, (m, tr) => `+${m[1]} AI miles · ${tr(m[2])}`],
+    [/^Doe je mee met de AI-brevetten\? Je testervaring bij deze agent levert (\d+) AI-miles op\.$/, 'Taking part in the AI wings? Your test experience for this agent earns $1 AI miles.'],
     [/^(jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec)( – (jan|feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec))?$/, (m) => MONTHS[m[1]] + (m[3] ? ' – ' + MONTHS[m[3]] : '')],
     [/^Tip van de week van (.+)$/, 'Tip of the week for $1'],
     [/^(\d+) agents en tools$/, '$1 agents and tools'],

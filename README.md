@@ -116,7 +116,7 @@ inzendingen en tellers gaan naar de discipline waarin je zit. Daarvoor hoeft de 
 ## Beheer: de indeling
 
 Links staat een zijbalk: bovenaan **Je beheert** (de discipline), daaronder de onderdelen per groep: *Start*; *Inhoud*
-(de discipline en de gedeelde basis); *Inbreng van collega's* (inzendingen, reviews, portfolio); *Cijfers* (overzicht,
+(de discipline, de gedeelde basis en *Onderhoud*); *Inbreng van collega's* (inzendingen, reviews, portfolio); *Cijfers* (overzicht,
 gebruik van de cockpit, Copilot-gebruik); *Communicatie* (nieuwsbrief); *Instellingen* (disciplines, beheerders).
 Bovenaan ieder onderdeel staat voor welke discipline het is, of *Alle disciplines*. **Start** (`#/beheer`) laat zien wat
 er te doen is (nieuwe inzendingen, toelichtingen die nog niet gepubliceerd zijn, de nieuwsbrief, de laatste import van
@@ -125,8 +125,8 @@ Start en die inhoud. De onderdelen staan in `TABS` in `js/view-admin.js`.
 
 Bovenaan Start staat voor hoofdbeheerders **Klaar voor livegang?** (`js/admin-launch.js`): wat er nog moet voordat
 collega's alles kunnen gebruiken, met een knop naar de plek waar je het regelt.
-- **Database (eenmalig):** stap 13 (invliegen), stap 14 (tijdwinst) en stap 12 (brevetten met echte accounts; pas nodig
-  bij de Microsoft-login). De cockpit controleert zelf of een stap is uitgevoerd, door een functie van die stap
+- **Database (eenmalig):** stap 13 (invliegen), stap 14 (tijdwinst), stap 16 (agents in testfase), stap 17
+  (zoekvragen zonder resultaat) en stap 12 (brevetten met echte accounts; pas nodig bij de Microsoft-login). De cockpit controleert zelf of een stap is uitgevoerd, door een functie van die stap
   alleen-lezend aan te roepen (`probe` in `js/central.js`).
 - **Cockpit van de discipline:** inhoud in de database, schattingen van de tijdwinst (klaar vanaf 80%), de startprompts
   van de Kickstart (naar keuze) en de AI-specialist voor invliegen.
@@ -428,6 +428,9 @@ Een nieuwe agent is niet meteen een geaccepteerde agent. Raakt hij de kwaliteit,
 - **Het formulier:** per testcriterium een score van 1 (slecht) tot 5 (uitstekend) of n.v.t. (zonder criteria één
   algemene vraag), *Zou je hem gebruiken in je werk?* (ja, misschien, nee), *Wat ging goed?*, *Wat kan beter?* en
   naar keuze naam en e-mailadres. Het wordt een inzending van de soort *Testervaring*, met de scores in `details`.
+- **AI-miles:** wie meedoet met de AI-brevetten, krijgt voor een testervaring 25 AI-miles, per agent één keer (zie
+  'AI-brevetten'). Het blok op de pagina zegt dat erbij. Een testervaring op *Gerealiseerd* zetten in Inzendingen
+  levert geen extra miles op.
 - **Alleen voor het AI-team:** een testervaring wordt nooit gepubliceerd (ook de database staat het niet toe). In
   Beheer staat boven het formulier van de agent het blok *Testervaringen* (`js/admin-testfase.js`): het aantal, hoe
   vaak ja, misschien of nee, de gemiddelde score per criterium en de laatste zes ervaringen. Beantwoorden doe je in
@@ -435,6 +438,29 @@ Een nieuwe agent is niet meteen een geaccepteerde agent. Raakt hij de kwaliteit,
 - **Eenmalig:** voer `setup/supabase-audit-testfase.sql` uit (stap 16, na stap 13). Dat zet de soort *testfeedback*
   erbij en de functie die per agent alleen het aantal ervaringen teruggeeft. Beheer → Start (*Klaar voor livegang?*)
   controleert of het gebeurd is.
+
+## Onderhoud (Beheer → Onderhoud, stap 17)
+
+Wat ontbreekt er, en wat vraagt aandacht? Voor de discipline die je beheert, alleen voor hoofdbeheerders
+(`js/admin-onderhoud.js`). Start toont hoeveel er openstaat.
+
+- **Zoekvragen zonder resultaat:** zoekt een collega iets wat er niet is (op de zoekpagina of met Ctrl+K), dan telt de
+  cockpit de zoekterm anoniem mee (`js/search-gaps.js`): pas als je even stopt met typen, dezelfde term één keer per
+  bezoek, opgeschoond (kleine letters, cijfers als `#`, niets met een e-mailadres of link, hoogstens 60 tekens en zes
+  woorden). Bij *niets gevonden* staat dat erbij, met het verzoek geen klant- of persoonsnamen te typen. In Beheer per
+  term: hoe vaak, wanneer het laatst en of hij nu wél iets vindt (dan grijs, en *Wis wat nu wel iets vindt*). Per term
+  **Maak een prompt** (een nieuwe prompt met de term als titel) of **Wissen** (bijv. als er een klantnaam tussen
+  staat). De database wist zoektermen na 180 dagen vanzelf.
+- **Inhoud die aandacht vraagt:** een testfase die verlopen is, een agent in testfase zonder testcriteria, een agent
+  zonder link of uitleg voor toegang, lage sterren (onder de 3 bij minstens 3 reviews), vaker "scheelde geen tijd" dan
+  wel (bij minstens 5 keer nee), open verbetervoorstellen, niet bekeken of gekopieerd in 90 dagen (alleen iets van
+  ouder dan 60 dagen, en pas als de tellers echt lopen), meer dan een jaar niet bijgewerkt, en een training van meer
+  dan twee weken geleden zonder opname of naslagwerk. Per punt naar het formulier, bekijken op de site, of **Gezien**
+  (dan 90 dagen niet meer, op dit apparaat). Links naar buiten controleert de cockpit niet (dat staat de CSP niet toe).
+- **Eenmalig:** voer `setup/supabase-audit-onderhoud.sql` uit (stap 17, na stap 1). Dat zet de teller
+  `search_empty` erbij, het wissen na 180 dagen en de functie `audit_search_terms` (alleen beheerders krijgen iets
+  terug); met de AI-brevetten ook het feit `test_shared` (testervaring). Zonder stap 17 werkt de rest van Onderhoud
+  gewoon; alleen de zoekvragen blijven leeg.
 
 ## Reviews bij usecases en prompts
 
@@ -608,9 +634,11 @@ te doen; wie de rondleiding al had, krijgt op de startpagina één keer een kaar
 | Commander | 2.500 | 25 keer dat een collega jouw prompt gebruikte, een sessie gegeven, voorgedragen door het AI-team |
 
 **Tegen sparen met klikken** (`js/brevet.js`): gebruik telt per uniek ding (elke prompt, demo of beoordeling één
-keer) en samen hoogstens 25 miles per dag; insturen hoogstens 3 keer per week; het grootste deel komt pas als het
-AI-team een bijdrage overneemt; royalty's tellen elke collega één keer (nooit jezelf), hoogstens 100 per maand. Een
-video-demo telt pas als hij helemaal is bekeken. Miles worden altijd opnieuw berekend uit het **feitenlogboek** (wie,
+keer) en samen hoogstens 25 miles per dag; insturen hoogstens 3 keer per week (een verzoek om in te vliegen en een
+testervaring tellen daar niet bij); het grootste deel komt pas als het AI-team een bijdrage overneemt; royalty's tellen
+elke collega één keer (nooit jezelf), hoogstens 100 per maand. Een video-demo telt pas als hij helemaal is bekeken. Een
+**testervaring** bij een agent in testfase levert 25 miles op, per agent één keer en buiten het plafond per dag (feit
+`test_shared`; instelbaar bij *Regels*, en als eis *agents getest* toe te voegen aan een checkride). Miles worden altijd opnieuw berekend uit het **feitenlogboek** (wie,
 wat, welk item, wanneer); de database zet het tijdstip, dus terugdateren kan niet.
 
 **Wie ziet wat.** Het AI-team (hoofdbeheerders) ziet het logboek: gebruik en bijdragen. Collega's zien alleen wat
@@ -984,7 +1012,8 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    de AI-specialist invliegen `setup/supabase-audit-invliegen.sql` (stap 13), voor de tijdwinst
    `setup/supabase-audit-tijdwinst.sql` (stap 14), en voor de puntenitems van de brevetten
    `setup/supabase-audit-puntenitems.sql` (stap 15, na stap 12), en voor de testervaringen bij agents in testfase
-   `setup/supabase-audit-testfase.sql` (stap 16, na stap 13).
+   `setup/supabase-audit-testfase.sql` (stap 16, na stap 13), en voor Beheer → Onderhoud (zoekvragen zonder
+   resultaat) `setup/supabase-audit-onderhoud.sql` (stap 17).
 3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
    e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').
@@ -1015,7 +1044,9 @@ Bewust zo gelaten: de inhoud van een discipline die op slot staat, is technisch 
 - De site en de repository zijn openbaar bereikbaar. Alles op het platform is informatie voor gebruikers; zet er nooit
   configuratie, systeemprompts, goedkeuringsdocumenten, interne opnames of klantinformatie op.
 - De tellers in Beheer zijn anoniem (welke usecase, demo, prompt, tip, training of agent), zonder apparaat- of
-  persoonsgegevens. Heb je het SQL-bestand al eens uitgevoerd vóór de trainingen of agents er waren? Voer het dan nog
+  persoonsgegevens. Een zoekterm zonder resultaat telt ook anoniem mee (stap 17), opgeschoond: zonder cijfers,
+  nooit met een e-mailadres of link, hoogstens 60 tekens. Collega's zien dat bij *niets gevonden*, met het verzoek geen
+  klant- of persoonsnamen te typen; het AI-team kan een term wissen, en na 180 dagen verdwijnt hij vanzelf. Heb je het SQL-bestand al eens uitgevoerd vóór de trainingen of agents er waren? Voer het dan nog
   een keer uit, zodat ook die inhoud en tellers worden geaccepteerd (bestaande gegevens blijven staan).
 - **Slot met pincode** (`js/lock.js`): wie de cockpit opent, vult eerst de pincode in (dezelfde als bij de snackbar).
   Daarna blijft hij op dat apparaat open (`ai-snackbar-audit:slot`), tot de pincode verandert. Een ingelogde beheerder en

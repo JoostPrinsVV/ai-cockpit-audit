@@ -19,6 +19,7 @@
   let input = null;
   let list = null;
   let status = null;
+  let gap = null; // de zin bij 'niets gevonden' (js/search-gaps.js)
   let options = []; // [{ id, node, open(), copy? }]
   let active = -1;
   let returnFocus = null;
@@ -88,6 +89,8 @@
   function groups(query) {
     const q = query.trim();
     if (!q) {
+      ns.searchGaps.note('', 1);
+      if (gap) gap.hidden = true;
       const recent = ns.ui.viewed.list().map((key) => {
         const split = key.indexOf(':');
         const kind = key.slice(0, split);
@@ -110,6 +113,9 @@
       .sort((a, b) => rank(b.label, q) - rank(a.label, q))
       .slice(0, MAX);
     const total = found.prompts.length + found.usecases.length + found.tips.length + found.trainings.length + found.agents.length;
+    // Niets in de cockpit: anoniem meetellen, zodat het AI-team ziet wat er ontbreekt
+    ns.searchGaps.note(q, total);
+    if (gap) gap.hidden = total > 0 || !ns.searchGaps.active();
     return [
       { title: 'Acties', entries: actions().filter((action) => matches(action.haystack, q)).slice(0, 4) },
       { title: 'In de cockpit', entries: items },
@@ -220,6 +226,7 @@
     });
     list = el('ul', { className: 'palette__list', attrs: { id: 'palette-list', role: 'listbox', 'aria-label': 'Keuzes' } });
     status = el('p', { className: 'sr-only', attrs: { role: 'status', 'aria-live': 'polite' } });
+    gap = el('p', { className: 'palette__gap', attrs: { hidden: true } }, [icon('shield'), el('span', { text: ns.searchGaps.NOTICE })]);
     let timer = 0;
     input.addEventListener('input', () => {
       window.clearTimeout(timer);
@@ -230,6 +237,7 @@
       el('div', { className: 'palette__panel' }, [
         el('div', { className: 'palette__search' }, [icon('search'), input, el('kbd', { className: 'palette__esc', text: 'Esc' })]),
         list,
+        gap,
         status,
         el('p', { className: 'palette__foot', attrs: { 'aria-hidden': 'true' } }, [
           el('span', {}, [el('kbd', { text: '↑' }), el('kbd', { text: '↓' }), ' kiezen']),

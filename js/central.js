@@ -307,7 +307,8 @@
 
   /**
    * kind: 'view_usecase' | 'play_demo' | 'copy_prompt' | 'view_tip' | 'copy_tip' | 'view_training' | 'play_training' | 'view_agent' | 'open_agent'
-   * | 'time_saved' | 'time_none' (tijdwinst: 'Scheelde dit tijd?' ja of nee, stap 14). Geen persoonsgegevens.
+   * | 'time_saved' | 'time_none' (tijdwinst: 'Scheelde dit tijd?' ja of nee, stap 14)
+   * | 'search_empty' (een zoekterm zonder resultaat, opgeschoond door js/search-gaps.js, stap 17). Geen persoonsgegevens.
    */
   function track(kind, itemId) {
     // Altijd als signaal in de pagina (je logboek, js/brevet.js); de anonieme teller alleen als die aan staat
@@ -615,6 +616,28 @@
   function adminEvents(days, options) {
     const since = new Date(Date.now() - (days || 90) * 86400000).toISOString();
     return readAll(TABLES.events, Object.assign({ select: 'namespace,kind,item_id,occurred_at', occurred_at: 'gte.' + since, order: 'id.asc' }, scope(options)), 'tellers lezen');
+  }
+
+  /**
+   * Zoektermen zonder resultaat in deze discipline (stap 17; Beheer → Onderhoud): per term hoe vaak en wanneer
+   * het laatst, de afgelopen dagen. [{ term, searches, last_at }], of null zolang stap 17 niet is uitgevoerd.
+   */
+  async function adminSearchTerms(days) {
+    await ensureSession();
+    const response = await request(RPC + 'audit_search_terms', post({ p_namespace: config.namespace, p_days: days || 180 }, admin.token));
+    if (await isMissingTable(response)) return null;
+    if (!response.ok) throw await failure(response, 'zoektermen lezen');
+    return response.json();
+  }
+
+  /** Een zoekterm wissen: alle keren dat hij in deze discipline gezocht is (bijv. een klantnaam, of opgelost). */
+  async function adminDeleteSearchTerm(term) {
+    const response = await request(tablePath(TABLES.events, { namespace: inNamespace(), kind: 'eq.search_empty', item_id: 'eq.' + term }), {
+      method: 'DELETE',
+      headers: await adminHeaders({ Prefer: 'return=minimal' })
+    });
+    if (!response.ok) throw await failure(response, 'zoekterm wissen');
+    return true;
   }
 
   /** Wat er live staat, in alle disciplines en de basis: per rij de soort en de paar velden die Overzicht telt. */
@@ -1000,6 +1023,8 @@
     adminUpdateReview,
     adminDeleteReview,
     adminEvents,
+    adminSearchTerms,
+    adminDeleteSearchTerm,
     contentOverview,
     listCopilotUsage,
     saveCopilotUsage,
