@@ -48,11 +48,15 @@
   function current() {
     const discipline = ns.cockpit.active();
     const name = discipline.specialist || '';
+    // In het Engels: de Engelse tekst uit Beheer → Disciplines; zonder die vertaalt js/i18n-en.js de gangbare zinnen
+    const english = Boolean(ns.i18n && ns.i18n.english());
     return {
       name,
       email: discipline.specialistEmail || '',
-      response: discipline.specialistResponse || '',
-      availability: discipline.specialistAvailability || '',
+      response: (english && discipline.specialistResponseEn) || discipline.specialistResponse || '',
+      availability: (english && discipline.specialistAvailabilityEn) || discipline.specialistAvailability || '',
+      // Al Engels (niet nog eens laten vertalen)
+      ownEnglish: { response: english && Boolean(discipline.specialistResponseEn), availability: english && Boolean(discipline.specialistAvailabilityEn) },
       // In een zin: 'Joost' of 'de AI-specialist'
       label: name ? name.split(/\s+/)[0] : 'de AI-specialist',
       discipline: discipline.name
@@ -103,7 +107,14 @@
       el('span', { className: 'flyin-person__avatar', attrs: { 'aria-hidden': 'true' }, text: initials(who.name) }),
       el('div', { className: 'flyin-person__text' }, [
         el('p', { className: 'flyin-person__name', text: who.name || 'De AI-specialist van ' + who.discipline }),
-        el('p', { className: 'flyin-person__meta', text: [who.response, who.availability].filter(Boolean).join(' · ') || 'Denkt mee over Copilot bij jouw klantcasus' })
+        // Reactietijd en beschikbaarheid elk apart, zodat js/i18n.js ze los kan vertalen
+        who.response || who.availability
+          ? el('p', { className: 'flyin-person__meta' }, [
+            who.response ? el('span', { text: who.response, attrs: { translate: who.ownEnglish && who.ownEnglish.response ? 'no' : null } }) : null,
+            who.response && who.availability ? ' · ' : null,
+            who.availability ? el('span', { text: who.availability, attrs: { translate: who.ownEnglish && who.ownEnglish.availability ? 'no' : null } }) : null
+          ].filter(Boolean))
+          : el('p', { className: 'flyin-person__meta', text: 'Denkt mee over Copilot bij jouw klantcasus' })
       ])
     ]);
   }

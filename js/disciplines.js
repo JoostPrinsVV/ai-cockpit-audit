@@ -47,7 +47,10 @@
         specialist: text(item.specialist),
         specialistEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text(item.specialistEmail)) ? text(item.specialistEmail).toLowerCase() : '',
         specialistResponse: text(item.specialistResponse),
-        specialistAvailability: text(item.specialistAvailability)
+        specialistAvailability: text(item.specialistAvailability),
+        // In de cockpit in het Engels (leeg = de Nederlandse tekst, vertaald waar dat kan)
+        specialistResponseEn: text(item.specialistResponseEn),
+        specialistAvailabilityEn: text(item.specialistAvailabilityEn)
       };
     }).filter(Boolean);
     return result.length ? result : null;

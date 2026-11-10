@@ -40,6 +40,8 @@
      level        'Starter' of 'Gevorderd'.
      license      true = gaat over functies met een Microsoft 365 Copilot-licentie;
                   false = ook bruikbaar met de gratis Copilot Chat. Weglaten = niets tonen.
+     language     'en' als de training in het Engels wordt gegeven; weglaten = Nederlands.
+                  Trainingen worden niet vertaald: een Engelse training is een eigen kaart.
      description  Waar gaat de training over (2-4 zinnen).
      link         Link naar de opname in Stream, SharePoint of Teams.
      video        Of: pad naar een korte MP4, bijv. 'assets/videos/training-01.mp4'.

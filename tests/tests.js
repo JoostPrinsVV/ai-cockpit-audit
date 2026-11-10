@@ -131,8 +131,36 @@
       ok(!out._dutchOnly, 'vertaald');
       equal(E.apply('usecase', usecaseNl)._dutchOnly, true, 'zonder Engelse versie: Dutch only');
       equal(E.apply('usecase', Object.assign({}, usecaseNl, { en: { title: '  ' } }))._dutchOnly, true, 'een lege Engelse versie telt niet');
-      const training = E.apply('training', { title: 'T', actions: [{ title: 'Stel je instructies in', slide: '3' }], en: { actions: [{ title: 'Set your instructions' }] } });
-      equal([training.actions[0].title, training.actions[0].slide, training.actions[0]._key], ['Set your instructions', '3', 'Stel je instructies in'], 'het vinkje bij een actie hoort bij de Nederlandse kop');
+    });
+    await test('trainingen worden niet vertaald: de taal staat erbij ("In Dutch" of "In het Engels")', () => {
+      const E = ns.contentEn;
+      const nl = { id: 't', title: 'Copilot voor managers', actions: [{ title: 'Stel je instructies in' }], en: { title: 'Copilot for managers' } };
+      const out = E.apply('training', nl);
+      equal([out.title, out.actions[0].title, out._dutchOnly], ['Copilot voor managers', 'Stel je instructies in', undefined], 'ook met een (oude) Engelse versie: gewoon zoals hij is');
+      ok(!E.SPEC.training, 'geen Engelse versie in Beheer');
+      const C = ns.content;
+      try {
+        C.load({ phase: [], usecase: [], prompt: [], tip: [], agent: [], setting: {}, training: [
+          { id: 'nl', title: 'Nederlands', date: '2026-10-01' },
+          { id: 'en', title: 'In English', date: '2026-10-02', language: 'en' }
+        ] });
+        const [dutch, english] = [C.trainingById.get('nl'), C.trainingById.get('en')];
+        equal([dutch.language, english.language], ['nl', 'en']);
+        const badge = (training) => (ns.ui.languageBadge(training) || {}).textContent || '';
+        equal([badge(dutch), badge(english)], ['', 'In het Engels'], 'in het Nederlands: alleen bij een Engelse training');
+        ns.i18n.use('en');
+        equal([badge(dutch), badge(english)], ['In Dutch', ''], 'in het Engels: alleen bij een Nederlandse training');
+      } finally {
+        ns.i18n.use('nl');
+        C.load();
+      }
+    });
+    await test('AI-specialist in het Engels: "Bring in", en reactietijd en dagen vertaald', () => {
+      const L = ns.i18n.lookup;
+      equal([L('AI-specialist invliegen'), L('Vlieg Joost in'), L('Joost vliegt in')], ['Bring in the AI specialist', 'Bring in Joost', 'Joost will join you']);
+      equal([L('Meestal binnen één werkdag'), L('binnen 2 werkdagen'), L('Binnen 24 uur'), L('doorgaans binnen twee dagen')], ['Usually within one working day', 'within 2 working days', 'Within 24 hours', 'usually within two days']);
+      equal([L('Maandag t/m donderdag'), L('maandag tot en met vrijdag'), L('ma, di en do'), L('Maandag en woensdag')], ['Monday to Thursday', 'Monday to Friday', 'Mon, Tue and Thu', 'Monday and Wednesday']);
+      equal(L('Je verzoek is binnen: meestal binnen één werkdag. De status zie je in de ideeënhub, bij Jouw inzendingen.'), 'Your request has arrived: usually within one working day. You can see the status in the ideas hub, under Your submissions.');
     });
     await test('extract, vingerafdruk en status: bijwerken als het Nederlands verandert', () => {
       const E = ns.contentEn;

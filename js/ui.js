@@ -619,6 +619,18 @@
     return el('span', { className: 'badge badge--dutch', attrs: { title: 'Not translated yet: shown in Dutch', translate: 'no' } }, [icon('globe'), 'Dutch only']);
   }
 
+  /**
+   * De taal van een training (die wordt niet vertaald): in het Engels 'In Dutch' bij een Nederlandse training,
+   * in het Nederlands 'In het Engels' bij een Engelse. Anders niets.
+   */
+  function languageBadge(item) {
+    if (!item || !item.language) return null;
+    const english = Boolean(ns.i18n && ns.i18n.english());
+    if (english && item.language === 'nl') return el('span', { className: 'badge badge--dutch', attrs: { title: 'This training is given in Dutch', translate: 'no' } }, [icon('globe'), 'In Dutch']);
+    if (!english && item.language === 'en') return el('span', { className: 'badge badge--dutch', attrs: { title: 'Deze training wordt in het Engels gegeven' } }, [icon('globe'), 'In het Engels']);
+    return null;
+  }
+
   function chip(text, options) {
     const opts = options || {};
     return el('span', { className: 'chip ' + (opts.className || '') }, [opts.icon ? icon(opts.icon) : null, text]);
@@ -730,6 +742,7 @@
     CHANGES,
     draftBadge,
     dutchBadge,
+    languageBadge,
     chip,
     pageHeader,
     toggleGroup,

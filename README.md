@@ -715,7 +715,8 @@ in Teams, langskomen, chat) en naam en e-mailadres (verplicht). Na versturen: "<
 een knop *Chat alvast in Teams*. Lukt versturen niet, dan kun je het verzoek kopiëren en in Teams sturen.
 
 - **Wie de specialist is**, stel je per discipline in bij **Beheer → Disciplines**: naam, e-mailadres voor Teams,
-  reactietijd en beschikbaarheid. Zonder naam heet hij "de AI-specialist". Het e-mailadres is zichtbaar voor iedereen
+  reactietijd en beschikbaarheid (met een Engelse versie voor de cockpit in het Engels; zie 'Engels'). Zonder naam
+  heet hij "de AI-specialist". Het e-mailadres is zichtbaar voor iedereen
   die de cockpit kan openen (zolang de site openbaar is dus voor iedereen); zet het daarom alleen hier, nooit in de code.
 - **Beheer → Invliegen** (per discipline): de verzoeken op urgentie (eerst nieuw, dan ingepland; daarbinnen deze week
   en de vroegste datum), met fase, soort klant, data, vorm en de usecase. Per verzoek: *Mail het team*, *Chat in Teams*,
@@ -805,12 +806,21 @@ tussen). Zet ze in `js/i18n-en.js` (sleutel zonder spaties eromheen; de tests co
 Let op: de teksten over het AI-beleid (*Mag dit?*, de checkride, Werk-modus) zijn een eerste vertaling en moeten nog
 langs Compliance voordat het Zuid-Afrikaanse team ermee werkt.
 
-**Fase 2 (klaar): de inhoud.** Iedere usecase, prompt, tip, training, agent en fase, en de teksten van de site, kan
-naast het Nederlands een Engelse versie hebben (veld `en` in de data; `js/content-en.js`). In het Engels legt de
-cockpit die over het Nederlands heen; wat niet vertaald is, blijft Nederlands. Een item zonder Engelse versie krijgt
-het label *Dutch only* op de kaart en een regel uitleg op de pagina. Afbeeldingen, tijden, links en keuzes komen altijd
-uit het Nederlands. Bij een lijst met onderdelen (de prompts van een usecase, de acties van een training) hoort het
-eerste Engelse onderdeel bij het eerste Nederlandse.
+**Fase 2 (klaar): de inhoud.** Iedere usecase, prompt, tip, agent en fase, en de teksten van de site, kan naast het
+Nederlands een Engelse versie hebben (veld `en` in de data; `js/content-en.js`). In het Engels legt de cockpit die over
+het Nederlands heen; wat niet vertaald is, blijft Nederlands. Een item zonder Engelse versie krijgt het label *Dutch
+only* op de kaart en een regel uitleg op de pagina. Afbeeldingen, tijden, links en keuzes komen altijd uit het
+Nederlands. Bij een lijst met onderdelen (de prompts van een usecase) hoort het eerste Engelse onderdeel bij het eerste
+Nederlandse.
+
+**Trainingen worden niet vertaald.** Een training wordt in één taal gegeven; een training in het Engels (bijv. voor het
+team in Zuid-Afrika) is een eigen kaart met *Taal van de training: Engels* (veld `language: 'en'`). In het Engels staat
+bij een Nederlandse training *In Dutch*, in het Nederlands bij een Engelse *In het Engels* (`ns.ui.languageBadge`).
+Trainingen hebben daarom geen blok *Engelse versie* in Beheer, en bij importeren worden ze overgeslagen.
+
+**De AI-specialist in het Engels:** de knop heet *Bring in the AI specialist*. De reactietijd en beschikbaarheid uit
+Beheer → Disciplines hebben elk een Engels veld; leeg vertaalt de cockpit gangbare zinnen zelf (*meestal binnen één
+werkdag* → *usually within one working day*, *maandag t/m donderdag* → *Monday to Thursday*, *ma, di en do*).
 
 - **Eén item vertalen:** onderaan ieder formulier in Beheer → Inhoud staat het blok *Engelse versie*, met de
   Nederlandse tekst in grijs in ieder veld. *Kopieer de prompt en open Copilot* geeft Copilot de Nederlandse teksten

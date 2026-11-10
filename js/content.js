@@ -483,6 +483,8 @@
         tips: list(item.tips),
         // Voor wie (rollen uit js/profile.js); leeg = voor iedereen
         audience: list(item.audience).filter((role) => !ns.profile || ns.profile.ROLE_IDS.includes(role)),
+        // In welke taal de training wordt gegeven ('nl' of 'en'): trainingen worden niet vertaald (js/content-en.js)
+        language: text(item.language) === 'en' ? 'en' : 'nl',
         added: text(item.added) || text(item.date),
         dutchOnly: item._dutchOnly === true,
         draft: item._draft === true,

@@ -154,7 +154,7 @@
     "Prompt delen": "Share a prompt",
     "Klantcasus waarbij je wilt weten wat Copilot kan?": "A client case where you want to know what Copilot can do?",
     "Naar de ideeënhub": "Go to the ideas hub",
-    "AI-specialist invliegen": "Fly in the AI specialist",
+    "AI-specialist invliegen": "Bring in the AI specialist",
     "Voor een klantcasus": "For a client case",
     "Wil je dit inzetten bij jouw klant?": "Want to use this with your client?",
 
@@ -503,7 +503,7 @@
     "Zodra het AI-team inzendingen beantwoordt of oppakt, verschijnen ze hier. Stuur gerust de eerste in!": "As soon as the AI team answers or picks up submissions, they'll appear here. Feel free to send in the first one!",
     "Insturen staat op dit moment uit.": "Submitting is currently switched off.",
     "Reactie van het AI-team": "Response from the AI team",
-    "Specialist invliegen": "Fly in specialist",
+    "Specialist invliegen": "Bring in a specialist",
     "Verbetering": "Improvement",
 
     /* ---- Snel insturen: prompt aanvragen en delen ---- */
@@ -560,7 +560,9 @@
     "Noem geen klantnamen, dossier- of persoonsgegevens. Je verzoek ziet alleen het AI-team; het komt nooit in de ideeënhub.": "Don't include client names, file details or personal data. Only the AI team sees your request; it never appears in the ideas hub.",
     "Bijv. \"Contracten doorlichten op leaseverplichtingen\"": "E.g. \"Review contracts for lease obligations\"",
     "Bijv. groothandel, mkb": "E.g. wholesale, SME",
-    "De AI-specialist vliegt in": "The AI specialist is flying in",
+    "De AI-specialist vliegt in": "The AI specialist will join you",
+    "Denkt mee over Copilot bij jouw klantcasus": "Thinks along about Copilot for your client case",
+    "Je verzoek is binnen. De status zie je in de ideeënhub, bij Jouw inzendingen.": "Your request has arrived. You can see the status in the ideas hub, under Your submissions.",
     "Versturen lukte niet": "Sending didn't work",
     "Kopieer je verzoek": "Copy your request",
     "Gekopieerd: plak het in een chat of mail": "Copied: paste it into a chat or email",
@@ -1118,7 +1120,7 @@
     "ideeën, vragen en verzoeken van collega's": "ideas, questions and requests from colleagues",
     "beantwoord door het AI-team": "answered by the AI team",
     "werkelijkheid geworden": "turned into reality",
-    "keer de AI-specialist ingevlogen": "times the AI specialist was flown in",
+    "keer de AI-specialist ingevlogen": "times the AI specialist was brought in",
     "Hoogtepunten": "Highlights",
     "Jouw jaar": "Your year",
     "Nog geen eigen jaar op dit apparaat": "No year of your own on this device yet",
@@ -1165,8 +1167,33 @@
   const MONTHS = { jan: 'Jan', feb: 'Feb', mrt: 'Mar', apr: 'Apr', mei: 'May', jun: 'Jun', jul: 'Jul', aug: 'Aug', sep: 'Sep', okt: 'Oct', nov: 'Nov', dec: 'Dec' };
   const KINDS = { tip: 'tip', agent: 'agent', usecase: 'use case', prompt: 'prompt', training: 'training' };
 
+  /* De reactietijd en beschikbaarheid van de AI-specialist (Beheer → Disciplines), als daar geen Engelse tekst
+     staat: 'meestal binnen één werkdag', 'maandag t/m donderdag', 'ma, di en do'. Hoofdletter zoals in het origineel. */
+  const DAYS = {
+    maandag: 'Monday', dinsdag: 'Tuesday', woensdag: 'Wednesday', donderdag: 'Thursday', vrijdag: 'Friday', zaterdag: 'Saturday', zondag: 'Sunday',
+    ma: 'Mon', di: 'Tue', wo: 'Wed', do: 'Thu', vr: 'Fri', za: 'Sat', zo: 'Sun'
+  };
+  const DAY = '(maandag|dinsdag|woensdag|donderdag|vrijdag|zaterdag|zondag|ma|di|wo|do|vr|za|zo)\\.?';
+  const COUNT = { een: 1, 'één': 1, twee: 2, drie: 3, vier: 4, vijf: 5 };
+  const WORD = ['', 'one', 'two', 'three', 'four', 'five'];
+  const UNIT = { werkdag: 'working day', werkdagen: 'working day', dag: 'day', dagen: 'day', uur: 'hour', uren: 'hour', week: 'week', weken: 'week' };
+  const capital = (source, text) => (/^[A-ZÀ-Þ]/.test(source) ? text.charAt(0).toUpperCase() + text.slice(1) : text);
+  function within(m) {
+    const n = /^\d+$/.test(m[3]) ? Number(m[3]) : COUNT[m[3].toLowerCase()];
+    const lead = { meestal: 'usually ', doorgaans: 'usually ', vaak: 'often ', altijd: 'always ' }[(m[1] || '').trim().toLowerCase()] || '';
+    const unit = UNIT[m[4].toLowerCase()];
+    const amount = n <= 5 && !/^\d+$/.test(m[3]) ? WORD[n] : String(n);
+    return capital(m[0], `${lead}within ${amount} ${unit}${n === 1 ? '' : 's'}`);
+  }
+  const dayList = (text) => text.replace(new RegExp(DAY, 'gi'), (whole, day) => DAYS[day.toLowerCase()]).replace(/ en /g, ' and ');
+
   // [patroon, Engels]: Engels met $1, $2 …, of een functie (match, vertaal) voor delen die zelf vertaald moeten worden
   const patterns = [
+    // De AI-specialist (Beheer → Disciplines): reactietijd en beschikbaarheid
+    [/^((?:meestal|doorgaans|vaak|altijd) )?(binnen) (\d+|één|een|twee|drie|vier|vijf) (werkdagen|werkdag|dagen|dag|uren|uur|weken|week)$/i, within],
+    [new RegExp('^' + DAY + ' ?(t\\/m|tot en met|tot|-|–) ?' + DAY + '$', 'i'), (m) => `${DAYS[m[1].toLowerCase()]} to ${DAYS[m[3].toLowerCase()]}`],
+    [new RegExp('^' + DAY + '(?:(?:, | en )' + DAY + ')+$', 'i'), (m) => dayList(m[0])],
+    [/^Je verzoek is binnen: (.+)\. De status zie je in de ideeënhub, bij Jouw inzendingen\.$/, (m, tr) => `Your request has arrived: ${tr(m[1])}. You can see the status in the ideas hub, under Your submissions.`],
     // Paginatitels in het tabblad: 'Prompts · AI-cockpit Audit'
     [/^(.+) · AI-cockpit (.+)$/, (m, tr) => `${tr(m[1])} · AI-cockpit ${tr(m[2])}`],
     [/^Zoeken: (.+)$/, 'Search: $1'],
@@ -1244,8 +1271,8 @@
     [/^Collega's wonnen al ±(\d+) uur terug met prompts uit de cockpit\.$/, "Colleagues have already saved ±$1 hours with prompts from the cockpit."],
     [/^Invullen \((\d+)\)$/, 'Fill in ($1)'],
     [/^(\d+) van (\d+) (actie|acties) gedaan$/, '$1 of $2 actions done'],
-    [/^Vlieg (.+) in$/, 'Fly in $1'],
-    [/^(.+) vliegt in$/, '$1 is flying in'],
+    [/^Vlieg (.+) in$/, 'Bring in $1'],
+    [/^(.+) vliegt in$/, '$1 will join you'],
     [/^Hoog-risico-data mag niet in Copilot\. (.+) denkt wel mee over wat er kan zonder die gegevens\.$/, 'High-risk data is not allowed in Copilot. $1 will still help you think about what is possible without that data.'],
     [/^Een klantcasus waarbij je wilt weten wat Copilot kan\? Vertel kort wat er speelt; (.+) denkt met je team mee\.$/, 'A client case where you want to know what Copilot can do? Briefly describe the situation; $1 will think along with your team.'],
     [/^Een klantcasus waarbij je wilt weten wat Copilot kan\? (.+) denkt met je team mee\.$/, 'A client case where you want to know what Copilot can do? $1 will think along with your team.'],

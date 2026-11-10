@@ -1,8 +1,11 @@
 /* ==========================================================================
    Inhoud in het Engels: per item een Engelse versie (veld 'en')
    --------------------------------------------------------------------------
-   Iedere usecase, prompt, tip, training, agent en fase (en de teksten van de
-   site) kan naast het Nederlands een Engelse versie hebben, in data.en. Die
+   Iedere usecase, prompt, tip, agent en fase (en de teksten van de site) kan
+   naast het Nederlands een Engelse versie hebben, in data.en. Trainingen niet:
+   die worden in één taal gegeven, dus een Engelse training is een eigen kaart
+   (veld language: 'en'); in het Engels krijgt een Nederlandse training het
+   label 'In Dutch' (ns.ui.languageBadge). Die
    heeft dezelfde veldnamen, maar alleen voor de teksten (SPEC hieronder):
      { title: 'Risk assessment …', prompts: [{ label: '…', text: '…' }], … }
    Lijsten met onderdelen (prompts, acties, hoofdstukken) gaan op volgorde:
@@ -29,13 +32,7 @@
     usecase: { title: T, subtitle: T, duration: T, intro: T, steps: T, prompts: { label: T, text: T }, promptNote: T, watchOut: T, tip: T },
     prompt: { title: T, description: T, prompt: T, note: T, followUps: { label: T, text: T }, promptLabel: T, promptBasic: T, noteBasic: T, tip: T },
     tip: { title: T, summary: T, category: T, minutes: T, why: T, steps: T, example: { label: T, text: T }, note: T },
-    training: {
-      title: T, subtitle: T, duration: T, category: T, description: T, videoTitle: T, videoIntro: T,
-      chapters: { title: T }, materials: { label: T }, slides: { title: T },
-      takeaways: { title: T, text: T },
-      actions: { title: T, text: T, more: T, howto: { title: T, steps: T }, note: T, prompts: { label: T, text: T } },
-      ideas: { title: T, text: T }, questions: T, timelineIntro: T, timeline: { month: T, title: T, text: T }
-    },
+    // (Geen training: die wordt niet vertaald, zie hierboven)
     agent: { title: T, summary: T, description: T, access: T, owner: T, useFor: T, notFor: T, testCriteria: T, testGroup: T },
     // Cockpit Wrapped (Beheer → Wrapped; js/wrapped.js): de teksten van het AI-team
     wrapped: { title: T, intro: T, highlights: { title: T, text: T }, closing: T },
@@ -117,12 +114,7 @@
     const spec = SPEC[type];
     if (!spec || !isObject(data)) return data;
     if (!translated(data)) return Object.assign({}, data, { _dutchOnly: true });
-    const out = overlay(data, data.en, spec);
-    // Het vinkje bij een actie van een training hoort bij de Nederlandse kop: in beide talen hetzelfde
-    if (type === 'training' && Array.isArray(data.actions)) {
-      out.actions = out.actions.map((action, index) => (isObject(action) && data.actions[index] && data.actions[index].title ? Object.assign({}, action, { _key: data.actions[index].title }) : action));
-    }
-    return out;
+    return overlay(data, data.en, spec);
   }
 
   /** De Nederlandse teksten van een item (zonder plaatjes, links en keuzes): voor de vertaling en de vingerafdruk. */

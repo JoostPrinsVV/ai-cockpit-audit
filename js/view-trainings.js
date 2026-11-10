@@ -74,7 +74,8 @@
         training.subtitle ? el('p', { className: 'tr-card__subtitle', text: training.subtitle }) : null,
         el('div', { className: 'chips' }, [
           ns.ui.draftBadge(training),
-          ns.ui.dutchBadge(training),
+          // Een training wordt niet vertaald: wel zien in welke taal hij is
+          ns.ui.languageBadge(training),
           ns.cockpit.sharedBadge(training),
           ...audienceChips(training),
           training.hasNaslag ? chip('Naslagwerk', { icon: 'book' }) : null,
@@ -561,6 +562,7 @@
         title: training.title,
         subtitle: training.subtitle,
         chips: [
+          ns.ui.languageBadge(training),
           ...audienceChips(training),
           chip(formatDate(training.date), { icon: 'calendar' }),
           training.duration ? chip(training.duration, { icon: 'clock' }) : null,

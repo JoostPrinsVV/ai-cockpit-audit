@@ -168,6 +168,8 @@
         { key: 'category', label: 'Soort', type: 'text', half: true, suggestions: () => unique(['Basistraining', 'Verdieping', 'Lunchsessie', 'Webinar'].concat(ns.content.trainingCategories)) },
         { key: 'level', label: 'Niveau', type: 'select', options: LEVELS, half: true },
         { key: 'license', label: 'Licentie', type: 'license', half: true },
+        // Een training wordt niet vertaald: een Engelse training is een eigen kaart (js/content-en.js)
+        { key: 'language', label: 'Taal van de training', type: 'select', half: true, options: () => [{ value: '', label: 'Nederlands' }, { value: 'en', label: 'Engels' }], hint: 'Trainingen worden niet vertaald. Geef je hem in het Engels (bijv. voor het team in Zuid-Afrika), maak dan een eigen kaart met de taal Engels. In de cockpit in het Engels staat bij een Nederlandse training "In Dutch", in het Nederlands bij een Engelse "In het Engels".' },
         { key: 'audience', label: 'Voor wie', type: 'choices', options: () => ns.profile.ROLES.map((role) => ({ value: role.id, label: role.plural.charAt(0).toUpperCase() + role.plural.slice(1) })), hint: 'Leeg = voor iedereen. Staat als "Voor managers" op de kaart; wie die rol heeft (Mijn gegevens), ziet hem bovenaan met "Voor jou". Iedereen kan hem openen.' },
         { key: 'description', label: 'Omschrijving', type: 'textarea' },
         { key: 'link', label: 'Link naar de opname (Stream/SharePoint/Teams)', type: 'url', hint: 'Aanbevolen. Begint met https://. Opent in een nieuw tabblad; Microsoft 365 regelt wie hem mag zien.' },

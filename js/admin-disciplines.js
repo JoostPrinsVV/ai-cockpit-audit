@@ -27,7 +27,10 @@
     { key: 'specialist', label: 'AI-specialist (naam)', hint: 'Die teams kunnen "invliegen" bij een klantcasus. Leeg = "de AI-specialist", zonder naam.', half: true },
     { key: 'specialistEmail', label: 'E-mailadres voor Teams', hint: 'Voor de knop "Chat in Teams". Zichtbaar voor iedereen die de cockpit kan openen.', half: true, type: 'email' },
     { key: 'specialistResponse', label: 'Reactietijd', hint: 'Bijv. "meestal binnen één werkdag".', half: true },
-    { key: 'specialistAvailability', label: 'Beschikbaar', hint: 'Bijv. "maandag tot en met donderdag".', half: true }
+    { key: 'specialistAvailability', label: 'Beschikbaar', hint: 'Bijv. "maandag tot en met donderdag".', half: true },
+    // Voor de cockpit in het Engels; leeg = de cockpit vertaalt de gangbare zinnen zelf (js/i18n-en.js)
+    { key: 'specialistResponseEn', label: 'Reactietijd in het Engels', hint: 'Bijv. "usually within one working day". Leeg = zinnen als "meestal binnen één werkdag" vertaalt de cockpit zelf.', half: true },
+    { key: 'specialistAvailabilityEn', label: 'Beschikbaar in het Engels', hint: 'Bijv. "Monday to Thursday". Leeg = dagen als "maandag t/m donderdag" vertaalt de cockpit zelf.', half: true }
   ];
 
   let uid = 0;
@@ -192,7 +195,7 @@
     function clean() {
       return list.map((discipline) => {
         const result = {};
-        ['id', 'name', 'description', 'status', 'icon', 'accent', 'eyebrow', 'label', 'phases', 'specialist', 'specialistEmail', 'specialistResponse', 'specialistAvailability'].forEach((key) => {
+        ['id', 'name', 'description', 'status', 'icon', 'accent', 'eyebrow', 'label', 'phases', 'specialist', 'specialistEmail', 'specialistResponse', 'specialistAvailability', 'specialistResponseEn', 'specialistAvailabilityEn'].forEach((key) => {
           const value = typeof discipline[key] === 'string' ? discipline[key].trim() : discipline[key];
           if (value) result[key] = value;
         });

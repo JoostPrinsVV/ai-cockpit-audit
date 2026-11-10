@@ -188,7 +188,9 @@
     function update() {
       const text = compose();
       const mine = ns.profile.values(text);
-      preview.replaceChildren(...(text ? ns.ui.promptNodes(text, mine, Object.keys(mine)) : [el('span', { className: 'builder__empty', text: 'Je prompt verschijnt hier terwijl je de stappen invult.' })]));
+      // (In een <pre> vertaalt js/i18n.js niets, dus deze zin zelf)
+      const empty = 'Je prompt verschijnt hier terwijl je de stappen invult.';
+      preview.replaceChildren(...(text ? ns.ui.promptNodes(text, mine, Object.keys(mine)) : [el('span', { className: 'builder__empty', text: ns.i18n ? ns.i18n.t(empty) : empty })]));
       const result = score();
       meter.set(result.score);
       meterValue.textContent = String(result.score);
