@@ -241,7 +241,7 @@
           el('p', { className: 'improve__subject', text: microsoft ? 'Met je Visser & Visser-account, zodat je logboek op elk apparaat hetzelfde is.' : 'Met je e-mailadres van Visser & Visser: je krijgt een link, daarmee ben je ingelogd. Geen wachtwoord nodig.' })
         ])
       ]),
-      microsoft ? null : el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-email' }, text: 'Je e-mailadres' }), email, status]),
+      microsoft ? status : el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-email' }, text: 'Je e-mailadres' }), email, status]),
       el('div', { className: 'improve__actions' }, [cancel, send])
     ]);
     const node = dialog('login', id + '-title', [form]);
@@ -256,7 +256,8 @@
         return;
       }
       if (result === 'redirect') return;
-      status.textContent = result === 'domain' ? `Gebruik je e-mailadres van ${ns.account.domain()}.` : 'Versturen lukte niet. Probeer het straks nog eens.';
+      status.textContent = result === 'not-ready' ? 'Inloggen met Microsoft staat nog niet aan. Het AI-team zet het binnenkort aan; probeer het later nog eens.'
+        : result === 'domain' ? `Gebruik je e-mailadres van ${ns.account.domain()}.` : 'Versturen lukte niet. Probeer het straks nog eens.';
       send.disabled = false;
     });
   }

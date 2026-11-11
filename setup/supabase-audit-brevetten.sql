@@ -1,18 +1,16 @@
 -- ============================================================================
 -- AI COCKPIT AUDIT — AI-BREVETTEN (stap 12)
 -- ----------------------------------------------------------------------------
--- Voor de AI-brevetten met echte accounts (js/config.js: brevet.mode = 'supabase').
--- Zolang brevet.mode 'demo' is, is dit niet nodig: dan staat alles in de browser.
+-- Voor de AI-brevetten: echte accounts, inloggen met Microsoft (js/config.js: brevet.login).
 -- Voer dit uit na setup/supabase-audit.sql (stap 1):
 --   Supabase → SQL Editor → New query → plak dit hele bestand → Run.
 -- Opnieuw uitvoeren kan geen kwaad: bestaande gegevens blijven staan.
 --
--- Daarnaast in Supabase (Authentication):
---   - URL Configuration: zet het adres van de cockpit bij Site URL en Redirect URLs;
---   - inloggen met een link (Email): standaard aan; voor meer dan een handvol mensen
---     een eigen SMTP-server instellen (de ingebouwde mail is beperkt);
---   - of inloggen met Microsoft: Providers → Azure, met een app-registratie van IT
---     (alleen de V&V-tenant) en brevet.login = 'microsoft'.
+-- Daarnaast in Supabase (Authentication; stap voor stap in README, 'AI-brevetten'):
+--   - URL Configuration: het adres van de cockpit bij Redirect URLs (de Site URL laten staan);
+--   - inloggen met Microsoft: Providers → Azure, met een app-registratie voor alleen de V&V-tenant;
+--   - alleen V&V-accounts: stap 18 (setup/supabase-audit-aanmelden.sql en de Auth Hook),
+--     daarna 'Allow new users to sign up' aan.
 --
 -- Wat het doet:
 --   audit_accounts      wie meedoet (opt-in): naam, vestiging, of je je brevet deelt;

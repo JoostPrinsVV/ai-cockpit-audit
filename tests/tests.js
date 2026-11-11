@@ -5,7 +5,7 @@
    inlezen van het Copilot-gebruik (met een verzonnen bestand uit
    fixture-copilot.js), de route van een idee per discipline, Mijn gegevens,
    het seizoenskompas, de promptbouwer, het verbetervoorstel bij een prompt en
-   de AI-brevetten (miles, plafonds, checkrides, royalty's en de demo), de tijdwinst, de Kickstart en de
+   de AI-brevetten (miles, plafonds, checkrides, royalty's, onderaan beginnen), de tijdwinst, de Kickstart en de
    termijnen van de beloftes van het AI-team.
    Draait in de browser (tests/index.html), zonder build of npm.
    ========================================================================== */
@@ -757,18 +757,29 @@
       equal(B.compute(cadetFacts('2026-08-01'), { today: '2026-10-01' }).active, true);
       equal([B.weekOf('2026-01-01'), B.weekOf('2024-12-30'), B.weekOf('2026-11-02')], ['2026-W01', '2025-W01', '2026-W45']);
     });
-    await test('demo: de fictieve collega\'s komen op het bedoelde brevet uit', () => {
-      const data = ns.brevetData.seed();
-      const levelOf = (name) => {
-        const account = data.accounts.find((row) => row.name === name);
-        const own = data.facts.filter((row) => row.email === account.email);
-        return B.compute(own, { royalties: B.royaltiesFrom(data.facts, account.email) });
-      };
-      equal(['Fatima El Amrani', 'Sanne de Vries', 'Eva Smit', 'Mark Jansen', 'Lotte Mulder', 'Daan Meijer', 'Thomas Bakker', 'Ruben de Jong'].map((name) => levelOf(name).level), [3, 2, 2, 1, 1, 1, 0, -1]);
-      equal(levelOf('Daan Meijer').active, false, 'Daan is al een tijd niet geweest');
-      ok(data.accounts.every((row) => row.email.endsWith('@demo.cockpit')), 'alleen verzonnen adressen');
-      const keys = data.facts.map((row) => row.email + '|' + row.kind + '|' + row.item);
-      equal(new Set(keys).size, keys.length, 'geen dubbele feiten');
+    await test('nieuw in de brevetten: zonder feiten onderaan de ladder (geen brevet, 0 miles)', () => {
+      const result = B.compute([], { today: '2026-11-11' });
+      equal([result.level, result.miles, result.next.index], [-1, 0, 0]);
+    });
+    await test('account: de oude demo verdwijnt uit de browser; een sessie van buiten V&V telt niet', () => {
+      const S = ns.ui.storage;
+      const saved = S.get('account', null);
+      const later = Date.now() + 3600000;
+      try {
+        S.set('brevet-demo', { version: 1, accounts: [{ email: 'fatima.el.amrani@demo.cockpit' }], facts: [] });
+        S.set('brevet-demo-als', 'fatima.el.amrani@demo.cockpit');
+        S.set('account', { token: 't', refresh: 'r', email: 'iemand@gmail.com', expiresAt: later });
+        ns.account.init(ns.config);
+        equal([S.get('brevet-demo', null), S.get('brevet-demo-als', null), S.get('account', null), ns.account.current()], [null, null, null, null]);
+        S.set('account', { token: 't', refresh: 'r', email: 'jan.jansen@visser-visser.nl', expiresAt: later });
+        ns.account.init(ns.config);
+        equal(ns.account.current().email, 'jan.jansen@visser-visser.nl');
+        equal([ns.brevetData.isDemo, ns.brevetData.seed, ns.account.become], [undefined, undefined, undefined], 'geen demo meer');
+      } finally {
+        if (saved) S.set('account', saved);
+        else S.remove('account');
+        ns.account.init(ns.config);
+      }
     });
     await test('account: alleen V&V-adressen; het e-mailadres uit het token', () => {
       const part = window.btoa(JSON.stringify({ email: 'Jan.Jansen@Visser-Visser.nl' })).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
@@ -1020,6 +1031,25 @@
       equal(L.savesCount(content), { filled: 3, total: 4 });
       equal([L.savesState({ filled: 3, total: 4 }), L.savesState({ filled: 4, total: 5 }), L.savesState({ filled: 0, total: 0 })], ['todo', 'done', 'optional']);
       equal(L.STEPS.map((step) => step.id), ['step13', 'step14', 'step16', 'step17', 'step12']);
+      equal(L.STEPS.find((step) => step.id === 'step12').missing, 'todo', 'de brevetten zijn echt: stap 12 is nodig');
+    });
+    await test('livegangcheck: inloggen met Microsoft en nieuwe accounts, uit de openbare instellingen', async () => {
+      const net = fakeFetch([
+        [200, { external: { azure: false, email: true }, disable_signup: true }],
+        [200, { external: { azure: true, email: true }, disable_signup: false }],
+        new TypeError('offline')
+      ]);
+      ns.central.init({ config: { centralUrl: 'https://voorbeeld.supabase.co', centralKey: 'sb_publishable_test', namespace: 'ai-test' } });
+      try {
+        const states = (rows) => rows.map((row) => row.id + ':' + row.state);
+        equal(states(await ns.adminLaunch.loginChecks()), ['azure:todo', 'signup:todo']);
+        equal(states(await ns.adminLaunch.loginChecks()), ['azure:done', 'signup:done']);
+        equal(states(await ns.adminLaunch.loginChecks()), ['azure:unknown', 'signup:unknown']);
+        ok(net.calls[0].url.endsWith('/auth/v1/settings'), 'de openbare instellingen');
+      } finally {
+        net.restore();
+        ns.central.init({ config: {} });
+      }
     });
     /* ---- Trainingen: voor wie, en naslagwerk met Copilot ---- */
     await test('rol: gekozen in Mijn gegevens, anders afgeleid uit je functie', () => {

@@ -192,7 +192,7 @@
     const name = el('input', { className: 'field__input', attrs: { id: id + '-name', type: 'text', maxlength: '100', autocomplete: 'name' } });
     name.value = me.naam || '';
     const email = el('input', { className: 'field__input', attrs: { id: id + '-email', type: 'email', maxlength: '254', autocomplete: 'email', inputmode: 'email', spellcheck: 'false' } });
-    const account = ns.account && ns.account.mode() !== 'demo' ? ns.account.current() : null;
+    const account = ns.account ? ns.account.current() : null;
     if (account) email.value = account.email;
     const useError = el('p', { className: 'field__error', attrs: { id: id + '-use-error' } });
     const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });

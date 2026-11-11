@@ -5,6 +5,8 @@
    - de databasestappen van de nieuwste onderdelen (de cockpit controleert
      zelf of ze zijn uitgevoerd, door een functie van die stap alleen-lezend
      aan te roepen: js/central.js, probe);
+   - inloggen voor de AI-brevetten: Microsoft aan en nieuwe (V&V-)accounts
+     toegestaan (de openbare instellingen van Supabase: js/central.js, authSettings);
    - voor de discipline die je beheert: inhoud in de database, schattingen
      van de tijdwinst, de startprompts van de Kickstart en de AI-specialist;
    - voor alle disciplines: de beloftes van het AI-team.
@@ -104,8 +106,27 @@
     { id: 'step14', label: 'Stap 14 · Tijdwinst', file: 'setup/supabase-audit-tijdwinst.sql', fn: 'audit_time_saved', body: () => ({ p_namespace: ns.app.config().namespace }), missing: 'todo', missingText: 'Nog uitvoeren, anders blijven het totaal op de startpagina en de tijdwinst in Gebruik leeg.' },
     { id: 'step16', label: 'Stap 16 · Agents in testfase', file: 'setup/supabase-audit-testfase.sql', fn: 'audit_testfeedback_count', body: () => ({ p_namespace: ns.app.config().namespace }), missing: 'todo', missingText: 'Nog uitvoeren (na stap 13), anders lukt "Deel je testervaring" bij een agent in testfase niet.' },
     { id: 'step17', label: 'Stap 17 · Zoekvragen zonder resultaat', file: 'setup/supabase-audit-onderhoud.sql', fn: 'audit_search_terms', body: () => ({ p_namespace: ns.app.config().namespace, p_days: 1 }), missing: 'todo', missingText: 'Nog uitvoeren, anders telt de cockpit niet wat collega\'s zoeken en niet vinden (Beheer → Onderhoud).' },
-    { id: 'step12', label: 'Stap 12 · AI-brevetten met echte accounts', file: 'setup/supabase-audit-brevetten.sql', fn: 'audit_brevet_allowed', body: () => ({}), missing: 'later', missingText: 'Pas nodig bij echte accounts (de Microsoft-login), samen met stap 15 (puntenitems). Tot dan draaien de brevetten als demo.' }
+    { id: 'step12', label: 'Stap 12 · AI-brevetten', file: 'setup/supabase-audit-brevetten.sql', fn: 'audit_brevet_allowed', body: () => ({}), missing: 'todo', missingText: 'Nog uitvoeren, anders kan niemand meedoen met de AI-brevetten.' }
   ];
+
+  /** Inloggen voor de AI-brevetten: staat Microsoft aan, en kunnen nieuwe collega's een account krijgen? */
+  async function loginChecks() {
+    const brevet = ((ns.app && ns.app.config ? ns.app.config() : ns.config) || {}).brevet || {};
+    if (brevet.enabled === false) return [];
+    const microsoft = brevet.login !== 'email';
+    const settings = await ns.central.authSettings();
+    const unknown = { state: 'unknown', text: 'Niet te controleren (geen verbinding).' };
+    const rows = [];
+    if (microsoft) {
+      rows.push(Object.assign({ id: 'azure', label: 'Inloggen met Microsoft' }, !settings ? unknown : settings.providers.azure
+        ? { state: 'done', text: 'Aan: collega\'s loggen in met hun account van Visser & Visser.' }
+        : { state: 'todo', text: 'Nog niet aan. Supabase → Authentication → Sign In / Providers → Azure, met de app-registratie van V&V (zie README, \'AI-brevetten\').' }));
+    }
+    rows.push(Object.assign({ id: 'signup', label: 'Nieuwe accounts (alleen V&V)' }, !settings ? unknown : settings.signup
+      ? { state: 'done', text: 'Aan: wie voor het eerst inlogt, krijgt een account en begint onderaan de ladder. Alleen @visser-visser.nl, door stap 18 (Auth Hooks → Before User Created).' }
+      : { state: 'todo', text: 'Nog uit: wie voor het eerst inlogt, komt er niet in. Eerst stap 18 (setup/supabase-audit-aanmelden.sql en de Auth Hook), dan Authentication → Sign In / Providers → Allow new users to sign up aan.' }));
+    return rows;
+  }
 
   /** Eén databasestap controleren. */
   async function checkStep(step) {
@@ -147,11 +168,18 @@
       el('ul', { className: 'launch__list', attrs: { role: 'list' } }, items.map(rowNode))
     ]);
 
+    let login = [{ id: 'login', label: 'Inloggen voor de AI-brevetten', state: 'busy', text: 'Controleren…' }];
+
     function draw() {
       const content = contentChecks();
       const shared = [promiseCheck()];
-      lists.replaceChildren(group('Database (eenmalig)', steps), group(`Cockpit van ${name}`, content), group('Alle disciplines', shared));
-      const all = steps.concat(content, shared);
+      lists.replaceChildren(...[
+        group('Database (eenmalig)', steps),
+        login.length ? group('Inloggen (eenmalig)', login) : null,
+        group(`Cockpit van ${name}`, content),
+        group('Alle disciplines', shared)
+      ].filter(Boolean));
+      const all = steps.concat(login, content, shared);
       const counted = all.filter((item) => item.state === 'done' || item.state === 'todo');
       const done = counted.filter((item) => item.state === 'done').length;
       const busy = all.some((item) => item.state === 'busy');
@@ -161,9 +189,12 @@
     }
 
     draw();
-    Promise.all(steps.map((step) => checkStep(step).then((result) => Object.assign(step, result)))).then(draw).catch(draw);
+    Promise.all([
+      ...steps.map((step) => checkStep(step).then((result) => Object.assign(step, result))),
+      loginChecks().then((rows) => { login = rows; }, () => { login = []; })
+    ]).then(draw).catch(draw);
     return { node: details };
   }
 
-  ns.adminLaunch = { render, contentChecks, savesCount, savesState, STEPS };
+  ns.adminLaunch = { render, contentChecks, loginChecks, savesCount, savesState, STEPS };
 })(window.AIAudit);

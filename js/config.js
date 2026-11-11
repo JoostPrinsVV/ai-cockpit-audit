@@ -68,14 +68,12 @@ window.AIAudit.config = {
   enableUsageStats: true,               // Anoniem tellen welke usecases, demo's en prompts gebruikt worden (zichtbaar in Beheer)
 
   /* ---- AI-brevetten (js/brevet.js, js/account.js) --------------------------- */
-  // Meedoen is vrijwillig. mode 'demo': jij plus fictieve collega's, alles alleen in deze browser
-  // (zolang de cockpit nog niet op een V&V-systeem staat). mode 'supabase': echte accounts (stap 12,
-  // setup/supabase-audit-brevetten.sql); login 'email' = een inloglink naar je V&V-mailadres,
-  // 'microsoft' = de Azure-koppeling van Supabase. Na de migratie met Microsoft SSO: zie README, 'Migratie'.
+  // Meedoen is vrijwillig, met echte accounts (stap 12 en 18, setup/). Wie meedoet, begint onderaan de
+  // ladder. login 'microsoft' = je Microsoft-account van V&V (de Azure-koppeling van Supabase),
+  // 'email' = een inloglink naar je V&V-mailadres. Na de migratie met Microsoft SSO: zie README, 'Migratie'.
   brevet: {
-    enabled: true,
-    mode: 'demo',
-    login: 'email',
+    enabled: true,                      // false = de AI-brevetten nergens tonen
+    login: 'microsoft',
     domain: 'visser-visser.nl'          // Alleen e-mailadressen van dit domein kunnen inloggen (de database controleert dat ook)
   },
 

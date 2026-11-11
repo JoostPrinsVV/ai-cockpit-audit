@@ -43,17 +43,15 @@
 
   /* ---- Miles bij een overgenomen inzending ----------------------------------------- */
   /**
-   * Een inzending is gerealiseerd: miles voor de indiener, als die meedoet (op e-mailadres; in de demo
-   * ook op naam). Geeft { status: 'ok' | 'al' | 'geen-email' | 'geen-account', name, miles }.
+   * Een inzending is gerealiseerd: miles voor de indiener, als die meedoet (op e-mailadres).
+   * Geeft { status: 'ok' | 'al' | 'geen-email' | 'geen-account', name, miles }.
    */
   async function awardFor(idea) {
     if (!ns.brevet.enabled()) return { status: 'uit' };
     const email = String(idea.email || '').trim().toLowerCase();
-    const name = String(idea.name || '').trim().toLowerCase();
-    if (!email && !(ns.brevetData.isDemo() && name)) return { status: 'geen-email' };
+    if (!email) return { status: 'geen-email' };
     const accounts = (await ns.brevetData.adminAccounts()).filter((account) => account.joined_at);
-    const account = accounts.find((row) => email && row.email === email)
-      || (ns.brevetData.isDemo() && name ? accounts.find((row) => String(row.name || '').toLowerCase() === name) : null);
+    const account = accounts.find((row) => row.email === email);
     if (!account) return { status: 'geen-account' };
     const added = await ns.brevetData.adminAdd([{ email: account.email, kind: 'contribution_adopted', item: 'idee-' + idea.id, detail: { kind: idea.kind, title: String(idea.title || '').slice(0, 120) }, namespace: idea.namespace || null }]);
     const miles = ns.brevet.rules().miles.adopted[idea.kind] || 0;
@@ -868,11 +866,8 @@
       }
     }
 
-    const intro = ns.brevetData.isDemo()
-      ? notice({ title: 'Demo: fictieve collega\'s', text: 'Zolang de cockpit nog niet op een V&V-systeem staat, zie je hier verzonnen deelnemers (alles staat alleen in deze browser). Zo werkt het straks met echte collega\'s. Overschakelen: zet brevet.mode op \'supabase\' in js/config.js, na stap 12 (zie README).' })
-      : null;
     load();
-    return { node: el('div', { className: 'bv' }, [intro, el('div', { className: 'bv-nav' }, [nav]), body]) };
+    return { node: el('div', { className: 'bv' }, [el('div', { className: 'bv-nav' }, [nav]), body]) };
   }
 
   ns.adminBrevet = { render, awardFor, awardToast, loadAll };

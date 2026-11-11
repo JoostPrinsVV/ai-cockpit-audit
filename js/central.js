@@ -759,6 +759,22 @@
     return `${base}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&scopes=email&redirect_to=${encodeURIComponent(redirect)}`;
   }
 
+  /**
+   * De openbare inloginstellingen van Supabase (Beheer → Start, 'Klaar voor livegang'):
+   * { providers: { azure, email, … }, signup } of null als ze niet te lezen zijn.
+   */
+  async function authSettings() {
+    if (!enabled) return null;
+    try {
+      const response = await request('/auth/v1/settings', { headers: headers(null) });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return { providers: data.external || {}, signup: data.disable_signup === false };
+    } catch (error) {
+      return null;
+    }
+  }
+
   /** De sessie van een deelnemer verlengen; null als dat niet meer kan. */
   async function refreshParticipant(refresh) {
     if (!enabled || !refresh) return null;
@@ -1035,6 +1051,7 @@
     saveGoals,
     sendLoginLink,
     authorizeUrl,
+    authSettings,
     refreshParticipant,
     brevetAccount,
     brevetSaveAccount,

@@ -4,7 +4,7 @@
    Nog niet meedoen: uitleg, de ladder en 'Doe mee'. Wel meedoen: je brevet
    met de strepen, je miles, de checkride voor het volgende brevet, wat je
    recent verdiende, trainingen waarvoor je bent aangemeld, en stoppen.
-   In de demo: 'Kijk als' een fictieve collega, en de demo opnieuw beginnen.
+   Net ingelogd en nog niet mee: dan opent 'Doe mee' vanzelf.
    ========================================================================== */
 (function (ns) {
   'use strict';
@@ -46,37 +46,6 @@
     }
   }
 
-  function demoBar(rerender) {
-    if (!ns.brevetData.isDemo()) return null;
-    const select = el('select', { className: 'field__input field__input--sm', attrs: { id: 'logbook-as', 'aria-label': 'Kijk als' } });
-    ns.brevetData.adminAccounts().then((rows) => {
-      const me = ns.account.DEMO_ME;
-      select.replaceChildren(
-        el('option', { attrs: { value: me }, text: 'Jijzelf' }),
-        ...rows.filter((row) => row.email !== me).sort((a, b) => a.name.localeCompare(b.name, 'nl')).map((row) => el('option', { attrs: { value: row.email }, text: row.name }))
-      );
-      select.value = ns.account.current().email;
-    });
-    select.addEventListener('change', () => {
-      ns.account.become(select.value);
-      ns.brevet.load().then(rerender);
-    });
-    const reset = el('button', { className: 'btn btn--quiet btn--sm', attrs: { type: 'button' } }, [icon('refresh'), el('span', { text: 'Demo opnieuw' })]);
-    reset.addEventListener('click', async () => {
-      if (!(await ns.ui.confirmDialog('Alle fictieve collega\'s beginnen opnieuw, en jouw demo-logboek wordt leeg.', { title: 'Demo opnieuw beginnen?', confirmLabel: 'Opnieuw' }))) return;
-      ns.brevetData.resetDemo();
-      ns.account.become('');
-      await ns.brevet.load();
-      rerender();
-    });
-    return el('div', { className: 'logbook__demo', attrs: { role: 'note' } }, [
-      icon('info'),
-      el('p', {}, [el('strong', { text: 'Demo. ' }), 'Je logboek en de fictieve collega\'s staan alleen in deze browser. Zo test je alles zonder echte persoonsgegevens.']),
-      el('label', { className: 'logbook__as', attrs: { for: 'logbook-as' } }, [el('span', { text: 'Kijk als' }), select]),
-      reset
-    ]);
-  }
-
   function intro() {
     const join = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('plane'), el('span', { text: 'Doe mee' })]);
     join.addEventListener('click', () => ns.brevetUi.join());
@@ -111,9 +80,9 @@
   }
 
   /** Je brevet: strepen, naam, miles en of je actief bent. */
-  function card(result, account, others) {
+  function card(result, account) {
     const level = result.levelInfo;
-    const share = el('input', { attrs: { id: 'logbook-share', type: 'checkbox', checked: Boolean(account.share_brevet), disabled: others } });
+    const share = el('input', { attrs: { id: 'logbook-share', type: 'checkbox', checked: Boolean(account.share_brevet) } });
     share.addEventListener('change', async () => {
       share.disabled = true;
       try {
@@ -129,7 +98,7 @@
     return el('section', { className: 'logbook__card', attrs: { 'aria-labelledby': 'logbook-card-title' } }, [
       ns.brevetUi.insignia(result.level, 'lg', { rules: result.rules }),
       el('div', { className: 'logbook__card-text' }, [
-        el('p', { className: 'logbook__eyebrow', text: others ? 'Brevet van ' + (account.name || account.email) : 'Jouw brevet' }),
+        el('p', { className: 'logbook__eyebrow', text: 'Jouw brevet' }),
         el('h2', { className: 'logbook__rank', attrs: { id: 'logbook-card-title' }, text: level ? level.name : 'Nog geen brevet' }),
         el('p', { className: 'logbook__miles' }, [
           el('span', { className: 'logbook__number', text: NUMBER.format(result.miles) }),
@@ -145,7 +114,7 @@
   }
 
   /** Op weg naar het volgende brevet: voortgang, de checkride, en waar je meteen kunt beginnen. */
-  function nextBlock(result, others) {
+  function nextBlock(result) {
     const next = result.next;
     if (!next) {
       return el('section', { className: 'logbook__next' }, [
@@ -157,19 +126,17 @@
     bar.style.setProperty('--progress', String(Math.round(next.progress * 100)));
     const missing = new Set(next.checks.filter((check) => !check.ok).map((check) => check.stat));
     const actions = [];
-    if (!others) {
-      if (missing.has('policy')) actions.push(el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.brevetUi.policyCheck() } }, [icon('shield'), el('span', { text: 'Doe de check "Veilig vliegen"' })]));
-      if (missing.has('tour')) actions.push(el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: () => ns.tour.restart() } }, [icon('plane'), el('span', { text: 'Start de rondleiding' })]));
-      if (missing.has('profile')) actions.push(el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#mine-form-title' }, on: { click: (event) => {
-        event.preventDefault();
-        const field = document.getElementById('mine-naam');
-        if (field) field.focus();
-      } } }, [icon('user'), el('span', { text: 'Vul je gegevens in' })]));
-      if (missing.has('prompts')) actions.push(ns.blocks.linkButton('#/prompts', 'chat', 'Naar de prompts', 'btn--secondary btn--sm'));
-      if (missing.has('demos')) actions.push(ns.blocks.linkButton('#/usecases', 'play-circle', 'Bekijk een demo', 'btn--secondary btn--sm'));
-      if (missing.has('trainings') || missing.has('live')) actions.push(ns.blocks.linkButton('#/trainingen', 'cap', 'Naar de trainingen', 'btn--secondary btn--sm'));
-      if (missing.has('adopted')) actions.push(el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.ideas.quick({ kind: 'prompt' }) } }, [icon('chat'), el('span', { text: 'Deel een prompt' })]));
-    }
+    if (missing.has('policy')) actions.push(el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.brevetUi.policyCheck() } }, [icon('shield'), el('span', { text: 'Doe de check "Veilig vliegen"' })]));
+    if (missing.has('tour')) actions.push(el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' }, on: { click: () => ns.tour.restart() } }, [icon('plane'), el('span', { text: 'Start de rondleiding' })]));
+    if (missing.has('profile')) actions.push(el('a', { className: 'btn btn--secondary btn--sm', attrs: { href: '#mine-form-title' }, on: { click: (event) => {
+      event.preventDefault();
+      const field = document.getElementById('mine-naam');
+      if (field) field.focus();
+    } } }, [icon('user'), el('span', { text: 'Vul je gegevens in' })]));
+    if (missing.has('prompts')) actions.push(ns.blocks.linkButton('#/prompts', 'chat', 'Naar de prompts', 'btn--secondary btn--sm'));
+    if (missing.has('demos')) actions.push(ns.blocks.linkButton('#/usecases', 'play-circle', 'Bekijk een demo', 'btn--secondary btn--sm'));
+    if (missing.has('trainings') || missing.has('live')) actions.push(ns.blocks.linkButton('#/trainingen', 'cap', 'Naar de trainingen', 'btn--secondary btn--sm'));
+    if (missing.has('adopted')) actions.push(el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.ideas.quick({ kind: 'prompt' }) } }, [icon('chat'), el('span', { text: 'Deel een prompt' })]));
     return el('section', { className: 'logbook__next', attrs: { 'aria-labelledby': 'logbook-next-title' } }, [
       el('div', { className: 'logbook__next-head' }, [
         ns.brevetUi.insignia(next.index, 'md', { rules: result.rules }),
@@ -240,26 +207,33 @@
     const notice = ns.account.takeNotice();
     if (notice && notice.error) toast('Inloggen lukte niet: ' + notice.error, { tone: 'warning' });
     else if (notice && notice.ok) toast('Je bent ingelogd', { tone: 'success' });
+    // Net ingelogd om mee te doen: zodra je logboek er is, meteen 'Doe mee' (je begint onderaan de ladder)
+    let askJoin = Boolean(notice && notice.ok);
 
     function render() {
       const state = ns.brevet.state();
       const person = ns.account.current();
-      const others = Boolean(person && person.demo && !person.me);
-      const parts = [demoBar(render)];
+      const parts = [];
       if (!person) parts.push(signedOut());
       else if (state.status === 'loading' || state.status === 'idle') parts.push(el('p', { className: 'logbook__loading', text: 'Je logboek laden…' }));
       else if (state.status === 'failed') parts.push(ns.blocks.notice({ tone: 'warning', title: 'Je logboek is nu niet te laden', text: 'Probeer het straks nog eens.' }));
-      else if (!ns.brevet.joined() || !state.result) parts.push(others ? el('p', { className: 'logbook__loading', text: 'Deze collega doet (nog) niet mee.' }) : intro());
-      else {
+      else if (!ns.brevet.joined() || !state.result) {
+        parts.push(intro());
+        if (askJoin && state.status === 'ready') {
+          askJoin = false;
+          window.setTimeout(() => ns.brevetUi.join(), 0);
+        }
+      } else {
+        askJoin = false;
         const result = state.result;
         parts.push(
-          el('div', { className: 'logbook__top' }, [card(result, state.account, others), nextBlock(result, others)]),
+          el('div', { className: 'logbook__top' }, [card(result, state.account), nextBlock(result)]),
           el('div', { className: 'logbook__columns' }, [recent(result), registered(result)]),
           el('details', { className: 'logbook__ladder' }, [
             el('summary', {}, [icon('layers'), el('span', { text: 'Alle brevetten en wat ze opleveren' })]),
             ns.brevetUi.ladder(result.level, result.rules)
           ]),
-          others ? null : el('div', { className: 'logbook__foot' }, [
+          el('div', { className: 'logbook__foot' }, [
             el('p', { className: 'privacy' }, [icon('shield'), el('span', { text: 'Het AI-team ziet je logboek; collega\'s alleen je brevet, en alleen als je dat aanzet.' })]),
             leaveButton()
           ])
@@ -269,7 +243,7 @@
     }
     render();
     const stop = ns.brevet.onChange(render);
-    // Na inloggen of 'kijk als': opnieuw laden
+    // Na inloggen of uitloggen: opnieuw laden
     const stopAccount = ns.account.onChange(() => ns.brevet.load());
     if (ns.brevet.state().status === 'idle') ns.brevet.load();
     return { node, destroy: () => { stop(); stopAccount(); } };

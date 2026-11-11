@@ -51,8 +51,8 @@ assets/branding/      Logo: logo-dark.svg (zonder vierkant, voor de donkere kopb
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …), soms met video
-setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), stap 9 (Copilot-gebruik), 10 (portfolio)
-                      en 11 (verbetervoorstellen bij prompts)
+setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), daarna 9 t/m 18 (zie 'Supabase
+                      instellen'); stap 18 laat alleen V&V-accounts toe
 ```
 
 Alle paden zijn relatief binnen deze repository (geen `../`). De pagina zelf linkt niet naar andere sites; links naar
@@ -126,8 +126,11 @@ Start en die inhoud. De onderdelen staan in `TABS` in `js/view-admin.js`.
 Bovenaan Start staat voor hoofdbeheerders **Klaar voor livegang?** (`js/admin-launch.js`): wat er nog moet voordat
 collega's alles kunnen gebruiken, met een knop naar de plek waar je het regelt.
 - **Database (eenmalig):** stap 13 (invliegen), stap 14 (tijdwinst), stap 16 (agents in testfase), stap 17
-  (zoekvragen zonder resultaat) en stap 12 (brevetten met echte accounts; pas nodig bij de Microsoft-login). De cockpit controleert zelf of een stap is uitgevoerd, door een functie van die stap
+  (zoekvragen zonder resultaat) en stap 12 (AI-brevetten). De cockpit controleert zelf of een stap is uitgevoerd, door een functie van die stap
   alleen-lezend aan te roepen (`probe` in `js/central.js`).
+- **Inloggen (eenmalig):** inloggen met Microsoft aan, en nieuwe accounts toegestaan (alleen V&V, stap 18). Uit de
+  openbare instellingen van Supabase (`authSettings` in `js/central.js`); of de hook van stap 18 aanstaat, kan de
+  site niet zien.
 - **Cockpit van de discipline:** inhoud in de database, schattingen van de tijdwinst (klaar vanaf 80%), de startprompts
   van de Kickstart (naar keuze) en de AI-specialist voor invliegen.
 - **Alle disciplines:** de beloftes van het AI-team.
@@ -651,7 +654,7 @@ miles toekennen met een reden, een sessie vastleggen, voordragen als Commander, 
 de royalty's, een feit weghalen; CSV), *Trainingen* (per training wie is aangemeld en wie er was; alleen deelnemers
 toe te voegen; *aanwezig* levert miles op en telt voor de checkride) en *Regels*. Een inzending op **Gerealiseerd**
 zetten (ook via *Overnemen in de cockpit* bij een verbetervoorstel) kent automatisch miles toe als de indiener
-meedoet (op e-mailadres; in de demo op naam).
+meedoet (op e-mailadres).
 
 **Regels aanpassen** (*Regels*): per brevet de naam, de drempel in AI-miles, de voordelen (één per regel) en de
 aantallen van de checkride; de AI-miles per actie; de plafonds (per dag, per week insturen, royalty's per maand) en
@@ -677,18 +680,38 @@ volgt de regels van alle disciplines.
 - **Checkrides samenstellen:** per brevet een eis weghalen (kruisje) of toevoegen (*Eis toevoegen…*): alles wat de
   cockpit telt, de automatische items en de eigen items.
 
-Met echte accounts vraagt dit eenmalig `setup/supabase-audit-puntenitems.sql` (stap 15, na stap 12), zodat de
-database de feiten `activity` en `item_awarded` accepteert. In de demo werkt het meteen.
+De database accepteert de feiten `activity` en `item_awarded` al na stap 12. `setup/supabase-audit-puntenitems.sql`
+(stap 15) is er voor een installatie waar stap 12 al stond voordat de puntenitems er waren; opnieuw uitvoeren kan geen
+kwaad.
 
-**Demo of echt** (`js/config.js`, `brevet.mode`):
-- `'demo'` (nu): jij plus ruim dertig verzonnen collega's (adressen op `@demo.cockpit`), alles alleen in deze browser.
-  Op Mijn logboek kun je *kijken als* een collega en de demo opnieuw beginnen. Geen echte persoonsgegevens buiten
-  V&V-systemen.
-- `'supabase'`: echte accounts. Voer `setup/supabase-audit-brevetten.sql` uit (stap 12, na stap 1). Zet in Supabase
-  → Authentication het adres van de cockpit bij *Site URL* en *Redirect URLs*, en zet *Allow new users to sign up*
-  aan (wie geen V&V-adres heeft, kan in de database niets: dat bewaakt `audit_brevet_allowed`). Inloggen gaat met een
-  link naar je V&V-mailadres (`brevet.login: 'email'`; voor meer dan een handvol mensen een eigen SMTP-server instellen)
-  of met Microsoft (`'microsoft'`: Providers → Azure, met een app-registratie van IT voor alleen de V&V-tenant).
+**Inloggen en beginnen.** Er zijn alleen echte accounts (geen demo of verzonnen collega's meer; wat daarvan nog in
+een browser stond, ruimt `js/account.js` bij het opstarten op). Op Mijn logboek kiest een collega *Inloggen* →
+*Log in met Microsoft* en logt in met zijn account van Visser & Visser (`brevet.login: 'microsoft'` in `js/config.js`;
+`'email'` = een inloglink per mail). Terug in de cockpit opent *Doe mee* meteen. Wie meedoet, begint **altijd onderaan
+de ladder**: een nieuw account heeft geen feiten, dus geen brevet en 0 AI-miles. Alleen de rondleiding en Mijn
+gegevens die iemand al deed, komen er direct bij (de eerste twee eisen van de Cadet-checkride); al het andere telt
+vanaf het moment van meedoen. Het AI-team zijn de hoofdbeheerders (Beheer → Beheerders): die loggen in Beheer in zoals
+altijd en zien daar alle deelnemers; met hun Microsoft-account kunnen ze zelf ook meedoen, en ook zij beginnen dan
+onderaan.
+
+**Eenmalig instellen** (*Klaar voor livegang?* op Beheer → Start controleert de stappen en het inloggen):
+1. Supabase → SQL Editor: `setup/supabase-audit-brevetten.sql` (stap 12) en `setup/supabase-audit-puntenitems.sql`
+   (stap 15).
+2. Een app-registratie voor Microsoft (Entra-beheercentrum → Applications → App registrations → *New registration*,
+   of door IT): naam *AI-cockpit*; *Accounts in this organizational directory only* (alleen de V&V-tenant); Redirect
+   URI *Web* `https://czxyhgthbpexxqmudgdu.supabase.co/auth/v1/callback`. Daarna: *Certificates & secrets* → *New
+   client secret* (kopieer de *Value* meteen), en *Token configuration* → *Add optional claim* → *ID* → `email` en
+   `xms_edov` (zodat Supabase het e-mailadres als bevestigd ziet). Noteer de *Application (client) ID* en de
+   *Directory (tenant) ID*.
+3. Supabase → Authentication → Sign In / Providers → **Azure**: aanzetten, de client-ID, de secret en als *Azure
+   Tenant URL* `https://login.microsoftonline.com/<Directory (tenant) ID>`. Een secret verloopt (standaard na een
+   half jaar tot twee jaar): zet een herinnering om op tijd een nieuwe te maken.
+4. Supabase → Authentication → URL Configuration → *Redirect URLs*: `https://joostprinsvv.github.io/ai-cockpit-audit/**`.
+   Laat de *Site URL* staan (die is van het hele project, ook van de snackbar).
+5. Alleen V&V-accounts (stap 18): voer `setup/supabase-audit-aanmelden.sql` uit en zet in Authentication → Auth Hooks
+   de hook *Before User Created* aan met de functie `public.audit_before_user_created`. Pas daarna Sign In / Providers →
+   *Allow new users to sign up* aan: wie voor het eerst inlogt, krijgt dan een account, maar alleen met een adres van
+   @visser-visser.nl (ook de database laat alleen V&V-adressen meedoen: `audit_brevet_allowed`).
 
 ### Migratie naar de Microsoft-omgeving (SSO)
 
@@ -1023,9 +1046,11 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    `setup/supabase-audit-tijdwinst.sql` (stap 14), en voor de puntenitems van de brevetten
    `setup/supabase-audit-puntenitems.sql` (stap 15, na stap 12), en voor de testervaringen bij agents in testfase
    `setup/supabase-audit-testfase.sql` (stap 16, na stap 13), en voor Beheer → Onderhoud (zoekvragen zonder
-   resultaat) `setup/supabase-audit-onderhoud.sql` (stap 17).
-3. Controleer in Authentication: *Allow new users to sign up* uit, *Allow anonymous sign-ins* uit, en bij de
-   e-mailprovider *Confirm email* en *Secure email change* aan (rechten hangen aan het e-mailadres van een account).
+   resultaat) `setup/supabase-audit-onderhoud.sql` (stap 17). Voor het inloggen met Microsoft bij de AI-brevetten
+   `setup/supabase-audit-aanmelden.sql` (stap 18: alleen V&V-accounts; zie 'AI-brevetten').
+3. Controleer in Authentication: *Allow anonymous sign-ins* uit, en bij de e-mailprovider *Confirm email* en *Secure
+   email change* aan (rechten hangen aan het e-mailadres van een account). *Allow new users to sign up* staat uit,
+   tot de AI-brevetten live gaan: dan aan, maar pas nadat stap 18 en zijn Auth Hook aanstaan.
 4. Ga naar `#/beheer`, log in en zet de inhoud over (zie 'Inhoud beheren').
 
 Een ander Supabase-project? Zet het adres in `centralUrl` in `js/config.js` én in de Content-Security-Policy bovenin

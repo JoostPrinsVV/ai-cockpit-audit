@@ -2,17 +2,17 @@
    Account: wie ben je? (voor de AI-brevetten)
    --------------------------------------------------------------------------
    De rest van de cockpit vraagt alleen ns.account.current() en token(); hoe je
-   inlogt, staat alleen hier. Instellen in js/config.js (brevet.mode):
+   inlogt, staat alleen hier. Echte accounts in Supabase (stap 12), in te stellen
+   in js/config.js (brevet.login):
 
-     'demo'      zolang de cockpit nog niet op een V&V-systeem staat: jij plus
-                 fictieve collega's, alles alleen in deze browser (js/brevet-data.js);
-     'supabase'  echte accounts in Supabase (stap 12): inloggen met een link naar je
-                 V&V-mailadres (brevet.login 'email'), of met Microsoft
-                 (brevet.login 'microsoft': de Azure-koppeling van Supabase).
+     'microsoft'  inloggen met je Microsoft-account van V&V (de Azure-koppeling
+                  van Supabase, alleen de V&V-tenant; zie README, 'AI-brevetten');
+     'email'      een inloglink naar je V&V-mailadres.
 
-   Na de migratie naar de Microsoft-omgeving met SSO: alleen deze laag aanpassen
-   (zie README, 'Migratie'). De sleutel van je logboek is je zakelijke e-mailadres;
-   dat is in Supabase en in Microsoft hetzelfde.
+   Wie voor het eerst inlogt, heeft nog geen logboek: meedoen begint altijd onderaan
+   de ladder. Na de migratie naar de Microsoft-omgeving met SSO: alleen deze laag
+   aanpassen (zie README, 'Migratie'). De sleutel van je logboek is je zakelijke
+   e-mailadres; dat is in Supabase en in Microsoft hetzelfde.
    De sessie staat in de lokale opslag ('account'), zodat je ingelogd blijft.
    ========================================================================== */
 (function (ns) {
@@ -20,14 +20,13 @@
 
   const { storage } = ns.ui;
   const KEY = 'account';
-  const DEMO_KEY = 'brevet-demo-als';
   const EVENT = 'ai:account';
-  const DEMO_ME = 'jij@demo.cockpit';
+  // Van de oude demo met fictieve collega's: bij het opstarten weg uit iedere browser
+  const OLD_DEMO_KEYS = ['brevet-demo', 'brevet-demo-als'];
 
-  let options = { mode: 'demo', login: 'email', domain: 'visser-visser.nl' };
+  let options = { login: 'microsoft', domain: 'visser-visser.nl' };
   let session = null; // { token, refresh, email, expiresAt }
 
-  const mode = () => options.mode;
   const domain = () => String(options.domain || '').toLowerCase();
   const emit = () => document.dispatchEvent(new CustomEvent(EVENT));
 
@@ -35,17 +34,6 @@
   function allowed(email) {
     const address = String(email || '').trim().toLowerCase();
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address) && (!domain() || address.endsWith('@' + domain()));
-  }
-
-  /* ---- Demo: jij, of 'kijk als' een fictieve collega ---------------------------------- */
-  function demoEmail() {
-    return storage.get(DEMO_KEY, DEMO_ME) || DEMO_ME;
-  }
-
-  /** Demo: bekijk de cockpit als een fictieve collega (of als jezelf met DEMO_ME). */
-  function become(email) {
-    storage.set(DEMO_KEY, email || DEMO_ME);
-    emit();
   }
 
   /* ---- Supabase: sessie --------------------------------------------------------------- */
@@ -98,32 +86,30 @@
 
   function init(config) {
     options = Object.assign(options, (config && config.brevet) || {});
-    if (mode() === 'supabase') {
-      session = storage.get(KEY, null);
-      if (session && !session.token) session = null;
-      notice = consumeRedirect();
+    OLD_DEMO_KEYS.forEach((key) => storage.remove(key));
+    session = storage.get(KEY, null);
+    if (session && (!session.token || !allowed(session.email))) {
+      session = null;
+      store();
     }
+    notice = consumeRedirect();
   }
 
-  /** Wie ben je: { email, name, demo } of null (niet ingelogd). */
+  /** Wie ben je: { email, name } of null (niet ingelogd). */
   function current() {
     const name = ns.profile ? ns.profile.get().naam : '';
-    if (mode() === 'demo') {
-      const email = demoEmail();
-      return { email, name: email === DEMO_ME ? name || 'Jij (demo)' : '', demo: true, me: email === DEMO_ME };
-    }
     if (!session) return null;
     // Zonder te verlengen kan het niet meer: uitgelogd
     if (!session.refresh && Date.now() > session.expiresAt - 30000) {
       signOut();
       return null;
     }
-    return { email: session.email, name, demo: false, me: true };
+    return { email: session.email, name };
   }
 
-  /** Een geldig token (verlengt zo nodig), of '' in de demo of als je niet bent ingelogd. */
+  /** Een geldig token (verlengt zo nodig), of '' als je niet bent ingelogd. */
   async function token() {
-    if (mode() !== 'supabase' || !session) return '';
+    if (!session) return '';
     if (Date.now() < session.expiresAt - 60000) return session.token;
     const data = await ns.central.refreshParticipant(session.refresh);
     if (!data) {
@@ -136,12 +122,15 @@
   }
 
   /**
-   * Inloggen (alleen in Supabase-modus). method 'email': een link naar je V&V-mailadres; geeft 'sent',
-   * 'domain' (geen V&V-adres) of 'failed'. method 'microsoft': door naar Microsoft (komt terug met #access_token).
+   * Inloggen. method 'email': een link naar je V&V-mailadres; geeft 'sent',
+   * 'domain' (geen V&V-adres) of 'failed'. method 'microsoft': door naar Microsoft (komt terug met #access_token);
+   * geeft 'not-ready' zolang Microsoft of nieuwe accounts in Supabase nog uit staan (dan geen foutpagina).
    */
   async function signIn(method, email) {
     const back = window.location.origin + window.location.pathname + window.location.search;
     if (method === 'microsoft') {
+      const settings = await ns.central.authSettings();
+      if (settings && (!settings.providers.azure || !settings.signup)) return 'not-ready';
       window.location.assign(ns.central.authorizeUrl('azure', back));
       return 'redirect';
     }
@@ -168,5 +157,5 @@
     return () => document.removeEventListener(EVENT, handler);
   }
 
-  ns.account = { init, mode, login: () => options.login, domain, allowed, current, token, signIn, signOut, become, takeNotice, onChange, emailOfToken, DEMO_ME };
+  ns.account = { init, login: () => options.login, domain, allowed, current, token, signIn, signOut, takeNotice, onChange, emailOfToken };
 })(window.AIAudit);

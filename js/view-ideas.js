@@ -679,8 +679,8 @@
     const name = el('input', { className: 'field__input', attrs: { id: id + '-name', type: 'text', maxlength: '100', autocomplete: 'name' } });
     name.value = ns.profile.get().naam;
     const email = el('input', { className: 'field__input', attrs: { id: id + '-email', type: 'email', maxlength: '254', autocomplete: 'email', inputmode: 'email', spellcheck: 'false' } });
-    // Ingelogd voor de AI-brevetten (echte accounts): je e-mailadres, zodat het AI-team je miles kan geven
-    const account = ns.account.mode() !== 'demo' ? ns.account.current() : null;
+    // Ingelogd voor de AI-brevetten: je e-mailadres, zodat het AI-team je miles kan geven
+    const account = ns.account.current();
     if (account) email.value = account.email;
     const allowPublic = el('input', { attrs: { id: id + '-public', type: 'checkbox', checked: true } });
     const titleError = el('p', { className: 'field__error', attrs: { id: id + '-title-error' } });
