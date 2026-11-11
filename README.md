@@ -665,6 +665,11 @@ instelling `brevet` per naamruimte); miles en brevetten worden opnieuw berekend,
 Deelnemers rekenen met de regels van de cockpit waarin ze kijken. Een discipline zonder eigen inhoud in de database
 volgt de regels van alle disciplines.
 
+**Voordelen die nog geheim zijn.** Een brevet zonder voordelen toont op de ladder een vage, onleesbare regel (er
+staat een vulzin, niet de echte tekst) en in het promotievenster *Wat dit brevet oplevert, maken we binnenkort
+bekend*. Standaard heeft alleen Cadet voordelen; die van Co-pilot, CaptAIn en Commander worden nog afgestemd. Vul
+ze in bij *Regels*, dan staan ze er meteen.
+
 **Puntenitems** (ook in *Regels*, op beide niveaus):
 - **Naam in het logboek:** bij iedere vaste actie een eigen naam (leeg = de standaard).
 - **Automatische items:** wat de cockpit al ziet maar standaard niets oplevert: usecase bekeken, tip gelezen, tip van

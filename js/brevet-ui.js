@@ -47,6 +47,20 @@
     }, [el('span', { className: 'insignia__button', attrs: { 'aria-hidden': 'true' } }), board]);
   }
 
+  /**
+   * Wat een brevet oplevert, als lijst. Zonder voordelen (nog niet bekendgemaakt, zie js/brevet.js): één vage
+   * regel. Daar staat een vulzin, niet de echte voordelen, dus er valt ook niets terug te lezen.
+   */
+  function perks(level, className) {
+    if (level.perks.length) {
+      return el('ul', { className, attrs: { role: 'list', 'aria-label': 'Voordelen' } }, level.perks.map((perk) => el('li', {}, [icon('check'), el('span', { text: perk })])));
+    }
+    return el('p', { className: className + ' is-secret' }, [
+      el('span', { className: 'sr-only', text: 'Voordelen: nog geheim' }),
+      el('span', { className: 'perks-secret', attrs: { 'aria-hidden': 'true', translate: 'no' }, text: 'Dit blijft nog even geheim' })
+    ]);
+  }
+
   /** De ladder: de vier brevetten naast elkaar als route (strepen op een lijn), met het jouwe gemarkeerd. */
   function ladder(current, rules) {
     const r = rules || ns.brevet.rules();
@@ -56,7 +70,7 @@
       el('span', { className: 'ladder__mark' }, [insignia(index, 'md', { rules: r })]),
       el('p', { className: 'ladder__name', text: level.name }),
       el('p', { className: 'ladder__miles', text: index === current ? 'Jouw brevet' : index === 0 ? 'De eerste stappen' : `${level.miles.toLocaleString(ns.i18n.locale())} AI-miles` }),
-      el('ul', { className: 'ladder__perks', attrs: { role: 'list', 'aria-label': 'Voordelen' } }, level.perks.map((perk) => el('li', {}, [icon('check'), el('span', { text: perk })])))
+      perks(level, 'ladder__perks')
     ])));
   }
 
@@ -128,7 +142,7 @@
           el('p', { className: 'promo__text', text: MEANING[level.id] || '' }),
           el('div', { className: 'promo__block' }, [
             el('h3', { className: 'promo__label', text: 'Dit hoort erbij' }),
-            el('ul', { className: 'promo__perks', attrs: { role: 'list' } }, level.perks.map((perk) => el('li', {}, [icon('check'), el('span', { text: perk })])))
+            level.perks.length ? perks(level, 'promo__perks') : el('p', { className: 'promo__next', text: 'Wat dit brevet oplevert, maken we binnenkort bekend.' })
           ]),
           next ? el('div', { className: 'promo__block' }, [
             el('h3', { className: 'promo__label', text: `Op weg naar ${next.level.name}` }),

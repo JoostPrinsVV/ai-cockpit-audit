@@ -732,6 +732,10 @@
       equal([r.levels[1].name, r.levels[1].miles, r.miles.prompt_used, r.levels[2].miles, r.levels[0].perks], ['First Officer', 300, 7, 1000, ['Eigen logboek']]);
       equal(B.compute([fact('prompt_used', 'a', '2026-10-01')], { rules: r, today: '2026-10-01' }).miles, 7);
     });
+    await test('voordelen: standaard alleen bij Cadet (de rest is nog geheim); ingevuld in Beheer staan ze er', () => {
+      equal(B.defaults().levels.map((level) => level.perks.length > 0), [true, false, false, false]);
+      equal(B.rules({ captainPerks: ['Testpiloot'] }).levels.map((level) => level.perks.length > 0), [true, false, true, false]);
+    });
     await test('regels in lagen: standaard, dan alle disciplines, dan de eigen discipline (leeg = de laag eronder)', () => {
       const saved = { settings: ns.content.settings, brevetRules: ns.content.brevetRules };
       try {

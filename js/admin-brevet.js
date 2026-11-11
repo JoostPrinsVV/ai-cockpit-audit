@@ -520,7 +520,7 @@
       inputs.push({ path: `levels.${level.id}.name`, input: name, kind: 'text' });
       // Net zoveel regels als er voordelen zijn (geen scrollbalk in het vak)
       const ownPerks = pick(stored, `levels.${level.id}.perks`) || [];
-      const perks = el('textarea', { className: 'field__input field__textarea', attrs: { rows: String(Math.min(8, Math.max(3, Math.max(ownPerks.length, level.perks.length) + 1))), maxlength: '600', placeholder: level.perks.join('\n'), 'aria-label': 'Voordelen van ' + level.name + ', één per regel' } });
+      const perks = el('textarea', { className: 'field__input field__textarea', attrs: { rows: String(Math.min(8, Math.max(3, Math.max(ownPerks.length, level.perks.length) + 1))), maxlength: '600', placeholder: level.perks.length ? level.perks.join('\n') : 'Nog geheim: collega\'s zien een vage regel. Vul de voordelen in zodra ze zijn afgestemd.', 'aria-label': 'Voordelen van ' + level.name + ', één per regel' } });
       perks.value = ownPerks.join('\n');
       inputs.push({ path: `levels.${level.id}.perks`, input: perks, kind: 'list' });
       // Wat je kunt tellen, heeft een aantal; wat maar één keer kan (rondleiding, voordracht), niet.

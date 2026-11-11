@@ -24,11 +24,14 @@
 (function (ns) {
   'use strict';
 
+  // perks: wat een brevet oplevert. Een brevet zonder voordelen is 'nog geheim': collega's zien dan een vage
+  // regel in plaats van de voordelen (js/brevet-ui.js). De voordelen van Co-pilot, CaptAIn en Commander worden
+  // nog intern afgestemd; vul ze daarna in bij Beheer → AI-brevetten → Regels, dan staan ze er meteen.
   const LEVELS = [
     { id: 'cadet', name: 'Cadet', stripes: 1, miles: 0, perks: ['Je eigen logboek met miles', 'Bewijs dat je veilig vliegt'] },
-    { id: 'copilot', name: 'Co-pilot', stripes: 3, miles: 250, perks: ['Upgrade: voorrang op een licentie', 'Priority boarding voor je aanvragen'] },
-    { id: 'captain', name: 'CaptAIn', stripes: 4, miles: 1000, perks: ['Testpiloot voor nieuwe agents', 'Stemrecht over wat we bouwen', 'Lounge met het AI-team', 'Cockpitcheck: 1-op-1 sessie'] },
-    { id: 'commander', name: 'Commander', stripes: 4, miles: 2500, insignia: true, perks: ['Een agent op maat voor je team', 'Een plek in het AI-panel', 'Aanspreekpunt voor AI in je team'] }
+    { id: 'copilot', name: 'Co-pilot', stripes: 3, miles: 250, perks: [] },
+    { id: 'captain', name: 'CaptAIn', stripes: 4, miles: 1000, perks: [] },
+    { id: 'commander', name: 'Commander', stripes: 4, miles: 2500, insignia: true, perks: [] }
   ];
 
   // Wat een deelnemer zelf laat vastleggen; de rest legt beheer vast (zie setup/supabase-audit-brevetten.sql).

@@ -3062,6 +3062,9 @@ ol.ladder { position: relative; display: grid; grid-template-columns: repeat(4, 
 .ladder__perks { display: grid; justify-items: start; gap: 0.3rem; margin: var(--space-2) 0 0; padding: 0; color: var(--color-text-body); font-size: var(--fs-xs); line-height: 1.35; list-style: none; text-align: left; }
 .ladder__perks li { display: flex; align-items: flex-start; gap: 0.35rem; }
 .ladder__perks .icon { flex: none; width: 0.9em; height: 0.9em; margin-top: 0.2em; color: var(--vv-teal); }
+/* Voordelen die nog geheim zijn (js/brevet-ui.js): een vage regel in turquoise, niet te lezen en niet te selecteren */
+.ladder__perks.is-secret { justify-items: center; text-align: center; }
+.perks-secret { color: var(--color-link); font-weight: var(--fw-semibold); filter: blur(4px); user-select: none; }
 
 /* Zo verdien je AI-miles */
 .earn { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
