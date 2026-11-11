@@ -176,5 +176,36 @@ Na afloop staan de notities bij de vergadering, zodat je er bijvoorbeeld een act
     tips: ['facilitator', 'transcriptie'],
     icon: 'mic',
     added: '2026-10-21'
+  },
+  {
+    id: 'engyon-documentation-agent',
+    title: 'Engyon Documentation Agent',
+    kind: 'Eigen agent',
+    summary: 'Chat met de Engyon-documentatie: stel vragen over Engyon en de V&V-werkwijze en krijg bij elk antwoord de bron.',
+    description: `De Engyon Documentation Agent staat in Ilse Lab. Hij zoekt eerst in de kennis die Audit zelf vastlegt, zoals het Handboek Kwaliteit Audit, en daarna in de V&V Engyon Quickstart, de Engyon Gitbook (ook de versie voor klanten) en de veelgestelde vragen op engyon.eu. Als je dat aanzet, zoekt hij ook op internet.
+
+Onder elk antwoord zie je waarop het gebaseerd is, met een link naar de bron. Audit beheert de kennis en de instructies zelf.
+
+Voorbeeldvragen: hoe wijs ik werkzaamheden toe aan een collega? Wanneer maak ik een klantgroep aan? Wat is het verschil met Caseware bij het vastleggen van de risicoanalyse? Hoe accepteert een klant de uitnodiging voor Engyon?`,
+    phases: ['planning', 'beheersing', 'gegevensgericht', 'afronding', 'communicatie'],
+    status: 'Testfase',
+    license: false,
+    access: 'Open Ilse Lab en kies de module Engyon Documentation Agent. De module is in bèta.',
+    link: 'https://ilse-lab.smartinsight.nu/module/AuditAssistent',
+    owner: 'Team Data & Innovatie',
+    dataLevel: 'algemeen',
+    web: true,
+    useFor: [
+      'Opzoeken hoe iets werkt in Engyon',
+      'Nagaan wat de V&V-werkwijze in Engyon is, per fase van de controle',
+      'Uitzoeken wat de klant in Engyon ziet en doet'
+    ],
+    notFor: [
+      'Klantgegevens of dossierinformatie invoeren',
+      'Een antwoord overnemen zonder de bron te openen: de module is in bèta en kan onvolledig of onjuist zijn',
+      'Je eigen professionele oordeel vervangen'
+    ],
+    icon: 'book',
+    added: '2026-11-11'
   }
 ];
