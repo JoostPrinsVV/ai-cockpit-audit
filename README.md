@@ -62,7 +62,7 @@ buiten staan alleen in de inhoud (bijv. de opname van een training of een agent)
 
 | Adres | Wat |
 | --- | --- |
-| `#/` | Startpagina: zoeken, de radar (nieuw sinds je vorige bezoek), de onderdelen, het seizoenskompas, uitgelichte usecases en tips, nieuw toegevoegd |
+| `#/` | Startpagina: zoeken, de radar (nieuw sinds je vorige bezoek), de onderdelen, het seizoenskompas, recent toegevoegd, uitgelichte usecases en tips |
 | `#/usecases`, `#/usecase/<id>` | Praktische usecases per fase van de controle, elk met demo, stappen, prompts, aandachtspunten en reviews |
 | `#/prompts`, `#/prompt/<id>` | Promptdatabase: zoeken, filteren, favorieten, plaatshouders invullen, kopiëren en beoordelen |
 | `#/tips`, `#/tip/<id>` | Tips & tricks, o.a. eigen instructies, Facilitator en geplande prompts |
@@ -523,7 +523,7 @@ openen. Komt Microsoft later met zo'n parameter, dan zet je die in `copilotPromp
   Teksten → Seizoenskompas (*Standaard overnemen om aan te passen*); dan is dat leidend.
 - **Radar**: wat er nieuw is sinds je vorige bezoek, als rode stipjes op de kompasroos (een veeg 'vindt' ze bij het
   openen). Op een smal scherm (onder 1240 pixels), waar de roos niet staat, als strook onder het zoekvak met een klein
-  draaiend radartje. In *Recent toegevoegd* onderaan de startpagina krijgt wat nieuw voor je is een rood bolletje.
+  draaiend radartje. In *Recent toegevoegd* (op de startpagina onder het seizoenskompas) krijgt wat nieuw voor je is een rood bolletje.
   Wat je opent (of in de strook met het kruisje wegklikt), verdwijnt. Wat je kent, onthoudt je browser per discipline
   (`ai-snackbar-audit:radar:<discipline>`, alleen adressen); bij je allereerste bezoek staat er wat recent is toegevoegd.
 - **Zoekvenster** (Ctrl+K, / buiten een tekstveld, of de zoekknop): zoek en kies met de pijltjes een usecase, prompt,

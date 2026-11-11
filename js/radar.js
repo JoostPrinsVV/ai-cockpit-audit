@@ -4,8 +4,8 @@
    Op de kompasroos in de hero verschijnen stipjes bij het onderdeel waar iets
    nieuws staat (een veeg van de radar 'vindt' ze bij het openen). Op een smal
    scherm, waar de roos niet staat, staat hetzelfde als strook onder het
-   zoekvak, met een klein draaiend radartje. In 'Recent toegevoegd' onderaan de
-   startpagina krijgt wat nieuw voor je is een rood bolletje (ook voor
+   zoekvak, met een klein draaiend radartje. In 'Recent toegevoegd' (onder het
+   seizoenskompas) krijgt wat nieuw voor je is een rood bolletje (ook voor
    toetsenbord en schermlezer: de stipjes op de roos zijn versiering).
    Wat je kent, bewaart deze browser per discipline (lokale opslag
    'radar:<discipline>': alleen adressen van items). Dit bezoek houdt het

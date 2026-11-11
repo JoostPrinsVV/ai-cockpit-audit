@@ -245,8 +245,9 @@
     // De Kickstart (js/kickstart.js) en, zodra het er is, de tijdwinst van alle collega's (js/tijdwinst.js)
     const kickstart = ns.kickstart.card({ place: 'home' });
     const proof = el('div', { className: 'container tw-proof-wrap' }, [ns.tijdwinst.proof()]);
-    // Cockpit Wrapped (js/wrapped.js): zolang het AI-team hem op de startpagina laat staan
-    const node = el('div', { className: 'home' }, [hero(config, radar), tiles(), ns.wrapped.teaser(), proof, kickstart.node, compass, mine, featuredUsecases(), colleagues(), featuredTips(), recent(radar), ideasCta()]);
+    // Cockpit Wrapped (js/wrapped.js): zolang het AI-team hem op de startpagina laat staan.
+    // 'Recent toegevoegd' direct onder het kompas: wat nieuw is hoort bij wat er nu speelt, niet onderaan.
+    const node = el('div', { className: 'home' }, [hero(config, radar), tiles(), ns.wrapped.teaser(), proof, kickstart.node, compass, recent(radar), mine, featuredUsecases(), colleagues(), featuredTips(), ideasCta()]);
     // Eerste bezoek: de rondleiding (js/tour.js), even na het opstarten van de instrumenten
     ns.tour.maybeStart();
     return {
