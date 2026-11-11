@@ -609,20 +609,27 @@
   function fillChrome() {
     document.getElementById('brand-title').textContent = config.applicationTitle;
     ns.cockpit.renderSwitcher();
-    // De gouden regels uit Beheer → Teksten; de kop telt mee (geen regels: geen blok)
+    // Hoofdmenu: eigen namen, volgorde en verborgen knoppen (js/layout.js)
+    ns.layout.applyMenu();
+    // De gouden regels uit Beheer → Teksten; de kop telt mee (geen regels: geen blok).
+    // Steeds nieuwe elementen: zo is de voet na de bewerkmodus weer gewoon (js/editmode.js).
     const rules = config.rules || [];
     document.getElementById('footer-rules').replaceChildren(...rules.map((rule, index) =>
-      el('li', { className: 'rules__item' }, [el('span', { className: 'rules__number', text: String(index + 1) }), el('span', { text: rule })])
+      el('li', { className: 'rules__item' }, [el('span', { className: 'rules__number', text: String(index + 1) }), el('span', { className: 'rules__text', text: rule, dataset: { ruleIndex: String(index) } })])
     ));
-    document.getElementById('rules-heading').textContent = rules.length <= 10
+    const heading = el('span', { attrs: { id: 'rules-heading' } });
+    document.getElementById('rules-heading').replaceWith(ns.layout.editable(heading, 'voet.regels.titel', rules.length <= 10
       ? `${ns.ui.countWord(rules.length)} gouden ${rules.length === 1 ? 'regel' : 'regels'}`
-      : 'Gouden regels';
+      : 'Gouden regels', { label: 'Kop boven de gouden regels' }));
     // Daaronder: het AI-beleid en 'Mag dit?' (js/check.js); bij de links de rondleiding (js/tour.js)
     document.getElementById('footer-policy').replaceChildren(...ns.check.footerLinks());
     document.getElementById('footer-tour').replaceChildren(ns.tour.footerLink());
     document.getElementById('rules-section').hidden = !rules.length && !ns.check.policyUrl();
     document.getElementById('footer-updated').textContent = config.lastUpdated ? 'Laatst bijgewerkt: ' + config.lastUpdated : '';
-    document.getElementById('footer-org').textContent = `${config.organizationName} · Alle demo's werken met fictieve gegevens. Copilot ondersteunt; het professionele oordeel blijft bij jou.`;
+    document.getElementById('footer-org').replaceChildren(
+      config.organizationName + ' · ',
+      ns.layout.editable(el('span'), 'voet.notitie', 'Alle demo\'s werken met fictieve gegevens. Copilot ondersteunt; het professionele oordeel blijft bij jou.', { label: 'Voettekst', multiline: true })
+    );
   }
 
   function showFatal(error) {
@@ -704,7 +711,9 @@
     /** Opnieuw samenstellen met de werkversies erin (na een niet-opgeslagen wijziging). */
     recompose,
     withPublished,
-    config: () => config
+    config: () => config,
+    /** Kopbalk en voet opnieuw vullen (bijv. na de bewerkmodus). */
+    refreshChrome: () => fillChrome()
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -11,6 +11,8 @@
   'use strict';
 
   const { el, icon, chip, toast, storage, accentClass, pageHeader, toggleGroup, copyText, formatDate } = ns.ui;
+  // Vaste tekst die je in de bewerkmodus aanpast (js/layout.js)
+  const edit = (node, key, fallback, label, multiline) => ns.layout.editable(node, key, fallback, { label, multiline });
 
   const KINDS = [
     {
@@ -94,7 +96,7 @@
     const button = el('button', { className: 'kind-picker__label kind-picker__flyin', attrs: { type: 'button', 'aria-haspopup': 'dialog' } }, [
       el('span', { className: 'kind-picker__icon', attrs: { 'aria-hidden': 'true' } }, [icon('plane')]),
       el('span', { className: 'kind-picker__flyin-text' }, [
-        el('span', { className: 'kind-picker__name', text: 'AI-specialist invliegen' }),
+        edit(el('span', { className: 'kind-picker__name' }), 'ideeen.soort.invliegen.naam', 'AI-specialist invliegen', 'Naam van de keuze'),
         el('span', { className: 'kind-picker__text', text: 'Een klantcasus waarbij je wilt weten wat Copilot kan? ' + (who.name ? who.label : 'De AI-specialist') + ' denkt met je team mee.' })
       ]),
       icon('arrow-right', { className: 'kind-picker__go' })
@@ -109,7 +111,7 @@
     let confirmSensitive = false;
 
     const kindPicker = el('fieldset', { className: 'kind-picker' }, [
-      el('legend', { className: 'field__label', text: 'Wat wil je insturen?' }),
+      edit(el('legend', { className: 'field__label' }), 'ideeen.formulier.vraag', 'Wat wil je insturen?', 'Vraag boven de keuzes'),
       el('div', { className: 'kind-picker__grid' }, KINDS.map((item) => {
         const input = el('input', { className: 'kind-picker__input', attrs: { type: 'radio', name: 'kind', value: item.id, id: 'kind-' + item.id, checked: item.id === kind } });
         input.addEventListener('change', () => {
@@ -121,7 +123,7 @@
           el('label', { className: 'kind-picker__label', attrs: { for: 'kind-' + item.id } }, [
             el('span', { className: 'kind-picker__icon', attrs: { 'aria-hidden': 'true' } }, [icon(item.icon)]),
             el('span', { className: 'kind-picker__name', text: item.label }),
-            el('span', { className: 'kind-picker__text', text: item.text })
+            edit(el('span', { className: 'kind-picker__text' }), `ideeen.soort.${item.id}.tekst`, item.text, 'Uitleg bij ' + item.label, true)
           ])
         ]);
       }).concat(flyInTile()))
@@ -170,8 +172,8 @@
           emailError
         ])
       ]),
-      el('label', { className: 'check', attrs: { for: 'idea-public' } }, [allowPublic, el('span', { text: 'Mijn inzending mag zichtbaar worden in de hub, zonder naam en e-mailadres, zodat collega\'s het antwoord ook zien.' })]),
-      el('p', { className: 'privacy' }, [icon('shield'), el('span', { text: 'Noem geen klantnamen, dossier- of persoonsgegevens. Je naam en e-mailadres ziet alleen het AI-team.' })]),
+      el('label', { className: 'check', attrs: { for: 'idea-public' } }, [allowPublic, edit(el('span'), 'ideeen.formulier.openbaar', 'Mijn inzending mag zichtbaar worden in de hub, zonder naam en e-mailadres, zodat collega\'s het antwoord ook zien.', 'Tekst bij het vinkje', true)]),
+      el('p', { className: 'privacy' }, [icon('shield'), edit(el('span'), 'ideeen.formulier.privacy', 'Noem geen klantnamen, dossier- of persoonsgegevens. Je naam en e-mailadres ziet alleen het AI-team.', 'Privacyregel', true)]),
       promise,
       formError,
       submit
@@ -397,8 +399,8 @@
     });
 
     wrap.append(
-      el('div', { className: 'section__head' }, [el('h2', { className: 'section__title', text: 'Uit de hub', attrs: { id: 'hub-title' } })]),
-      el('p', { className: 'section__lead', text: 'Ideeën, vragen en verzoeken van collega\'s, met de reactie van het AI-team. Herken je iets? Stem met "Ik ook", dan weten we wat het meest leeft.' }),
+      el('div', { className: 'section__head' }, [edit(el('h2', { className: 'section__title', attrs: { id: 'hub-title' } }), 'ideeen.hub.titel', 'Uit de hub', 'Kop')]),
+      edit(el('p', { className: 'section__lead' }), 'ideeen.hub.tekst', 'Ideeën, vragen en verzoeken van collega\'s, met de reactie van het AI-team. Herken je iets? Stem met "Ik ook", dan weten we wat het meest leeft.', 'Inleiding', true),
       el('div', { className: 'filters filters--inline' }, [kindGroup, el('label', { className: 'sr-only', text: 'Sorteren', attrs: { for: 'hub-sort' } }), sort]),
       status,
       listNode
@@ -545,7 +547,7 @@
       ])
     ));
     const roles = route.roles.length || route.link ? el('aside', { className: 'side-card route__roles', attrs: { 'aria-labelledby': 'roles-title' } }, [
-      el('h3', { className: 'side-card__title', attrs: { id: 'roles-title' } }, [icon('users'), el('span', { text: 'Wie doet wat' })]),
+      el('h3', { className: 'side-card__title', attrs: { id: 'roles-title' } }, [icon('users'), edit(el('span'), 'ideeen.route.rollen', 'Wie doet wat', 'Kop')]),
       route.roles.length ? el('dl', { className: 'facts' }, route.roles.map((role) =>
         el('div', { className: 'facts__row' }, [el('dt', { text: role.name }), role.text ? el('dd', { text: role.text }) : null])
       )) : null,
@@ -555,7 +557,7 @@
     ]) : null;
     const section = el('section', { className: 'section section--tight route accent-teal', attrs: { id: 'route', 'aria-labelledby': 'route-title' } }, [
       el('div', { className: 'section__head' }, [
-        el('h2', { className: 'section__title', text: 'Wat gebeurt er met je idee?', attrs: { id: 'route-title', tabindex: '-1' } }),
+        edit(el('h2', { className: 'section__title', attrs: { id: 'route-title', tabindex: '-1' } }), 'ideeen.route.titel', 'Wat gebeurt er met je idee?', 'Kop'),
         el('button', { className: 'btn btn--quiet btn--sm route__print', attrs: { type: 'button' }, on: { click: () => printRoute(section, config) } }, [icon('download'), el('span', { text: 'Afdrukken als PDF' })])
       ]),
       route.intro ? el('p', { className: 'section__lead', text: route.intro }) : null,
@@ -583,7 +585,7 @@
         form.hidden = true;
         done.replaceChildren(
           el('span', { className: 'done__icon', attrs: { 'aria-hidden': 'true' } }, [icon('check-circle')]),
-          el('h3', { className: 'done__title', text: 'Dank je wel, je inzending is ontvangen!' }),
+          el('h3', { className: 'done__title', text: ns.layout.text('ideeen.bedankt', 'Dank je wel, je inzending is ontvangen!') }),
           el('p', { text: payload.allowPublic
             ? 'Het AI-team bekijkt alles. Een antwoord of opgepakt idee verschijnt hieronder in de hub' + (payload.email ? ', en je krijgt persoonlijk bericht.' : '.')
             : 'Het AI-team bekijkt alles. Je inzending blijft privé' + (payload.email ? '; je krijgt persoonlijk bericht.' : '.') }),
@@ -595,25 +597,29 @@
       });
 
     formCard.append(
-      el('h2', { className: 'form-card__title', text: 'Stuur iets in', attrs: { id: 'idea-form-title' } }),
+      edit(el('h2', { className: 'form-card__title', attrs: { id: 'idea-form-title' } }), 'ideeen.insturen.titel', 'Stuur iets in', 'Kop'),
       form,
       done
     );
 
     const route = routeBlock(config);
+    const HOW_STEPS = [
+      'Je stuurt een idee, vraag, verzoek of prompt in.',
+      'Het AI-team bekijkt iedere inzending en reageert.',
+      'Goede ideeën worden een usecase, prompt of tip op dit platform.',
+      'Antwoorden die voor iedereen nuttig zijn, zetten we (zonder naam) in de hub.'
+    ];
+    const howSteps = ns.blocks.stepsList(HOW_STEPS, 'small');
+    howSteps.querySelectorAll('.steps__item > span:last-child').forEach((span, index) =>
+      edit(span, `ideeen.zo-werkt-het.stap${index + 1}`, HOW_STEPS[index], `Stap ${index + 1}`, true));
     const how = el('section', { className: 'side-card', attrs: { 'aria-labelledby': 'how-title' } }, [
-      el('h2', { className: 'side-card__title', attrs: { id: 'how-title' } }, [icon('info'), el('span', { text: 'Zo werkt het' })]),
-      ns.blocks.stepsList([
-        'Je stuurt een idee, vraag, verzoek of prompt in.',
-        'Het AI-team bekijkt iedere inzending en reageert.',
-        'Goede ideeën worden een usecase, prompt of tip op dit platform.',
-        'Antwoorden die voor iedereen nuttig zijn, zetten we (zonder naam) in de hub.'
-      ], 'small'),
+      el('h2', { className: 'side-card__title', attrs: { id: 'how-title' } }, [icon('info'), edit(el('span'), 'ideeen.zo-werkt-het.titel', 'Zo werkt het', 'Kop')]),
+      howSteps,
       route ? el('a', { className: 'section__link', attrs: { href: '#route' }, on: { click: (event) => {
         event.preventDefault();
         route.scrollIntoView({ behavior: ns.motion.calm() ? 'auto' : 'smooth', block: 'start' });
         route.querySelector('#route-title').focus({ preventScroll: true });
-      } } }, [el('span', { text: 'Van idee tot toepassing: de hele route' }), icon('arrow-down')]) : null
+      } } }, [edit(el('span'), 'ideeen.zo-werkt-het.link', 'Van idee tot toepassing: de hele route', 'Link naar de route'), icon('arrow-down')]) : null
     ]);
 
     const node = el('div', { className: 'page container' }, [

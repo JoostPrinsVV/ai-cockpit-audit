@@ -307,6 +307,13 @@
     const viewNode = document.getElementById('view');
     if (viewNode && isOn()) observer.observe(viewNode, { childList: true, subtree: true });
     else observer.disconnect();
+    // De voet staat buiten de pagina: na de bewerkmodus opnieuw vullen, dan is hij weer gewoon
+    const footer = document.getElementById('footer');
+    if (!isOn() && footer && footer.querySelector('[data-inline], .rule-tools, .rules-add')) {
+      footer.querySelectorAll('.rules-add').forEach((node) => node.remove());
+      ns.app.refreshChrome();
+    }
+    if (isOn()) decorateFooter(footer);
     if (!isOn() || !parsed) return;
     const view = document.getElementById('view');
     if (!view || parsed.name === 'beheer') return;
@@ -446,6 +453,122 @@
     }
   }
 
+  /* ---- Voet: de gouden regels en de kleine tekst onderaan ----------------------------------- */
+  const currentRules = () => ((ns.app.config() || {}).rules || []).slice();
+  function setRules(rules) {
+    return ns.editor.change(own(), 'setting', 'site', (state) => {
+      state.data = state.data || {};
+      state.data.rules = rules;
+      return state;
+    });
+  }
+
+  function decorateFooter(footer) {
+    if (!footer || !ns.layout.canEdit()) return;
+    decorateTexts(footer);
+    const list = document.getElementById('footer-rules');
+    if (!list) return;
+    list.querySelectorAll('.rules__text').forEach((span) => {
+      if (span.dataset.inline) return;
+      const index = Number(span.dataset.ruleIndex);
+      inline(span, (text) => {
+        const rules = currentRules();
+        rules[index] = text;
+        setRules(rules);
+      }, false, `Gouden regel ${index + 1}`);
+      const remove = el('button', { className: 'rule-tools', attrs: { type: 'button', title: 'Regel weghalen', 'aria-label': `Regel ${index + 1} weghalen` } }, [icon('trash')]);
+      remove.addEventListener('click', async () => {
+        if (!(await ns.ui.confirmDialog(`"${span.textContent.trim()}" verdwijnt uit de gouden regels. Live gaat dat pas na Opslaan en Publiceren.`, { title: 'Regel weghalen?', confirmLabel: 'Weghalen', danger: true }))) return;
+        const rules = currentRules();
+        rules.splice(index, 1);
+        setRules(rules);
+      });
+      span.parentElement.append(remove);
+    });
+    if (!footer.querySelector('.rules-add')) {
+      const add = el('button', { className: 'rules-add btn btn--ghost-dark btn--sm', attrs: { type: 'button' } }, [icon('plus'), el('span', { text: 'Regel toevoegen' })]);
+      add.addEventListener('click', () => {
+        setRules(currentRules().concat('Nieuwe regel: klik om de tekst aan te passen'));
+        ns.ui.announce('Regel toegevoegd. Klik op de tekst om hem aan te passen.');
+      });
+      list.after(add);
+    }
+    // Nog geen regels: het blok staat verborgen; in de bewerkmodus toch tonen, zodat je kunt toevoegen
+    document.getElementById('rules-section').hidden = false;
+  }
+
+  /* ---- Hoofdmenu: namen, volgorde en tonen (knop 'Menu' in de bewerkbalk) ------------------- */
+  function openMenu() {
+    if (!ns.layout.canEdit()) return;
+    const start = JSON.stringify(ns.layout.menu());
+    let items = JSON.parse(start);
+    const list = el('ol', { className: 'menu-editor', attrs: { role: 'list' } });
+    const dirty = () => JSON.stringify(items) !== start;
+
+    function render(focusKey, focusAction) {
+      list.replaceChildren(...items.map((item, index) => {
+        const input = el('input', { className: 'field__input', attrs: { type: 'text', value: item.label, maxlength: '40', 'aria-label': 'Naam van menuknop ' + (index + 1) } });
+        input.addEventListener('input', () => { item.label = input.value; });
+        const show = el('input', { attrs: { type: 'checkbox', checked: !item.hidden } });
+        show.addEventListener('change', () => {
+          item.hidden = !show.checked;
+          row.classList.toggle('is-off', item.hidden);
+        });
+        const move = (delta, action) => {
+          const to = index + delta;
+          if (to < 0 || to >= items.length) return;
+          items.splice(to, 0, items.splice(index, 1)[0]);
+          render(item.key, action);
+        };
+        const button = (iconName, text, onClick, disabled, action) => {
+          const b = el('button', { className: 'btn btn--quiet btn--icon btn--sm', attrs: { type: 'button', title: text, 'aria-label': `${text}: ${item.label || item.standard}`, disabled, 'data-action': action } }, [icon(iconName)]);
+          b.addEventListener('click', onClick);
+          return b;
+        };
+        const row = el('li', { className: 'menu-editor__row' + (item.hidden ? ' is-off' : ''), dataset: { key: item.key } }, [
+          el('span', { className: 'menu-editor__number', text: String(index + 1), attrs: { 'aria-hidden': 'true' } }),
+          el('div', { className: 'menu-editor__name' }, [
+            input,
+            item.label.trim() !== item.standard ? el('span', { className: 'field__hint', text: 'Standaard: ' + item.standard }) : null
+          ]),
+          el('label', { className: 'menu-editor__show' }, [show, el('span', { text: 'Tonen' })]),
+          el('span', { className: 'menu-editor__move' }, [
+            button('arrow-up', 'Omhoog', () => move(-1, 'up'), index === 0, 'up'),
+            button('arrow-down', 'Omlaag', () => move(1, 'down'), index === items.length - 1, 'down')
+          ])
+        ]);
+        return row;
+      }));
+      if (focusKey) {
+        const row = list.querySelector(`[data-key="${focusKey}"]`);
+        const target = row && (row.querySelector(`[data-action="${focusAction}"]:not([disabled])`) || row.querySelector('input[type="text"]'));
+        if (target) target.focus();
+      }
+    }
+    render();
+
+    const apply = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('check'), el('span', { text: 'Toepassen' })]);
+    const reset = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [icon('replay'), el('span', { text: 'Standaardmenu' })]);
+    const body = el('div', { className: 'menu-editor__wrap' }, [
+      el('p', { className: 'drawer__lead', text: 'Pas de namen aan, zet de knoppen in een andere volgorde of verberg er een. Een verborgen knop haalt alleen de knop weg: de pagina blijft bereikbaar via zoeken en links.' }),
+      list,
+      el('div', { className: 'menu-editor__actions' }, [apply, reset])
+    ]);
+    let handle = null;
+    const canClose = () => !dirty() || ns.ui.confirmDialog('Wat je in dit paneel hebt aangepast, is nog niet toegepast.', { title: 'Paneel sluiten?', confirmLabel: 'Sluiten zonder toepassen', cancelLabel: 'Verder aanpassen', danger: true });
+    apply.addEventListener('click', () => {
+      if (dirty()) ns.layout.setMenu(items);
+      handle.close();
+    });
+    reset.addEventListener('click', () => {
+      items = ns.layout.MENU.map((item) => ({ key: item.key, standard: item.label, label: item.label, hidden: false }));
+      render();
+    });
+    handle = ns.editor.drawer('Hoofdmenu aanpassen', body, null, { canClose });
+    const first = list.querySelector('input');
+    if (first) first.focus();
+  }
+
   // In de bewerkmodus: kaarten en links niet openen bij klikken (dan zou je niet kunnen typen)
   document.addEventListener('click', (event) => {
     if (!isOn()) return;
@@ -454,5 +577,5 @@
     if (link.closest('.edit-slot') || link.querySelector('[data-inline]') || link.closest('[data-inline]')) event.preventDefault();
   }, true);
 
-  ns.editmode = { isOn, toggle, decorate, openPanel };
+  ns.editmode = { isOn, toggle, decorate, openPanel, openMenu };
 })(window.AIAudit);

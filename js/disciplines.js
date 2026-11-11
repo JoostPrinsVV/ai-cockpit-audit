@@ -358,6 +358,7 @@
     sharedBadge,
     sharedNote,
     lockBar,
+    fit,
     renderSwitcher
   };
 })(window.AIAudit);

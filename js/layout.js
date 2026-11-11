@@ -37,21 +37,26 @@
    * de opgeslagen volgorde staat (nieuw in de code), blijft achter de sectie die er in de standaard
    * vóór stond. Geeft een lijst omhulsels (div.layout-block) terug.
    */
-  function arrange(page, sections) {
-    const saved = pageLayout(page);
+  /** Dingen (met .key) in de opgeslagen volgorde; wat er niet in staat, blijft achter zijn voorganger. */
+  function sortSaved(things, order) {
     const rank = new Map();
     let last = -1;
-    sections.forEach((section) => {
-      const index = saved.order.indexOf(section.key);
+    things.forEach((thing) => {
+      const index = order.indexOf(thing.key);
       if (index >= 0) last = index;
-      rank.set(section.key, index >= 0 ? index : last + 0.001 * (rank.size + 1));
+      rank.set(thing.key, index >= 0 ? index : last + 0.001 * (rank.size + 1));
     });
+    return things
+      .map((thing, index) => ({ thing, index }))
+      .sort((a, b) => rank.get(a.thing.key) - rank.get(b.thing.key) || a.index - b.index)
+      .map(({ thing }) => thing);
+  }
+
+  function arrange(page, sections) {
+    const saved = pageLayout(page);
     const hidden = new Set(saved.hidden);
     const showHidden = editing();
-    return sections
-      .map((section, index) => ({ section, index }))
-      .sort((a, b) => rank.get(a.section.key) - rank.get(b.section.key) || a.index - b.index)
-      .map(({ section }) => section)
+    return sortSaved(sections, saved.order)
       .filter((section) => section.node && (showHidden || !hidden.has(section.key)))
       .map((section) => ns.ui.el('div', {
         className: 'layout-block' + (hidden.has(section.key) ? ' is-hidden-block' : ''),
@@ -134,5 +139,82 @@
     });
   }
 
-  ns.layout = { arrange, text, editable, pageLayout, setOrder, setHidden, resetPage, setText, canEdit };
+  /* ---- Hoofdmenu: namen, volgorde en welke knoppen je ziet --------------------------------
+     Opgeslagen als de 'pagina' menu (layout.menu) en de teksten menu.<sleutel>. Een verborgen
+     knop haalt alleen de knop weg: de pagina zelf blijft bereikbaar (via zoeken of een link). */
+  const MENU = [
+    { key: 'usecases', label: 'Usecases' },
+    { key: 'prompts', label: 'Prompts' },
+    { key: 'tips', label: 'Tips & tricks' },
+    { key: 'trainingen', label: 'Trainingen' },
+    { key: 'agents', label: 'Agents & tools' },
+    { key: 'ideeen', label: 'Ideeënhub' }
+  ];
+  const menuNodes = new Map(); // sleutel → { li, span, original }
+
+  function menuNode(key) {
+    if (!menuNodes.has(key)) {
+      const link = document.querySelector(`.nav__list [data-nav="${key}"]`);
+      const span = link && link.querySelector(':scope > span');
+      if (!span) return null;
+      menuNodes.set(key, { li: link.closest('li'), span, original: span.cloneNode(true) });
+    }
+    return menuNodes.get(key);
+  }
+
+  /** Het menu zoals het nu is ingesteld: [{ key, label, standard, hidden }] in de juiste volgorde. */
+  function menu() {
+    const saved = pageLayout('menu');
+    const hidden = new Set(saved.hidden);
+    return sortSaved(MENU, saved.order).map((item) => ({
+      key: item.key, standard: item.label, label: text('menu.' + item.key, item.label), hidden: hidden.has(item.key)
+    }));
+  }
+
+  let menuShape = '';
+  /** Het menu in de kopbalk bijwerken (js/app.js, na het laden van de inhoud en na iedere wijziging). */
+  function applyMenu() {
+    const items = menu();
+    const shape = JSON.stringify(items);
+    if (shape === menuShape) return;
+    menuShape = shape;
+    items.forEach((item) => {
+      const node = menuNode(item.key);
+      if (!node) return;
+      node.li.parentElement.append(node.li); // volgorde
+      node.li.hidden = item.hidden;
+      // Eigen naam: één tekst (zonder de korte vorm op smalle schermen); anders de standaard terug
+      if (item.label !== item.standard) {
+        node.span.textContent = item.label;
+        node.span.dataset.custom = 'ja';
+      } else if (node.span.dataset.custom) {
+        const fresh = node.original.cloneNode(true);
+        node.span.replaceWith(fresh);
+        node.span = fresh;
+      }
+    });
+    // De kopbalk opnieuw passend maken (een andere naam is breder of smaller)
+    if (ns.cockpit && ns.cockpit.fit) ns.cockpit.fit();
+  }
+
+  /** Alles uit het menupaneel in één keer: [{ key, label, hidden }] in de nieuwe volgorde. */
+  function setMenu(items) {
+    return changeSite((data) => {
+      const layout = Object.assign({}, data.layout || {});
+      const texts = Object.assign({}, data.texts || {});
+      const standard = new Map(MENU.map((item) => [item.key, item.label]));
+      const isStandard = items.every((item, index) => MENU[index] && MENU[index].key === item.key) && !items.some((item) => item.hidden);
+      if (isStandard) delete layout.menu;
+      else layout.menu = { order: items.map((item) => item.key), hidden: items.filter((item) => item.hidden).map((item) => item.key) };
+      items.forEach((item) => {
+        const clean = (item.label || '').trim();
+        if (!clean || clean === standard.get(item.key)) delete texts['menu.' + item.key];
+        else texts['menu.' + item.key] = clean;
+      });
+      data.layout = layout;
+      data.texts = texts;
+    });
+  }
+
+  ns.layout = { arrange, text, editable, pageLayout, setOrder, setHidden, resetPage, setText, canEdit, MENU, menu, applyMenu, setMenu };
 })(window.AIAudit);

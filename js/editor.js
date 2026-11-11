@@ -887,8 +887,10 @@
     p.itemButton = barButton('admin-bar__btn--item', 'pencil-line', '', {}, () => ns.editmode.openPanel(barItem.type, barItem.namespace, barItem.id));
     p.itemLabel = el('span');
     p.itemLink = el('a', { className: 'admin-bar__btn admin-bar__btn--item' }, [icon('pencil-line'), p.itemLabel]);
+    // In de bewerkmodus: het hoofdmenu (namen, volgorde, tonen) en de voet (js/editmode.js)
+    p.menu = barButton('admin-bar__btn--menu', 'layers', 'Menu', { title: 'Hoofdmenu aanpassen: namen, volgorde en welke knoppen je ziet' }, () => ns.editmode.openMenu());
     p.tools = [p.mode.button, p.group, p.save.button, p.publish.button, p.log.button, p.view.button];
-    bar.replaceChildren(el('div', { className: 'container admin-bar__inner' }, [p.brand, p.mode.button, p.status, p.group, p.save.button, p.publish.button, p.log.button, p.view.button, p.itemButton.button, p.itemLink]));
+    bar.replaceChildren(el('div', { className: 'container admin-bar__inner' }, [p.brand, p.mode.button, p.menu.button, p.status, p.group, p.save.button, p.publish.button, p.log.button, p.view.button, p.itemButton.button, p.itemLink]));
     return p;
   }
 
@@ -936,6 +938,7 @@
       p.count.hidden = !waitingCount;
       p.view.button.setAttribute('aria-pressed', String(visitorView));
     }
+    p.menu.button.hidden = !(on && ns.editmode && ns.editmode.isOn() && ns.layout.canEdit());
     const inPanel = Boolean(barItem && ns.editmode && ns.editmode.isOn() && on);
     p.itemButton.button.hidden = !inPanel;
     p.itemLink.hidden = !barItem || inPanel;
