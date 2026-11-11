@@ -4,19 +4,19 @@
    Catalogus van AI-agents en -producten, vanuit de gebruiker bekeken: wat
    is het, waarvoor gebruik je het (en waarvoor niet) en hoe krijg je
    toegang. De formele registratie staat in het AI-register (registerUrl).
-   Ingedeeld naar de fasen (Beheer → Inhoud → Fasen: namen en volgorde), net
-   als de prompts: een filter bovenaan en een groep per fase. Een agent in
-   (bijna) alle fasen staat één keer, bij 'In elke fase'. De fasen van wat nu
-   speelt in het seizoenskompas komen bovenaan, uitgelicht.
+   Iedere agent staat één keer op de pagina: eerst wat beschikbaar is, dan
+   wat in testfase is. Fase en status zijn keuzelijsten (filters), geen
+   koppen, zodat een agent die in meer fasen past niet steeds terugkomt.
+   groups() en broad() blijven beschikbaar voor andere onderdelen.
    ========================================================================== */
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, toggleGroup, emptyState } = ns.ui;
-  const { detailHeader, relatedList, itemLinks, warningList, askCard, notice, linkButton, statusPanel, openButton, filterRow, resultCount, countText, cardCache, phaseFilter } = ns.blocks;
+  const { el, icon, chip, licenseBadge, newBadge, accentClass, pageHeader, emptyState } = ns.ui;
+  const { detailHeader, relatedList, itemLinks, warningList, askCard, notice, linkButton, statusPanel, openButton, resultCount, countText } = ns.blocks;
 
   // Filters blijven staan zolang de pagina open is
-  const filters = { kind: 'all', status: 'all', phase: 'all' };
+  const filters = { status: 'all', phase: 'all' };
 
   /** In (bijna) elke fase: geen fasen, of hooguit één fase niet. Die staat één keer, niet in iedere groep. */
   const broad = (agent) => !agent.phases.length || agent.phases.length >= Math.max(2, ns.content.phases.length - 1);
@@ -73,13 +73,13 @@
    * Kaart voor een agent (ook gebruikt bij zoeken). Klikbaar via de titel, die over de hele kaart
    * reikt: een schermlezer hoort dan de naam als link, niet de hele kaart.
    */
-  function card(agent, headingTag) {
-    // In testfase: een duidelijke band bovenaan (js/agent-test.js), zodat niemand denkt dat hij al geaccepteerd is
+  function card(agent, headingTag, options) {
+    const showNew = !options || options.showNew !== false;
+    // In testfase: een gele rand en het label Testfase onderaan; de uitleg staat één keer boven het blok
     return el('article', { className: 'uc-card ag-card ' + accentClass(agent.accent) + (agent.stopped ? ' is-stopped' : '') + (agent.testing ? ' is-testing' : ''), dataset: { kind: 'agent', id: agent.id } }, [
-      agent.testing ? ns.agentTest.ribbon() : null,
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(agent.icon)]),
-        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), ns.ui.dutchBadge(agent), ns.cockpit.sharedBadge(agent), newBadge(agent.added), agentLicense(agent, true)])
+        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(agent), ns.ui.dutchBadge(agent), showNew ? newBadge(agent.added) : null, agentLicense(agent, true)])
       ]),
       el('div', { className: 'uc-card__body' }, [
         el('p', { className: 'uc-card__phase', text: agent.kind }),
@@ -101,19 +101,25 @@
     action: linkButton('#/ideeen/vraag', 'message-plus', 'Stel een vraag', 'btn--secondary btn--sm')
   });
 
-  /** Schakelknoppen voor alle waarden, met aantallen; een waarde zonder agents staat uit. */
-  function facet(label, values, all, key, onChange) {
-    const group = toggleGroup('Filter op ' + label, [{ value: 'all', label: 'Alle', count: all.length }].concat(
-      values.map((value) => ({ value, label: value, count: all.filter((agent) => agent[key] === value).length }))
-    ), filters[key], (value) => {
-      filters[key] = value;
+  /** Keuzelijst als filter: compacter dan een rij knoppen. */
+  function selectFilter(label, options, key, onChange) {
+    const select = el('select', { className: 'field__input ag-filter__select', attrs: { 'aria-label': 'Filter op ' + label.toLowerCase() } },
+      options.map((option) => el('option', { attrs: { value: option.value }, text: option.label + (option.count != null ? ` (${option.count})` : '') })));
+    select.value = filters[key];
+    select.addEventListener('change', () => {
+      filters[key] = select.value;
       onChange();
     });
-    group.querySelectorAll('.toggle').forEach((button) => {
-      if (button.dataset.value !== 'all' && !all.some((agent) => agent[key] === button.dataset.value)) button.disabled = true;
-    });
-    return group;
+    return el('label', { className: 'ag-filter' }, [el('span', { className: 'ag-filter__label', text: label }), select]);
   }
+
+  // De blokken op de pagina, in deze volgorde; iedere agent staat in precies één blok
+  const SECTIONS = [
+    { status: 'Beschikbaar', title: 'Beschikbaar', icon: 'check-circle' },
+    { status: 'Testfase', title: 'In testfase', icon: 'flask', text: 'Nog niet geaccepteerd. Probeer ze uit en deel je ervaring op de pagina van de agent: zo bepalen we samen of ze blijven.' },
+    { status: 'In ontwikkeling', title: 'In ontwikkeling', icon: 'settings' },
+    { status: 'Gestopt', title: 'Gestopt', icon: 'close' }
+  ];
 
   /* ---- Overzicht ---------------------------------------------------------------- */
   function renderList() {
@@ -134,71 +140,53 @@
     }
 
     // Filters van een vorige keer die nu niets meer opleveren: terug naar 'Alle'
-    if (!all.some((agent) => agent.kind === filters.kind)) filters.kind = 'all';
     if (!all.some((agent) => agent.status === filters.status)) filters.status = 'all';
+    if (filters.phase !== 'all' && !all.some((agent) => inPhase(agent, filters.phase))) filters.phase = 'all';
 
-    const list = el('div', { className: 'p-list' });
+    // 'Nieuw' zegt alleen iets als niet alles nieuw is
+    const showNew = !all.every((agent) => ns.ui.isNew(agent.added));
+
+    const list = el('div', { className: 'ag-sections' });
     const count = resultCount();
-    const empty = emptyState('Geen agents of tools met deze filters', 'Kies een andere fase, soort of status.');
-    const season = ns.compass.nowPhases(ns.app.config());
-
-    // Een agent kan in meer groepen staan: per groep een eigen kaart (in een groep is de titel een h3)
-    const cardFor = cardCache((agent, variant) => card(agent, variant ? 'h3' : 'h2'));
-    const grid = (items, variant) => el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } }, items.map((agent) => cardFor(agent, variant)));
+    const empty = emptyState('Geen agents of tools met deze filters', 'Kies een andere fase of status.');
 
     function update() {
       const items = all.filter((agent) =>
         (filters.phase === 'all' || inPhase(agent, filters.phase)) &&
-        (filters.kind === 'all' || agent.kind === filters.kind) &&
         (filters.status === 'all' || agent.status === filters.status)
       );
-      if (filters.phase !== 'all') {
-        // Eén fase gekozen: gewoon de kaarten
-        list.replaceChildren(grid(items, ''));
-      } else {
-        list.replaceChildren(...groups(items, season).map((group) => {
-          const key = group.phase ? group.phase.id : 'elke-fase';
-          const titleId = 'ag-' + key;
-          return el('section', { className: 'p-group ' + accentClass(group.phase ? group.phase.accent : 'navy') + (group.season ? ' is-season' : ''), attrs: { 'aria-labelledby': titleId } }, [
-            el('div', { className: 'p-group__head' }, [
-              el('h2', { className: 'p-group__title', attrs: { id: titleId } }, [
-                el('span', { className: 'p-group__icon', attrs: { 'aria-hidden': 'true' } }, [icon(group.phase ? group.phase.icon : 'grid')]),
-                el('span', {}, [(group.phase ? group.phase.label : 'In elke fase') + ' ', el('span', { className: 'p-group__count', text: String(group.items.length) })])
-              ]),
-              group.season ? ns.compass.badge(group.season.title) : null
-            ]),
-            grid(group.items, key)
-          ]);
-        }));
-      }
+      list.replaceChildren(...SECTIONS.map((section) => {
+        const members = items.filter((agent) => agent.status === section.status || (section.status === 'Beschikbaar' && !SECTIONS.some((s) => s.status === agent.status)));
+        if (!members.length) return null;
+        const titleId = 'ag-' + section.status.toLowerCase().replace(/\s+/g, '-');
+        return el('section', { className: 'ag-section' + (section.status === 'Testfase' ? ' is-testing' : ''), attrs: { 'aria-labelledby': titleId } }, [
+          el('h2', { className: 'ag-section__title', attrs: { id: titleId } }, [
+            el('span', { className: 'ag-section__icon', attrs: { 'aria-hidden': 'true' } }, [icon(section.icon)]),
+            el('span', { text: section.title }),
+            el('span', { className: 'p-group__count', text: String(members.length) })
+          ]),
+          section.text ? el('p', { className: 'ag-section__text', text: section.text }) : null,
+          el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } }, members.map((agent) => el('li', {}, [card(agent, 'h3', { showNew })])))
+        ]);
+      }).filter(Boolean));
       count.textContent = countText(items.length, 'agent of tool', 'agents en tools');
       empty.hidden = items.length > 0;
       list.hidden = items.length === 0;
     }
 
-    // Agents in testfase: bovenaan een melding, met een knop om alleen die te tonen
-    const testing = all.filter((agent) => agent.testing);
-    const showTesting = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('flask'), el('span', { text: filters.status === 'Testfase' ? 'Toon weer alles' : 'Toon alleen de testfase' })]);
-    showTesting.addEventListener('click', () => {
-      filters.status = filters.status === 'Testfase' ? 'all' : 'Testfase';
-      ns.app.refresh();
-    });
-    const testNotice = testing.length ? el('div', { className: 'test-notice' }, [
-      el('span', { className: 'test-notice__icon', attrs: { 'aria-hidden': 'true' } }, [icon('flask')]),
-      el('div', { className: 'test-notice__body' }, [
-        el('p', { className: 'test-notice__title' }, [el('strong', { attrs: { translate: 'no' }, text: String(testing.length) }), ' ', el('span', { text: testing.length === 1 ? 'agent in testfase: nog niet geaccepteerd' : 'agents in testfase: nog niet geaccepteerd' })]),
-        el('p', { className: 'test-notice__text', text: 'Je herkent ze aan de gele band. Test mee en deel je ervaring op de pagina van de agent: zo bepalen we samen of hij geaccepteerd wordt.' })
-      ]),
-      showTesting
-    ]) : null;
+    const phaseOptions = [{ value: 'all', label: 'Alle fasen' }].concat(ns.content.phases
+      .map((phase) => ({ value: phase.id, label: phase.short, count: all.filter((agent) => inPhase(agent, phase.id)).length }))
+      .filter((option) => option.count > 0));
+    const statusOptions = [{ value: 'all', label: 'Alle' }].concat(ns.content.AGENT_STATUSES
+      .map((status) => ({ value: status, label: status, count: all.filter((agent) => agent.status === status).length }))
+      .filter((option) => option.count > 0));
 
     const node = el('div', { className: 'page container' }, [
       head,
-      testNotice,
-      el('div', { className: 'filters' }, [
-        filterRow('Fase', phaseFilter(all, filters, update, inPhase)),
-        filterRow('Soort', facet('soort', ns.content.AGENT_KINDS, all, 'kind', update)),
-        filterRow('Status', facet('status', ns.content.AGENT_STATUSES, all, 'status', update), count)
+      el('div', { className: 'ag-filters' }, [
+        selectFilter('Fase', phaseOptions, 'phase', update),
+        selectFilter('Status', statusOptions, 'status', update),
+        count
       ]),
       list,
       empty,

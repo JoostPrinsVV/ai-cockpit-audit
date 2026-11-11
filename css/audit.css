@@ -3609,3 +3609,18 @@ ul.wr-highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax
 
 .test-panel__miles { display: flex; flex-basis: 100%; align-items: center; gap: var(--space-2); margin: 0; color: var(--color-text-body); font-size: var(--fs-sm); }
 .test-panel__miles .icon { flex: none; color: var(--color-warning); }
+
+/* Agents & tools: één rij keuzelijsten en een blok per status (iedere agent één keer) */
+.ag-filters { display: flex; flex-wrap: wrap; align-items: end; gap: var(--space-3) var(--space-4); margin-bottom: var(--space-6); }
+.ag-filters .result-count, .ag-filters > :last-child { margin-left: auto; color: var(--color-text-muted); font-size: var(--fs-sm); }
+.ag-filter { display: grid; gap: 4px; min-width: 11rem; }
+.ag-filter__label { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.ag-filter__select { padding-block: var(--space-2); }
+.ag-sections { display: grid; gap: var(--space-8, 2.5rem); }
+.ag-section__title { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); font-size: var(--fs-lg, 1.25rem); }
+.ag-section__icon { display: inline-flex; color: var(--color-text-muted); }
+.ag-section__icon .icon { width: 1.2rem; height: 1.2rem; }
+.ag-section.is-testing .ag-section__icon { color: var(--vv-amber-500); }
+.ag-section__text { margin: calc(-1 * var(--space-2)) 0 var(--space-4); color: var(--color-text-body); font-size: var(--fs-sm); max-width: 60ch; }
+.ag-sections .ag-card.is-testing { border-width: 1px; box-shadow: inset 4px 0 0 var(--vv-amber-500); }
+@media (max-width: 600px) { .ag-filter { flex: 1 1 100%; } .ag-filters > :last-child { margin-left: 0; } }
