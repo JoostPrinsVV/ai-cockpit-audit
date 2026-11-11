@@ -5,6 +5,8 @@
   'use strict';
 
   const { el, icon, chip } = ns.ui;
+  // Vaste teksten die een beheerder in de bewerkmodus kan aanpassen (js/layout.js)
+  const edit = (node, key, fallback, label, multiline) => ns.layout.editable(node, key, fallback, { label, multiline });
 
   /** radar: wat nieuw is sinds je vorige bezoek (js/radar.js), op de roos en als strook onder het zoekvak. */
   function hero(config, radar) {
@@ -56,12 +58,12 @@
     const c = ns.content;
     const withDemo = c.usecases.filter((u) => u.hasDemo).length;
     const items = [
-      { href: '#/usecases', icon: 'play-circle', accent: 'crimson', title: 'Usecases', count: c.usecases.length, text: `Praktische toepassingen per fase van ${ns.cockpit.active().phases}, ${withDemo} met een demo.` },
-      { href: '#/prompts', icon: 'chat', accent: 'teal', title: 'Promptdatabase', count: c.prompts.length, text: 'Direct te gebruiken prompts. Vul de plaatshouders in en kopieer.' },
-      { href: '#/tips', icon: 'bulb', accent: 'steel', title: 'Tips & tricks', count: c.openTips.length, text: 'Iedere vrijdag een nieuwe tip, plus de basis: instructies, Facilitator en meer.' },
-      { href: '#/trainingen', icon: 'cap', accent: 'deepteal', title: 'Trainingen', count: c.trainings.filter((t) => t.available).length || null, text: 'Opnames en naslagwerk van trainingen en sessies om terug te kijken.' },
-      { href: '#/agents', icon: 'robot', accent: 'navy', title: 'Agents & tools', count: c.agents.filter((a) => !a.stopped).length || null, text: 'Welke AI-agents en tools er zijn, waarvoor je ze gebruikt en hoe je toegang krijgt.' },
-      { href: '#/ideeen', icon: 'message-plus', accent: 'rose', title: 'Ideeënhub', count: null, text: 'Stuur een idee, vraag of verzoek in en zie wat collega\'s aandragen.' }
+      { key: 'usecases', href: '#/usecases', icon: 'play-circle', accent: 'crimson', title: 'Usecases', count: c.usecases.length, text: `Praktische toepassingen per fase van ${ns.cockpit.active().phases}, ${withDemo} met een demo.` },
+      { key: 'prompts', href: '#/prompts', icon: 'chat', accent: 'teal', title: 'Promptdatabase', count: c.prompts.length, text: 'Direct te gebruiken prompts. Vul de plaatshouders in en kopieer.' },
+      { key: 'tips', href: '#/tips', icon: 'bulb', accent: 'steel', title: 'Tips & tricks', count: c.openTips.length, text: 'Iedere vrijdag een nieuwe tip, plus de basis: instructies, Facilitator en meer.' },
+      { key: 'trainingen', href: '#/trainingen', icon: 'cap', accent: 'deepteal', title: 'Trainingen', count: c.trainings.filter((t) => t.available).length || null, text: 'Opnames en naslagwerk van trainingen en sessies om terug te kijken.' },
+      { key: 'agents', href: '#/agents', icon: 'robot', accent: 'navy', title: 'Agents & tools', count: c.agents.filter((a) => !a.stopped).length || null, text: 'Welke AI-agents en tools er zijn, waarvoor je ze gebruikt en hoe je toegang krijgt.' },
+      { key: 'ideeen', href: '#/ideeen', icon: 'message-plus', accent: 'rose', title: 'Ideeënhub', count: null, text: 'Stuur een idee, vraag of verzoek in en zie wat collega\'s aandragen.' }
     ];
     return el('section', { className: 'section container', attrs: { 'aria-label': 'Onderdelen' } }, [
       el('ul', { className: 'tiles', attrs: { role: 'list' } }, items.map((item) =>
@@ -70,14 +72,14 @@
             el('span', { className: 'tile__icon', attrs: { 'aria-hidden': 'true' } }, [icon(item.icon)]),
             el('span', { className: 'tile__body' }, [
               el('span', { className: 'tile__title' }, [
-                el('span', { text: item.title }),
+                edit(el('span'), 'home.tegel.' + item.key + '.titel', item.title, 'Titel van de tegel'),
                 // Uitleesvenster met twee cijfers (09); een schermlezer hoort gewoon het getal
                 item.count != null ? el('span', { className: 'tile__count' }, [
                   el('span', { text: String(item.count).padStart(2, '0'), attrs: { 'aria-hidden': 'true' } }),
                   el('span', { className: 'sr-only', text: String(item.count) })
                 ]) : null
               ]),
-              el('span', { className: 'tile__text', text: item.text })
+              edit(el('span', { className: 'tile__text' }), 'home.tegel.' + item.key + '.tekst', item.text, 'Tekst van de tegel', true)
             ]),
             el('span', { className: 'tile__go', attrs: { 'aria-hidden': 'true' } }, [icon('arrow-right')])
           ])
@@ -88,8 +90,8 @@
 
   function sectionHead(title, id, link) {
     return el('div', { className: 'section__head' }, [
-      el('h2', { className: 'section__title', text: title, attrs: { id } }),
-      link ? el('a', { className: 'section__link', attrs: { href: link.href } }, [el('span', { text: link.label }), icon('arrow-right')]) : null
+      edit(el('h2', { className: 'section__title', attrs: { id } }), 'home.' + id + '.titel', title, 'Kop'),
+      link ? el('a', { className: 'section__link', attrs: { href: link.href } }, [edit(el('span'), 'home.' + id + '.link', link.label, 'Linktekst'), icon('arrow-right')]) : null
     ]);
   }
 
@@ -164,7 +166,7 @@
     const list = el('ul', { className: 'recent', attrs: { role: 'list' } });
     const node = el('section', { className: 'section container', attrs: { 'aria-labelledby': 'home-rated', hidden: true } }, [
       sectionHead('Favoriet bij collega\'s', 'home-rated'),
-      el('p', { className: 'section__lead', text: `Het best beoordeeld door collega's, vanaf ${MIN_REVIEWS} beoordelingen.` }),
+      edit(el('p', { className: 'section__lead' }), 'home.home-rated.inleiding', `Het best beoordeeld door collega's, vanaf ${MIN_REVIEWS} beoordelingen.`, 'Inleiding', true),
       list
     ]);
     ns.reviews.stats().then((map) => {
@@ -211,8 +213,8 @@
     return el('section', { className: 'section container', attrs: { 'aria-labelledby': 'home-ideas' } }, [
       el('div', { className: 'cta on-dark' }, [
         el('div', { className: 'cta__text' }, [
-          el('h2', { className: 'cta__title', text: 'Mis je iets? Laat het weten.', attrs: { id: 'home-ideas' } }),
-          el('p', { className: 'cta__lead', text: 'Een idee voor een usecase, een vraag over Copilot, een verzoek voor een demo of een prompt die je wilt delen: de ideeënhub is van ons allemaal.' }),
+          edit(el('h2', { className: 'cta__title', attrs: { id: 'home-ideas' } }), 'home.ideeen.titel', 'Mis je iets? Laat het weten.', 'Kop'),
+          edit(el('p', { className: 'cta__lead' }), 'home.ideeen.tekst', 'Een idee voor een usecase, een vraag over Copilot, een verzoek voor een demo of een prompt die je wilt delen: de ideeënhub is van ons allemaal.', 'Tekst', true),
           el('ul', { className: 'chips', attrs: { role: 'list' } }, [
             el('li', {}, [chip('Idee', { icon: 'bulb', className: 'chip--dark' })]),
             el('li', {}, [chip('Vraag', { icon: 'question', className: 'chip--dark' })]),
@@ -221,11 +223,11 @@
           ]),
           // Een klantcasus: de AI-specialist invliegen (js/specialist.js)
           el('p', { className: 'cta__flyin' }, [
-            el('span', { text: 'Klantcasus waarbij je wilt weten wat Copilot kan?' }),
+            edit(el('span'), 'home.ideeen.specialist', 'Klantcasus waarbij je wilt weten wat Copilot kan?', 'Tekst'),
             el('button', { className: 'cta__flyin-button', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.specialist.open() } }, [icon('plane'), el('span', { text: 'AI-specialist invliegen' }), icon('arrow-right')])
           ])
         ]),
-        el('a', { className: 'btn btn--primary btn--lg', attrs: { href: '#/ideeen' } }, [icon('message-plus'), el('span', { text: 'Naar de ideeënhub' })])
+        el('a', { className: 'btn btn--primary btn--lg', attrs: { href: '#/ideeen' } }, [icon('message-plus'), edit(el('span'), 'home.ideeen.knop', 'Naar de ideeënhub', 'Knoptekst')])
       ])
     ]);
   }
@@ -247,7 +249,20 @@
     const proof = el('div', { className: 'container tw-proof-wrap' }, [ns.tijdwinst.proof()]);
     // Cockpit Wrapped (js/wrapped.js): zolang het AI-team hem op de startpagina laat staan.
     // 'Recent toegevoegd' direct onder het kompas: wat nieuw is hoort bij wat er nu speelt, niet onderaan.
-    const node = el('div', { className: 'home' }, [hero(config, radar), tiles(), ns.wrapped.teaser(), proof, kickstart.node, compass, recent(radar), mine, featuredUsecases(), colleagues(), featuredTips(), ideasCta()]);
+    // De secties onder de hero: een beheerder zet ze in de bewerkmodus in een andere volgorde of verbergt ze (js/layout.js)
+    const node = el('div', { className: 'home' }, [hero(config, radar)].concat(ns.layout.arrange('home', [
+      { key: 'tegels', label: 'Tegels naar de onderdelen', node: tiles() },
+      { key: 'wrapped', label: 'Cockpit Wrapped', node: ns.wrapped.teaser() },
+      { key: 'tijdwinst', label: 'Tijdwinst van collega\'s', node: proof },
+      { key: 'kickstart', label: 'Kickstart', node: kickstart.node },
+      { key: 'kompas', label: 'Seizoenskompas', node: compass },
+      { key: 'recent', label: 'Recent toegevoegd', node: recent(radar) },
+      { key: 'voor-jou', label: 'Voor jou (bewaard en bekeken)', node: mine },
+      { key: 'usecases', label: 'Uitgelichte usecases', node: featuredUsecases() },
+      { key: 'favoriet', label: 'Favoriet bij collega\'s', node: colleagues() },
+      { key: 'tips', label: 'Uitgelichte tips', node: featuredTips() },
+      { key: 'ideeen', label: 'Oproep ideeënhub', node: ideasCta() }
+    ])));
     // Eerste bezoek: de rondleiding (js/tour.js), even na het opstarten van de instrumenten
     ns.tour.maybeStart();
     return {

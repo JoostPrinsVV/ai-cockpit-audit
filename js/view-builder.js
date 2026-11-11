@@ -338,7 +338,7 @@
 
     update();
     const node = el('div', { className: 'page container' }, [
-      pageHeader({ eyebrow: 'Promptbouwer', title: 'Bouw je eigen prompt', lead: 'Een goede prompt heeft een doel, context, een bron en een verwachting. Vul de stappen in; rechts groeit je prompt mee en zie je wat er nog beter kan.' }),
+      pageHeader({ key: 'pagina.promptbouwer', eyebrow: 'Promptbouwer', title: 'Bouw je eigen prompt', lead: 'Een goede prompt heeft een doel, context, een bron en een verwachting. Vul de stappen in; rechts groeit je prompt mee en zie je wat er nog beter kan.' }),
       el('div', { className: 'builder' }, [form, aside])
     ]);
     return { node, title: 'Promptbouwer' };

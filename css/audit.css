@@ -3624,3 +3624,6 @@ ul.wr-highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax
 .ag-section__text { margin: calc(-1 * var(--space-2)) 0 var(--space-4); color: var(--color-text-body); font-size: var(--fs-sm); max-width: 60ch; }
 .ag-sections .ag-card.is-testing { border-width: 1px; box-shadow: inset 4px 0 0 var(--vv-amber-500); }
 @media (max-width: 600px) { .ag-filter { flex: 1 1 100%; } .ag-filters > :last-child { margin-left: 0; } }
+
+/* Secties die een beheerder kan verplaatsen of verbergen (js/layout.js): voor bezoekers onzichtbaar omhulsel */
+.layout-block { display: contents; }

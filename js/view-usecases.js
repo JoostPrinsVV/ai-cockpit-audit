@@ -108,7 +108,7 @@
     const sort = B.ratingSort(filters, update, { value: 'default', label: 'Standaard' });
 
     const node = el('div', { className: 'page container' }, [
-      pageHeader({
+      pageHeader({ key: 'pagina.usecases',
         eyebrow: 'Usecases',
         title: `Copilot in de praktijk van ${ns.cockpit.active().label}`,
         lead: `Per fase van ${ns.cockpit.active().phases}: wat je met Copilot kunt doen, hoe het eruitziet in een demo en welke prompts je direct kunt gebruiken. Alle demo's werken met fictieve gegevens.`

@@ -125,23 +125,26 @@
 
     const weekly = weeklySection();
     const node = el('div', { className: 'page container' }, [
-      pageHeader({
+      pageHeader({ key: 'pagina.tips',
         eyebrow: 'Tips & tricks',
         title: 'Slimmer werken met Copilot',
         lead: 'Korte handleidingen voor de functies die het verschil maken. Iedere vrijdag komt er een nieuwe tip bij.'
       }),
-      weekly,
-      featured.length ? el('section', { className: weekly ? 'section' : 'section section--flush', attrs: { 'aria-labelledby': 'tips-featured' } }, [
-        el('h2', { className: 'section__title', text: 'Begin hier', attrs: { id: 'tips-featured' } }),
-        el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } }, featured.map((tip) => el('li', {}, [card(tip, 'h3', true)])))
-      ]) : null,
-      el('section', { className: 'section', attrs: { 'aria-labelledby': 'tips-all' } }, [
-        el('h2', { className: 'section__title', text: 'Alle tips', attrs: { id: 'tips-all' } }),
-        el('div', { className: 'filters' }, [
-          B.filterRow('Thema', themeGroup, B.extraFilters(saved.button), count)
-        ]),
-        grid,
-        empty
+      // Secties: in de bewerkmodus te verplaatsen en te verbergen (js/layout.js)
+      ...ns.layout.arrange('tips', [
+        { key: 'week', label: 'Tip van de week', node: weekly },
+        { key: 'begin-hier', label: 'Begin hier', node: featured.length ? el('section', { className: weekly ? 'section' : 'section section--flush', attrs: { 'aria-labelledby': 'tips-featured' } }, [
+          ns.layout.editable(el('h2', { className: 'section__title', attrs: { id: 'tips-featured' } }), 'tips.begin-hier.titel', 'Begin hier', { label: 'Kop' }),
+          el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } }, featured.map((tip) => el('li', {}, [card(tip, 'h3', true)])))
+        ]) : null },
+        { key: 'alle', label: 'Alle tips', node: el('section', { className: 'section', attrs: { 'aria-labelledby': 'tips-all' } }, [
+          ns.layout.editable(el('h2', { className: 'section__title', attrs: { id: 'tips-all' } }), 'tips.alle.titel', 'Alle tips', { label: 'Kop' }),
+          el('div', { className: 'filters' }, [
+            B.filterRow('Thema', themeGroup, B.extraFilters(saved.button), count)
+          ]),
+          grid,
+          empty
+        ]) }
       ])
     ]);
     update();

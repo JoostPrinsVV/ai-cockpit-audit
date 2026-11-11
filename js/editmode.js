@@ -273,6 +273,9 @@
     inline(titleSpan, (text) => setting('applicationTitle')(text.trim()), false, 'Naam van het platform');
     inline(view.querySelector('.hero__tagline'), setting('tagline'), false, 'Slogan');
     inline(view.querySelector('.hero__subtitle'), setting('applicationSubtitle'), true, 'Uitleg');
+    // Kickstart: titel en belofte (dezelfde teksten als in Beheer → Teksten)
+    inline(view.querySelector('.ks__title'), setting('kickstartTitle'), false, 'Titel van de Kickstart');
+    inline(view.querySelector('.ks__lead'), setting('kickstartLead'), true, 'Belofte van de Kickstart');
   }
 
   /* ---- Detailpagina: titel en ondertitel -------------------------------------------------- */
@@ -325,6 +328,122 @@
     }
     if (parsed.name === '') decorateHero(view);
     decorateDetail(view, parsed);
+    decorateTexts(view);
+    decorateBlocks(view);
+  }
+
+  /* ---- Vaste teksten (koppen, inleidingen, knoppen): js/layout.js ------------------------- */
+  function decorateTexts(view) {
+    if (!ns.layout.canEdit()) return;
+    view.querySelectorAll('[data-text-key]').forEach((node) => {
+      if (node.dataset.inline) return;
+      const { textKey, textDefault, textLabel } = node.dataset;
+      inline(node, (text) => ns.layout.setText(textKey, text, textDefault), node.dataset.textMultiline === 'true', textLabel);
+    });
+  }
+
+  /* ---- Secties verplaatsen en verbergen: js/layout.js ------------------------------------- */
+  let draggingBlock = null;
+
+  function blockKeys(block) {
+    return Array.from(block.parentElement.querySelectorAll(':scope > .layout-block'))
+      .filter((other) => other.dataset.layoutPage === block.dataset.layoutPage)
+      .map((other) => other.dataset.layoutKey);
+  }
+
+  function moveBlock(block, toIndex) {
+    const keys = blockKeys(block);
+    const from = keys.indexOf(block.dataset.layoutKey);
+    if (toIndex < 0 || toIndex >= keys.length || toIndex === from) return;
+    keys.splice(from, 1);
+    keys.splice(toIndex, 0, block.dataset.layoutKey);
+    // Ook verborgen secties die nu niet op de pagina staan, houden hun plek achteraan
+    const saved = ns.layout.pageLayout(block.dataset.layoutPage).order.filter((key) => !keys.includes(key));
+    ns.layout.setOrder(block.dataset.layoutPage, keys.concat(saved));
+  }
+
+  function decorateBlocks(view) {
+    if (!ns.layout.canEdit()) return;
+    const blocks = Array.from(view.querySelectorAll('.layout-block'));
+    blocks.forEach((block) => {
+      if (block.querySelector(':scope > .block-tools')) return;
+      const { layoutPage: page, layoutKey: key, layoutLabel: label } = block.dataset;
+      const hidden = block.classList.contains('is-hidden-block');
+      const index = () => blockKeys(block).indexOf(key);
+      const grip = el('span', { className: 'block-tools__grip', attrs: { title: 'Sleep om te verplaatsen', 'aria-hidden': 'true' } }, [icon('grip')]);
+      grip.addEventListener('mousedown', () => {
+        block.draggable = true;
+        window.addEventListener('mouseup', () => {
+          if (!draggingBlock) block.draggable = false;
+        }, { once: true });
+      });
+      const button = (iconName, text, onClick, extra) => {
+        const b = el('button', { className: 'block-tools__btn' + (extra || ''), attrs: { type: 'button', title: text, 'aria-label': text + ': ' + label } }, [icon(iconName), el('span', { className: 'block-tools__text', text })]);
+        b.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onClick();
+        });
+        return b;
+      };
+      const tools = el('div', { className: 'block-tools', attrs: { role: 'group', 'aria-label': 'Sectie: ' + label } }, [
+        grip,
+        el('span', { className: 'block-tools__label', text: label + (hidden ? ' · verborgen' : '') }),
+        button('arrow-up', 'Omhoog', () => moveBlock(block, index() - 1)),
+        button('arrow-down', 'Omlaag', () => moveBlock(block, index() + 1)),
+        hidden
+          ? button('eye', 'Tonen', () => ns.layout.setHidden(page, key, false), ' block-tools__btn--show')
+          : button('close', 'Verbergen', () => ns.layout.setHidden(page, key, true))
+      ]);
+      block.prepend(tools);
+
+      block.addEventListener('dragstart', (event) => {
+        if (event.target !== block) return;
+        draggingBlock = block;
+        block.classList.add('is-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        try {
+          event.dataTransfer.setData('text/plain', key);
+        } catch (error) {
+          /* oudere browsers */
+        }
+      });
+      block.addEventListener('dragend', () => {
+        block.draggable = false;
+        block.classList.remove('is-dragging');
+        blocks.forEach((other) => other.classList.remove('drop-before', 'drop-after'));
+        draggingBlock = null;
+      });
+      block.addEventListener('dragover', (event) => {
+        if (!draggingBlock || draggingBlock === block || draggingBlock.dataset.layoutPage !== page) return;
+        event.preventDefault();
+        const box = block.getBoundingClientRect();
+        const after = event.clientY > box.top + box.height / 2;
+        block.classList.toggle('drop-after', after);
+        block.classList.toggle('drop-before', !after);
+      });
+      block.addEventListener('dragleave', () => block.classList.remove('drop-before', 'drop-after'));
+      block.addEventListener('drop', (event) => {
+        if (!draggingBlock || draggingBlock === block) return;
+        event.preventDefault();
+        const after = block.classList.contains('drop-after');
+        block.classList.remove('drop-before', 'drop-after');
+        const keys = blockKeys(block).filter((k) => k !== draggingBlock.dataset.layoutKey);
+        const target = keys.indexOf(key) + (after ? 1 : 0);
+        moveBlock(draggingBlock, target);
+      });
+    });
+    // Eén knop per pagina om de standaardindeling terug te zetten
+    const first = blocks[0];
+    if (first && !view.querySelector('.block-reset')) {
+      const page = first.dataset.layoutPage;
+      const saved = ns.layout.pageLayout(page);
+      if (saved.order.length || saved.hidden.length) {
+        const reset = el('button', { className: 'block-reset btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('replay'), el('span', { text: 'Standaardindeling van deze pagina terugzetten' })]);
+        reset.addEventListener('click', () => ns.layout.resetPage(page));
+        first.parentElement.append(el('div', { className: 'container block-reset-wrap' }, [reset]));
+      }
+    }
   }
 
   // In de bewerkmodus: kaarten en links niet openen bij klikken (dan zou je niet kunnen typen)

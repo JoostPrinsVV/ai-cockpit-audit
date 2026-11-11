@@ -98,7 +98,7 @@
   /* ---- Overzicht ---------------------------------------------------------------- */
   function renderList() {
     const all = ns.content.trainings;
-    const head = pageHeader({
+    const head = pageHeader({ key: 'pagina.trainings',
       eyebrow: 'Trainingen',
       title: 'Trainingen terugkijken',
       lead: 'Opnames en naslagwerk van trainingen, webinars en lunchsessies over Copilot. Kijk terug wat je gemist hebt, of spring direct naar het onderdeel dat je nodig hebt.'
@@ -154,16 +154,19 @@
 
     const node = el('div', { className: 'page container' }, [
       head,
-      planned.length ? el('section', { className: 'section section--flush', attrs: { 'aria-labelledby': 'tr-planned' } }, [
-        el('h2', { className: 'section__title', text: 'Binnenkort', attrs: { id: 'tr-planned' } }),
-        el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } }, planned.map((training) => el('li', {}, [card(training)])))
-      ]) : null,
-      archive.length ? el('section', { className: planned.length ? 'section' : 'section section--flush', attrs: { 'aria-labelledby': 'tr-archive' } }, [
-        el('h2', { className: 'section__title', text: 'Terugkijken', attrs: { id: 'tr-archive' } }),
-        filterBlock,
-        grid
-      ]) : null,
-      el('div', { className: 'section' }, [requestCta()])
+      // Secties: in de bewerkmodus te verplaatsen en te verbergen (js/layout.js)
+      ...ns.layout.arrange('trainingen', [
+        { key: 'binnenkort', label: 'Binnenkort', node: planned.length ? el('section', { className: 'section section--flush', attrs: { 'aria-labelledby': 'tr-planned' } }, [
+          ns.layout.editable(el('h2', { className: 'section__title', attrs: { id: 'tr-planned' } }), 'trainingen.binnenkort.titel', 'Binnenkort', { label: 'Kop' }),
+          el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } }, planned.map((training) => el('li', {}, [card(training)])))
+        ]) : null },
+        { key: 'terugkijken', label: 'Terugkijken', node: archive.length ? el('section', { className: planned.length ? 'section' : 'section section--flush', attrs: { 'aria-labelledby': 'tr-archive' } }, [
+          ns.layout.editable(el('h2', { className: 'section__title', attrs: { id: 'tr-archive' } }), 'trainingen.terugkijken.titel', 'Terugkijken', { label: 'Kop' }),
+          filterBlock,
+          grid
+        ]) : null },
+        { key: 'aanvragen', label: 'Training aanvragen', node: el('div', { className: 'section' }, [requestCta()]) }
+      ])
     ]);
     if (archive.length) update();
     return { node, title: 'Trainingen' };

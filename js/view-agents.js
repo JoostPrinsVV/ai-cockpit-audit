@@ -124,7 +124,7 @@
   /* ---- Overzicht ---------------------------------------------------------------- */
   function renderList() {
     const all = ns.content.agents;
-    const head = pageHeader({
+    const head = pageHeader({ key: 'pagina.agents',
       eyebrow: 'Agents & tools',
       title: 'AI-agents en tools',
       lead: 'Welke AI-agents en -producten kun je gebruiken, waarvoor (en waarvoor niet), en hoe krijg je toegang? Per agent of tool vind je ook de usecases, tips en trainingen die erbij horen.'
@@ -162,10 +162,10 @@
         return el('section', { className: 'ag-section' + (section.status === 'Testfase' ? ' is-testing' : ''), attrs: { 'aria-labelledby': titleId } }, [
           el('h2', { className: 'ag-section__title', attrs: { id: titleId } }, [
             el('span', { className: 'ag-section__icon', attrs: { 'aria-hidden': 'true' } }, [icon(section.icon)]),
-            el('span', { text: section.title }),
+            ns.layout.editable(el('span'), 'agents.' + titleId + '.titel', section.title, { label: 'Kop' }),
             el('span', { className: 'p-group__count', text: String(members.length) })
           ]),
-          section.text ? el('p', { className: 'ag-section__text', text: section.text }) : null,
+          section.text ? ns.layout.editable(el('p', { className: 'ag-section__text' }), 'agents.' + titleId + '.tekst', section.text, { label: 'Uitleg', multiline: true }) : null,
           el('ul', { className: 'card-grid card-grid--3', attrs: { role: 'list' } }, members.map((agent) => el('li', {}, [card(agent, 'h3', { showNew })])))
         ]);
       }).filter(Boolean));
@@ -190,7 +190,7 @@
       ]),
       list,
       empty,
-      el('div', { className: 'section' }, [questionCta()])
+      ...ns.layout.arrange('agents', [{ key: 'vraag', label: 'Mis je een agent? (oproep)', node: el('div', { className: 'section' }, [questionCta()]) }])
     ]);
     update();
     return { node, title: 'Agents & tools' };

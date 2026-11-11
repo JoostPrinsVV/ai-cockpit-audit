@@ -637,11 +637,14 @@
   }
 
   /** Paginakop van een overzicht: eyebrow, titel, lead (een detailpagina: ns.blocks.detailHeader). */
+  /** options.key: dan zijn titel en inleiding in de bewerkmodus aan te passen (js/layout.js), als <key>.titel en <key>.inleiding. */
   function pageHeader(options) {
+    const key = options.key && ns.layout ? options.key : '';
+    const own = (node, part, fallback, label, multiline) => (key ? ns.layout.editable(node, key + '.' + part, fallback, { label, multiline }) : node);
     return el('header', { className: 'page-head' }, [
       options.eyebrow ? el('p', { className: 'page-head__eyebrow', text: options.eyebrow }) : null,
-      el('h1', { className: 'page-head__title', text: options.title, attrs: { tabindex: '-1' } }),
-      options.lead ? el('p', { className: 'page-head__lead', text: options.lead }) : null
+      own(el('h1', { className: 'page-head__title', text: options.title, attrs: { tabindex: '-1' } }), 'titel', options.title, 'Paginatitel'),
+      options.lead ? own(el('p', { className: 'page-head__lead', text: options.lead }), 'inleiding', options.lead, 'Inleiding', true) : null
     ]);
   }
 

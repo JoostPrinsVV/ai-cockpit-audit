@@ -187,7 +187,7 @@
     const sort = B.ratingSort(filters, update, { value: 'phase', label: 'Per fase' });
 
     const node = el('div', { className: 'page container' }, [
-      pageHeader({
+      pageHeader({ key: 'pagina.prompts',
         eyebrow: 'Promptdatabase',
         title: 'Prompts die je direct kunt gebruiken',
         lead: 'Kopieer een prompt, plak hem in Copilot en vul de [PLAATSHOUDERS] in. Of vul ze hier alvast in via "Invullen". Prompts met een demo horen bij een usecase.'

@@ -1249,3 +1249,54 @@ ul.onderhoud-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; l
 .onderhoud-item__type { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.06em; text-transform: uppercase; }
 .onderhoud-item__text { margin: 0; color: var(--color-text-body); font-size: var(--fs-sm); }
 .onderhoud-item__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+/* Secties verplaatsen en verbergen in de bewerkmodus (js/layout.js, js/editmode.js) */
+.is-editing .layout-block {
+  display: block;
+  position: relative;
+  margin-block: var(--space-4);
+  padding-top: 2.6rem;
+  border: 2px dashed color-mix(in srgb, var(--vv-teal) 35%, transparent);
+  border-radius: var(--radius);
+}
+.is-editing .layout-block:hover { border-color: var(--vv-teal); }
+.is-editing .layout-block.is-hidden-block > :not(.block-tools) { opacity: 0.35; filter: grayscale(1); }
+.is-editing .layout-block.is-dragging { opacity: 0.45; }
+.is-editing .layout-block.drop-before { box-shadow: 0 -6px 0 -2px var(--vv-teal); }
+.is-editing .layout-block.drop-after { box-shadow: 0 6px 0 -2px var(--vv-teal); }
+.block-tools {
+  position: absolute;
+  z-index: 7;
+  top: 0.5rem;
+  left: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px;
+  border-radius: var(--radius-pill);
+  background: var(--vv-navy);
+  color: var(--vv-white);
+  box-shadow: var(--shadow-float);
+  font-size: var(--fs-sm);
+}
+.block-tools__grip { display: grid; place-items: center; width: 1.8rem; height: 1.8rem; cursor: grab; }
+.block-tools__grip:active { cursor: grabbing; }
+.block-tools__grip .icon, .block-tools__btn .icon { width: 1rem; height: 1rem; }
+.block-tools__label { padding-inline: 4px 8px; font-weight: var(--fw-bold); white-space: nowrap; }
+.block-tools__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--vv-white);
+  font: inherit;
+  cursor: pointer;
+}
+.block-tools__btn:hover, .block-tools__btn:focus-visible { background: var(--on-dark-fill-strong); }
+.block-tools__btn--show { background: var(--vv-teal); }
+.block-reset-wrap { display: flex; justify-content: flex-end; margin-block: var(--space-4); }
+@media (max-width: 600px) { .block-tools__text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }

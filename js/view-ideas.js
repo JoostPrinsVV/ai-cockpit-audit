@@ -617,14 +617,17 @@
     ]);
 
     const node = el('div', { className: 'page container' }, [
-      pageHeader({
+      pageHeader({ key: 'pagina.ideas',
         eyebrow: 'Ideeënhub',
         title: 'Jouw ideeën, vragen en verzoeken',
         lead: 'Dit platform groeit met wat jullie inbrengen. Heb je een idee voor een usecase, loop je ergens tegenaan, wil je een demo voor je team of heb je een prompt die goed werkt? Laat het weten.'
       }),
-      el('div', { className: 'ideas-layout' }, [formCard, el('div', { className: 'ideas-layout__side' }, [how, mine.node])]),
-      route,
-      hubList(mine)
+      // Secties: in de bewerkmodus te verplaatsen en te verbergen (js/layout.js)
+      ...ns.layout.arrange('ideeen', [
+        { key: 'insturen', label: 'Insturen', node: el('div', { className: 'ideas-layout' }, [formCard, el('div', { className: 'ideas-layout__side' }, [how, mine.node])]) },
+        { key: 'route', label: 'Van idee tot toepassing (route)', node: route },
+        { key: 'hub', label: 'Uit de hub', node: hubList(mine) }
+      ])
     ]);
     return { node, title: 'Ideeënhub' };
   }
