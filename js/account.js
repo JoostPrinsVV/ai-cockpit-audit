@@ -83,6 +83,7 @@
 
   /* ---- Voor iedereen ------------------------------------------------------------------ */
   let notice = null; // melding na terugkomen van het inloggen (getoond op Mijn logboek)
+  let listening = false;
 
   function init(config) {
     options = Object.assign(options, (config && config.brevet) || {});
@@ -93,6 +94,10 @@
       store();
     }
     notice = consumeRedirect();
+    if (!listening) {
+      listening = true;
+      window.addEventListener('storage', onStorage);
+    }
   }
 
   /** Wie ben je: { email, name } of null (niet ingelogd). */
@@ -107,18 +112,75 @@
     return { email: session.email, name };
   }
 
-  /** Een geldig token (verlengt zo nodig), of '' als je niet bent ingelogd. */
-  async function token() {
-    if (!session) return '';
-    if (Date.now() < session.expiresAt - 60000) return session.token;
-    const data = await ns.central.refreshParticipant(session.refresh);
-    if (!data) {
+  const fresh = () => Boolean(session) && Date.now() < session.expiresAt - 60000;
+
+  /**
+   * De sessie zoals die nu in de opslag staat: een ander tabblad kan hem hebben verlengd (dan is de code
+   * om te verlengen die dit tabblad nog had, verbruikt). Geeft true als er een andere sessie is overgenomen.
+   */
+  function adopt() {
+    const stored = storage.get(KEY, null);
+    if (!stored || !stored.token || !allowed(stored.email)) return false;
+    if (session && stored.token === session.token && stored.refresh === session.refresh) return false;
+    session = stored;
+    return true;
+  }
+
+  let refreshing = null; // één verlenging tegelijk (meerdere verzoeken wachten op dezelfde)
+
+  /**
+   * Een geldig token (verlengt zo nodig), of '': niet ingelogd, of verlengen lukt nu even niet (geen
+   * verbinding). Uitloggen gebeurt alleen als Supabase de sessie echt weigert, niet bij een hapering.
+   */
+  function token() {
+    if (!session) return Promise.resolve('');
+    if (fresh()) return Promise.resolve(session.token);
+    if (!refreshing) {
+      refreshing = renew().finally(() => {
+        refreshing = null;
+      });
+    }
+    return refreshing;
+  }
+
+  async function renew() {
+    adopt();
+    if (fresh()) return session.token;
+    const used = session.refresh;
+    const result = await ns.central.refreshParticipant(used);
+    if (!session) return ''; // intussen uitgelogd
+    if (result.status === 'ok') {
+      session = fromAuth(result.data);
+      store();
+      return session.token;
+    }
+    if (result.status === 'invalid') {
+      // Net door een ander tabblad verlengd? Dan gaat het met die sessie verder.
+      if (adopt() && session.refresh !== used) {
+        if (fresh()) return session.token;
+        const again = await ns.central.refreshParticipant(session.refresh);
+        if (!session) return '';
+        if (again.status === 'ok') {
+          session = fromAuth(again.data);
+          store();
+          return session.token;
+        }
+        if (again.status === 'failed') return '';
+      }
       signOut();
       return '';
     }
-    session = fromAuth(data);
-    store();
-    return session.token;
+    // Geen verbinding of een storing: ingelogd blijven. Het oude token werkt nog tot het echt verloopt.
+    return Date.now() < session.expiresAt - 5000 ? session.token : '';
+  }
+
+  /** In een ander tabblad ingelogd, uitgelogd of verlengd: dit tabblad doet mee. */
+  function onStorage(event) {
+    if (!event.key || !event.key.endsWith(':' + KEY)) return;
+    const before = session ? session.email : '';
+    const stored = storage.get(KEY, null);
+    session = stored && stored.token && allowed(stored.email) ? stored : null;
+    if ((session ? session.email : '') !== before) emit();
   }
 
   /**

@@ -27,7 +27,11 @@
   async function account() {
     const email = me();
     if (!email) return null;
-    return ns.central.brevetAccount(await ns.account.token(), email);
+    const token = await ns.account.token();
+    // Nog ingelogd, maar de sessie is nu niet te verlengen (geen verbinding): een fout, zodat het logboek
+    // het later opnieuw probeert. Niet 'geen account': dan zou je 'Doe mee' zien terwijl je al meedoet.
+    if (!token && me()) throw new Error('de sessie is nu niet te verlengen');
+    return ns.central.brevetAccount(token, email);
   }
 
   /** Je account aanmaken of bijwerken; geeft het account. */

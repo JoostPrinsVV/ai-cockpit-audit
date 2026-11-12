@@ -1549,10 +1549,15 @@
 
     /* ---- slot met pincode ---- */
     describe('Slot met pincode (js/lock.js)');
-    await test('de vingerafdruk in de config hoort bij de pincode van de snackbar; spaties tellen niet', async () => {
-      equal(await ns.lock.hash('26102026'), ns.config.lockPinHash, 'pincode');
-      equal(await ns.lock.hash(' 26102026 '), ns.config.lockPinHash, 'met spaties');
-      ok((await ns.lock.hash('12345678')) !== ns.config.lockPinHash, 'andere pincode');
+    // Met een proefcode, nooit de echte pincode: dit bestand is openbaar (de repository en /tests/ op de site)
+    await test('de vingerafdruk van een pincode staat vast; spaties tellen niet', async () => {
+      const print = 'bf32d344b23fa2378b42cbcb2c90ad8907b5248c1768aed73ea635e22e8f2b35';
+      equal(await ns.lock.hash('0000'), print, 'proefcode');
+      equal(await ns.lock.hash(' 0000 '), print, 'met spaties');
+      ok((await ns.lock.hash('0001')) !== print, 'andere pincode');
+    });
+    await test('de config heeft een vingerafdruk (of geen slot), nooit de pincode zelf', () => {
+      ok(/^([0-9a-f]{64})?$/.test(String(ns.config.lockPinHash || '')), 'lockPinHash');
     });
 
     /* ---- route van een idee ---- */

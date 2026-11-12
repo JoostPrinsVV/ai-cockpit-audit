@@ -94,6 +94,21 @@ alter table public.audit_ideas enable row level security;
 -- Kolomrechten: bezoekers mogen alleen deze kolommen invullen ...
 revoke all on public.audit_ideas from anon, authenticated;
 grant insert (namespace, ref, kind, title, body, phase, name, email, allow_public) on public.audit_ideas to anon, authenticated;
+-- Ook de kolommen van latere stappen, als die er al zijn (stap 11: target; stap 13 en 16: details).
+-- De revoke hierboven trekt ook die kolomrechten in; zonder deze regels zou opnieuw uitvoeren van dit
+-- bestand de verbetervoorstellen, 'AI-specialist invliegen' en de testervaringen laten mislukken.
+do $columns$
+declare
+  v_column text;
+begin
+  foreach v_column in array array['target', 'details'] loop
+    if exists (select 1 from information_schema.columns
+               where table_schema = 'public' and table_name = 'audit_ideas' and column_name = v_column) then
+      execute format('grant insert (%I) on public.audit_ideas to anon, authenticated', v_column);
+    end if;
+  end loop;
+end;
+$columns$;
 -- ... en alleen deze kolommen lezen (nooit naam of e-mailadres).
 grant select (id, namespace, ref, created_at, kind, title, body, phase, status, answer, answered_at, is_public, votes) on public.audit_ideas to anon;
 -- Ingelogd: alles, maar de policies hieronder laten alleen beheerders toe.

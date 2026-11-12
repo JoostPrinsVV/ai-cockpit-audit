@@ -245,7 +245,8 @@
     const stop = ns.brevet.onChange(render);
     // Na inloggen of uitloggen: opnieuw laden
     const stopAccount = ns.account.onChange(() => ns.brevet.load());
-    if (ns.brevet.state().status === 'idle') ns.brevet.load();
+    // Nog niet geladen, of de vorige keer mislukt (geen verbinding): bij het openen van je logboek opnieuw
+    if (['idle', 'failed'].includes(ns.brevet.state().status)) ns.brevet.load();
     return { node, destroy: () => { stop(); stopAccount(); } };
   }
 

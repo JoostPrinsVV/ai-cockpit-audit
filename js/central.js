@@ -775,14 +775,18 @@
     }
   }
 
-  /** De sessie van een deelnemer verlengen; null als dat niet meer kan. */
+  /**
+   * De sessie van een deelnemer verlengen: { status: 'ok', data }, 'invalid' (Supabase weigert deze sessie:
+   * opnieuw inloggen) of 'failed' (geen verbinding, te druk, storing: later nog eens, de sessie blijft).
+   */
   async function refreshParticipant(refresh) {
-    if (!enabled || !refresh) return null;
+    if (!enabled || !refresh) return { status: 'invalid' };
     try {
       const response = await request('/auth/v1/token?grant_type=refresh_token', post({ refresh_token: refresh }));
-      return response.ok ? response.json() : null;
+      if (response.ok) return { status: 'ok', data: await response.json() };
+      return { status: [400, 401, 403].includes(response.status) ? 'invalid' : 'failed' };
     } catch (error) {
-      return null;
+      return { status: 'failed' };
     }
   }
 

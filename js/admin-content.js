@@ -1010,7 +1010,9 @@
     const changes = changeTracker(() => fields.snapshot() + statusSelect.value);
 
     const save = el('button', { className: canPublish ? 'btn btn--secondary' : 'btn btn--primary', attrs: { type: 'submit', disabled: !canEdit } }, [icon('check'), el('span', { text: drafting() && !canPublish ? 'Opslaan als voorstel' : 'Opslaan' })]);
-    const saveAndPublish = canPublish ? el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('send'), el('span', { text: 'Opslaan en publiceren' })]) : null;
+    // Geen submit-knop: Enter in een tekstveld drukt op de eerste submit-knop van het formulier, en dat mag
+    // nooit 'publiceren' zijn (dan staat een half bewerkt item live). Enter = Opslaan.
+    const saveAndPublish = canPublish ? el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [icon('send'), el('span', { text: 'Opslaan en publiceren' })]) : null;
     const cancel = el('a', { className: 'btn btn--secondary', attrs: { href: schema.single ? scope.base : `${scope.base}/${type}` } }, [el('span', { text: schema.single ? 'Terug' : 'Terug naar de lijst' })]);
     const viewLink = existing && schema.route && existing.status !== 'trash'
       ? el('a', { className: 'btn btn--quiet', attrs: { href: `#/${schema.route}/${existing.id}` } }, [icon('eye'), el('span', { text: 'Bekijk op de site' })])
@@ -1052,10 +1054,29 @@
     // Agent: de testervaringen van collega's (js/admin-testfase.js)
     const testPanel = type === 'agent' && existing && ns.adminTestfase ? ns.adminTestfase.panel(existing.id, data) : null;
 
-    form.addEventListener('submit', async (event) => {
+    /** De knoppen uit zolang er een opslag loopt (geen dubbele opslag met dezelfde versie). */
+    const lockButtons = (on) => {
+      save.disabled = on || !canEdit;
+      if (saveAndPublish) saveAndPublish.disabled = on || !canEdit;
+    };
+    let submitting = false;
+    /** publishNow: 'Opslaan en publiceren' geldt alleen voor deze ene keer (ook als er iets misgaat of je annuleert). */
+    async function submit(publishNow) {
+      if (submitting || !canEdit) return;
+      submitting = true;
+      try {
+        await store(publishNow);
+      } finally {
+        submitting = false;
+      }
+    }
+    form.addEventListener('submit', (event) => {
       event.preventDefault();
-      // Welke knop: 'Opslaan en publiceren' geldt alleen voor deze ene keer (ook als er iets misgaat of je annuleert)
-      const publishNow = Boolean(saveAndPublish) && event.submitter === saveAndPublish;
+      submit(false);
+    });
+    if (saveAndPublish) saveAndPublish.addEventListener('click', () => submit(true));
+
+    async function store(publishNow) {
       if (!fields.valid(form)) return;
       const newId = fields.newId();
       const record = fields.collect();
@@ -1069,7 +1090,7 @@
       if (renamed && !(await confirm(`Het adres verandert van "${existing.id}" naar "${newId}". Links naar het oude adres werken dan niet meer.`, { title: 'Adres wijzigen?', confirmLabel: 'Adres wijzigen' }))) return;
       const position = existing ? base.position : nextPosition(type);
       saving = true;
-      save.disabled = true;
+      lockButtons(true);
       try {
         if (drafting()) {
           // Werkversie: pas live na publiceren
@@ -1095,9 +1116,9 @@
         fields.showError('Opslaan mislukt: ' + error.message);
       } finally {
         saving = false;
-        save.disabled = !canEdit;
+        lockButtons(false);
       }
-    });
+    }
 
     if (trash) {
       trash.addEventListener('click', async () => {

@@ -368,7 +368,10 @@
     "Haal persoonsgegevens weg. Weet je zeker dat het mag, klik dan nog een keer op versturen.": "Remove personal data. If you're sure it's allowed, click send once more.",
     "Bedankt voor het testen": "Thanks for testing",
     "Je ervaring is binnen bij het AI-team. Samen met die van andere testers bepaalt hij of de agent geaccepteerd wordt.": "The AI team has received your experience. Together with those of other testers, it decides whether the agent gets accepted.",
-    "Je ervaring is niet bewaard. Probeer het straks nog eens, of stuur hem via de ideeënhub.": "Your experience wasn't saved. Try again later, or send it via the ideas hub.",
+    "Je antwoorden staan er nog. Probeer het zo nog eens, of kopieer je ervaring en stuur hem via de ideeënhub.": "Your answers are still here. Try again in a moment, or copy your experience and send it via the ideas hub.",
+    "Kopieer je ervaring": "Copy your experience",
+    "Je ervaring staat op het klembord": "Your experience is on the clipboard",
+    "Dit lijkt geen geldig e-mailadres.": "This doesn't look like a valid email address.",
     "Testervaring": "Test experience",
     // Zoekvragen zonder resultaat (js/search-gaps.js)
     "Zoektermen zonder resultaat tellen we anoniem mee (zonder cijfers), zodat het AI-team ziet wat er ontbreekt. Typ dus geen klant- of persoonsnamen.": "We count search terms without results anonymously (without numbers), so the AI team can see what's missing. So don't type client or personal names.",

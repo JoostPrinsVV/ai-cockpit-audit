@@ -195,6 +195,12 @@
     const account = ns.account ? ns.account.current() : null;
     if (account) email.value = account.email;
     const useError = el('p', { className: 'field__error', attrs: { id: id + '-use-error' } });
+    const emailError = el('p', { className: 'field__error', attrs: { id: id + '-email-error' } });
+    email.setAttribute('aria-describedby', id + '-email-error');
+    email.addEventListener('input', () => {
+      emailError.textContent = '';
+      email.removeAttribute('aria-invalid');
+    });
     const formError = el('div', { className: 'form-error', attrs: { role: 'alert', hidden: true } });
     const cancel = el('button', { className: 'btn btn--secondary', attrs: { type: 'button' } }, [el('span', { text: 'Annuleren' })]);
     const send = el('button', { className: 'btn btn--primary', attrs: { type: 'submit' } }, [icon('send'), el('span', { text: 'Versturen' })]);
@@ -224,7 +230,7 @@
       el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-better' } }, ['Wat kan beter, of ging mis? ', optional.cloneNode(true)]), better]),
       el('div', { className: 'field-row' }, [
         el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-name' } }, ['Je naam ', optional.cloneNode(true)]), name]),
-        el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-email' } }, ['Je e-mailadres ', optional.cloneNode(true)]), email])
+        el('div', { className: 'field' }, [el('label', { className: 'field__label', attrs: { for: id + '-email' } }, ['Je e-mailadres ', optional.cloneNode(true)]), email, emailError])
       ]),
       el('p', { className: 'privacy' }, [icon('shield'), el('span', { text: 'Noem geen klantnamen, dossier- of persoonsgegevens. Je ervaring ziet alleen het AI-team; hij komt nooit in de ideeënhub.' })]),
       formError,
@@ -241,19 +247,33 @@
       if (opener && opener.isConnected) opener.focus({ preventScroll: true });
     });
 
-    function done(sent) {
+    function done() {
       const ok = el('button', { className: 'btn btn--primary', attrs: { type: 'button' } }, [el('span', { text: 'Sluiten' })]);
       ok.addEventListener('click', close);
-      form.replaceChildren(el('div', { className: 'flyin-done' + (sent ? ' is-sent' : '') }, [
-        el('span', { className: 'flyin-done__mark', attrs: { 'aria-hidden': 'true' } }, [icon(sent ? 'check-circle' : 'alert')]),
-        el('h2', { className: 'flyin-done__title', attrs: { id: id + '-heading' }, text: sent ? 'Bedankt voor het testen' : 'Versturen lukte niet' }),
-        el('p', { className: 'flyin-done__text', text: sent
-          ? 'Je ervaring is binnen bij het AI-team. Samen met die van andere testers bepaalt hij of de agent geaccepteerd wordt.'
-          : 'Je ervaring is niet bewaard. Probeer het straks nog eens, of stuur hem via de ideeënhub.' }),
+      form.replaceChildren(el('div', { className: 'flyin-done is-sent' }, [
+        el('span', { className: 'flyin-done__mark', attrs: { 'aria-hidden': 'true' } }, [icon('check-circle')]),
+        el('h2', { className: 'flyin-done__title', attrs: { id: id + '-heading' }, text: 'Bedankt voor het testen' }),
+        el('p', { className: 'flyin-done__text', text: 'Je ervaring is binnen bij het AI-team. Samen met die van andere testers bepaalt hij of de agent geaccepteerd wordt.' }),
         el('div', { className: 'improve__actions flyin-done__actions' }, [ok])
       ]));
       dialog.scrollTop = 0;
       ok.focus();
+    }
+
+    /** Versturen mislukt (geen verbinding, storing): het formulier blijft staan, je raakt niets kwijt. */
+    function failed(text) {
+      const copy = el('button', { className: 'btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('copy'), el('span', { text: 'Kopieer je ervaring' })]);
+      copy.addEventListener('click', async () => {
+        const ok = await ns.ui.copyText(text);
+        ns.ui.toast(ok ? 'Je ervaring staat op het klembord' : 'Kopiëren lukte niet', { tone: ok ? 'success' : 'warning' });
+      });
+      formError.replaceChildren(
+        el('p', { className: 'form-error__title' }, [icon('alert'), el('span', { text: 'Versturen lukte niet.' })]),
+        el('p', { text: 'Je antwoorden staan er nog. Probeer het zo nog eens, of kopieer je ervaring en stuur hem via de ideeënhub.' }),
+        el('div', { className: 'form-error__actions' }, [copy])
+      );
+      formError.hidden = false;
+      formError.scrollIntoView({ block: 'nearest' });
     }
 
     form.addEventListener('submit', async (event) => {
@@ -263,6 +283,14 @@
       useError.textContent = use ? '' : 'Kies of je hem zou gebruiken.';
       if (!use) {
         useGroup.querySelector('input').focus();
+        return;
+      }
+      // Optioneel, maar als het er staat moet het een adres zijn (de database weigert de inzending anders)
+      const address = email.value.trim();
+      if (address && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address)) {
+        emailError.textContent = 'Dit lijkt geen geldig e-mailadres.';
+        email.setAttribute('aria-invalid', 'true');
+        email.focus();
         return;
       }
       const goodText = good.value.trim();
@@ -283,23 +311,23 @@
         betterText ? 'Wat kan beter: ' + betterText : ''
       ].filter(Boolean).join('\n').slice(0, 4000);
       if (!ns.central.isEnabled()) {
-        done(false);
+        failed(body);
         return;
       }
       send.disabled = true;
       const ref = ns.ui.randomId();
       const title = ('Testervaring: ' + agent.title).slice(0, 140);
-      const result = await ns.central.submitIdea({ ref, kind: KIND, title, body, phase: null, name: name.value.trim() || null, email: email.value.trim() || null, allowPublic: false, details: info });
+      const result = await ns.central.submitIdea({ ref, kind: KIND, title, body, phase: null, name: name.value.trim() || null, email: address || null, allowPublic: false, details: info });
       if (result === 'ok') {
         rememberShared(agent.id);
         // Voor je logboek (js/brevet.js): AI-miles, per agent één keer, als je meedoet
         document.dispatchEvent(new CustomEvent('ai:getest', { detail: { id: agent.id } }));
         if (ns.ideas) ns.ideas.rememberSubmission({ ref, kind: KIND, title, at: new Date().toISOString() });
-        done(true);
+        done();
         return;
       }
       send.disabled = false;
-      done(false);
+      failed(body);
     });
 
     document.body.append(dialog);

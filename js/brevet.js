@@ -531,6 +531,13 @@
   const state = { status: 'idle', account: null, facts: [], royalties: [], result: null, loadedAt: 0 };
   const pending = new Set();
   let loading = null;
+  /* Laden mislukt (geen verbinding, storing): vanzelf opnieuw, steeds wat later, zolang je bent ingelogd.
+     Ook bij terugkomen in het tabblad en zodra er weer verbinding is (zie retryLater, retryNow en listen). */
+  const RETRY_FIRST = 15000;
+  const RETRY_MAX = 300000;
+  let retryDelay = RETRY_FIRST;
+  let retryTimer = 0;
+  let failedAt = 0;
 
   const config = () => ((ns.app && ns.app.config ? ns.app.config() : ns.config) || {}).brevet || {};
   const enabled = () => config().enabled !== false;
@@ -542,32 +549,64 @@
     if (!enabled()) return Promise.resolve(state);
     if (loading) return loading;
     state.status = state.status === 'ready' ? 'ready' : 'loading';
+    window.clearTimeout(retryTimer);
     loading = (async () => {
+      let loaded = false;
       try {
         const data = ns.brevetData;
-        state.account = await data.account();
-        if (joined()) {
-          const [facts, royalties] = await Promise.all([data.facts(), data.royalties()]);
-          state.facts = facts;
-          state.royalties = royalties;
-        } else {
-          state.facts = [];
-          state.royalties = [];
-        }
-        state.result = joined() ? compute(state.facts, { royalties: state.royalties }) : null;
+        // Pas in de staat zetten als alles binnen is: mislukt het halverwege, dan blijft staan wat er stond
+        const account = await data.account();
+        const joinedNow = Boolean(account && account.joined_at);
+        const [facts, royalties] = joinedNow ? await Promise.all([data.facts(), data.royalties()]) : [[], []];
+        state.account = account;
+        state.facts = facts;
+        state.royalties = royalties;
+        state.result = joinedNow ? compute(facts, { royalties }) : null;
         state.status = 'ready';
         state.loadedAt = Date.now();
+        retryDelay = RETRY_FIRST;
+        failedAt = 0;
+        loaded = true;
       } catch (error) {
         console.warn('[AI-cockpit] Logboek laden mislukt', error);
-        state.status = 'failed';
+        // Een hapering bij het verversen: het logboek dat er al stond (van dezelfde persoon) blijft bruikbaar
+        const person = ns.account ? ns.account.current() : null;
+        const same = Boolean(state.loadedAt && state.account && person && state.account.email === person.email);
+        if (!same) {
+          state.account = null;
+          state.facts = [];
+          state.royalties = [];
+          state.result = null;
+        }
+        state.status = same ? 'ready' : 'failed';
+        retryLater();
       } finally {
         loading = null;
       }
       emit();
-      if (joined()) await checkPromotion();
+      if (loaded && joined()) {
+        try {
+          await checkPromotion();
+        } catch (error) {
+          console.warn('[AI-cockpit] Brevet bijwerken mislukt', error);
+        }
+      }
       return state;
     })();
     return loading;
+  }
+
+  function retryLater() {
+    failedAt = Date.now();
+    window.clearTimeout(retryTimer);
+    retryTimer = window.setTimeout(() => {
+      if (failedAt && ns.account && ns.account.current()) load();
+    }, retryDelay);
+    retryDelay = Math.min(retryDelay * 2, RETRY_MAX);
+  }
+  /** Staat er nog een mislukte keer open? Dan nu opnieuw (terug in het tabblad, weer verbinding, Mijn logboek open). */
+  function retryNow() {
+    if (failedAt && !loading && ns.account && ns.account.current()) load();
   }
 
   /** Een promotie sinds de vorige keer: één keer het venster (js/brevet-ui.js), in welk tabblad ook. */
@@ -707,8 +746,12 @@
     });
     // Terug in het tabblad: misschien heeft het AI-team iets toegekend
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && joined() && Date.now() - state.loadedAt > 120000) load();
+      if (document.visibilityState !== 'visible') return;
+      if (failedAt) retryNow();
+      else if (joined() && Date.now() - state.loadedAt > 120000) load();
     });
+    // Weer verbinding: een mislukte keer meteen opnieuw
+    window.addEventListener('online', retryNow);
     if (ns.profile) ns.profile.onChange(() => {
       if (joined() && ns.profile.get().naam) record('profile_done', '');
     });
