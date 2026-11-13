@@ -472,6 +472,69 @@
       }
     });
 
+    /* ---- Beheer → Start: het dashboard Deze week ---- */
+    describe('Dashboard Deze week (js/admin-dashboard.js)');
+    await test('week, vrijdag en dagwoorden', () => {
+      const D = ns.adminDashboard;
+      equal(D.week('2026-11-13'), { monday: '2026-11-09', sunday: '2026-11-15', number: 46 }, 'week 46');
+      equal(D.week('2027-01-01').number, 53, 'jaargrens: 1 januari 2027 valt in week 53');
+      equal(D.week('2026-12-29').number, 53, '29 december 2026 ook');
+      equal([D.nextFriday('2026-11-11'), D.nextFriday('2026-11-13'), D.nextFriday('2026-11-14')], ['2026-11-13', '2026-11-20', '2026-11-20'], 'woensdag: deze vrijdag; vrijdag zelf: de volgende');
+      equal([D.dayWords('2026-11-13T09:00:00Z', '2026-11-13'), D.dayWords('2026-11-12T09:00:00Z', '2026-11-13')], ['vandaag', 'gisteren']);
+    });
+    await test('te doen: op urgentie, alleen met rechten, en weg zodra het gedaan is', () => {
+      const D = ns.adminDashboard;
+      const today = '2026-11-13';
+      const now = new Date('2026-11-13T10:00:00');
+      const ideas = [
+        { id: 1, kind: 'verzoek', title: 'Prompt voor: huurcontract', status: 'nieuw', created_at: '2026-11-10T09:00:00' },
+        { id: 2, kind: 'vraag', title: 'PDF met tabellen', status: 'nieuw', created_at: '2026-11-12T09:00:00' },
+        { id: 3, kind: 'verbetering', title: 'Betere prompt', status: 'nieuw', created_at: '2026-11-13T08:00:00' },
+        { id: 4, kind: 'agendapunt', title: 'Excel', status: 'nieuw', session: '2026-11-19', created_at: '2026-11-13T08:30:00' },
+        { id: 5, kind: 'agendapunt', title: 'Agents', status: 'gepland', session: '2026-11-05', created_at: '2026-10-30T08:30:00' },
+        { id: 6, kind: 'idee', title: 'Oud idee', status: 'gerealiseerd', created_at: '2026-09-01T08:00:00' },
+        { id: 7, kind: 'idee', title: 'Opgepakt idee', status: 'gepland', created_at: '2026-10-01T08:00:00' }
+      ];
+      const data = {
+        ideas,
+        reviews: [{ comment: 'Top', is_public: false }, { comment: '', is_public: false }],
+        rows: [
+          { namespace: 'ai-test', type: 'prompt', id: 'a', status: 'published', data: { title: 'A' }, draft: { data: { title: 'A nieuw' } } },
+          { namespace: 'ai-test', type: 'tip', id: 'b', status: 'draft', data: { title: 'B' }, draft: { data: { title: 'B' } }, draft_kind: 'voorstel' },
+          { namespace: 'ai-ander', type: 'tip', id: 'c', status: 'draft', data: { title: 'C' } },
+          { namespace: 'ai-test', type: 'tip', id: 'd', status: 'draft', data: { title: 'D' }, draft: { data: { title: 'D' } }, publish_at: '2026-11-16T09:00:00Z' }
+        ],
+        tips: [{ id: 'w1', title: 'Tip 1', weekly: true, release: '2026-11-06' }],
+        trainings: [{ id: 't', title: 'Copilot in Excel', date: '2026-11-02', available: false }],
+        openCockpit: { sessions: [{ date: '2026-11-05', location: 'Leeuwarden' }, { date: '2026-11-19', location: 'Groningen' }] },
+        usage: null, goals: null, onderhoud: { text: '2 zoekvragen zonder resultaat', due: false }, newsletterDay: false
+      };
+      const all = D.compute(data, { today, now, lastVisit: '2026-11-12T12:00:00', namespaces: ['ai-test'], has: () => true });
+      equal(all.todo.map((item) => item.id), ['inzendingen', 'verbeteringen', 'agendapunten', 'sessie-2026-11-05', 'voorstellen', 'weektip', 'reviews', 'werkversies', 'trainingen', 'portfolio', 'onderhoud'], 'op urgentie (een verlopen belofte eerst)');
+      const byId = (id) => all.todo.find((item) => item.id === id);
+      equal([byId('inzendingen').tone, byId('inzendingen').badge, byId('inzendingen').items[0].meta], ['late', 'Belofte verlopen', 'Belofte verlopen'], 'de prompt op maat (1 werkdag) is te laat, en staat in het punt bovenaan');
+      equal(byId('inzendingen').text, '1 verzoek · 1 vraag', 'per soort');
+      equal(byId('sessie-2026-11-05').text, 'Nog te doen: reactie bij 1 agendapunt en het nieuws of een samenvatting.', 'sessie afronden');
+      equal([byId('voorstellen').items[0].title, byId('werkversies').items[0].title], ['B', 'A nieuw'], 'werkversies van deze discipline, niet van een andere');
+      equal(byId('weektip').title, 'Plan de tip van vrijdag 20 nov.', 'nog geen tip voor vrijdag');
+      equal(byId('portfolio').title, '2 ideeën nog niet beoordeeld', 'opgepakte ideeën zonder score');
+      equal(all.counts, { todo: 11, late: 1, unseen: 2 }, 'tellers');
+      equal(all.fresh.map((item) => item.id), [4, 3, 2, 1], 'nieuw binnen: de afgelopen week, nieuwste eerst');
+      equal(all.fresh.filter((item) => item.unseen).map((item) => item.id), [4, 3], 'stip bij wat na je vorige bezoek binnenkwam');
+      equal(all.info.map((item) => item.id), ['sessie', 'gepland', 'weektip'], 'goed om te weten');
+
+      const editor = D.compute(data, { today, now, lastVisit: '', namespaces: ['ai-test'], has: (id) => id === 'inhoud' });
+      equal(editor.todo.map((item) => item.id), ['voorstellen', 'weektip', 'werkversies', 'trainingen'], 'een redacteur ziet alleen wat bij de inhoud hoort');
+      equal(editor.fresh, [], 'en geen inzendingen');
+
+      const handled = ideas.map((item) => Object.assign({}, item, { status: item.kind === 'agendapunt' ? 'beantwoord' : 'afgewezen' }));
+      const done = D.compute({
+        ideas: handled, reviews: [], rows: [], tips: data.tips.concat({ id: 'w2', title: 'Tip 2', weekly: true, release: '2026-11-20' }),
+        trainings: [], openCockpit: { sessions: [{ date: '2026-11-05', news: ['Notebooks'] }, { date: '2026-11-19' }] }, usage: null, goals: null, onderhoud: { text: 'Niets dat aandacht vraagt' }, newsletterDay: false
+      }, { today, now, lastVisit: '', namespaces: ['ai-test'], has: () => true });
+      equal(done.todo, [], 'alles afgehandeld: niets te doen');
+    });
+
     /* ---- ui: tekst, zoeken en plaatshouders ---- */
     describe('Tekst en zoeken (js/ui.js)');
     await test('normalize: kleine letters, zonder accenten, één spatie', () => {

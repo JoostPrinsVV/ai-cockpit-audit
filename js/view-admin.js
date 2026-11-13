@@ -654,92 +654,18 @@
   }
 
   /* ---- Start ------------------------------------------------------------------ */
-  /** De eerste pagina: wat er te doen is (met de stand van nu) en in drie zinnen hoe Beheer werkt. */
+  /**
+   * De eerste pagina: het dashboard 'Deze week' van de gekozen discipline (js/admin-dashboard.js),
+   * daaronder alle onderdelen om snel naartoe te gaan, en in drie zinnen hoe Beheer werkt.
+   */
   function startTab(container, allowed) {
     const owner = ns.rights.isOwner();
     const name = ns.cockpit.active().name;
-    const has = (id) => allowed.some((t) => t.id === id);
-    const tasks = [];
-    // Een tegel naar een onderdeel; de tweede regel kan later nog veranderen (de stand van nu)
-    const task = (id, title, text) => {
-      const status = el('span', { className: 'admin-task__status', text });
-      tasks.push(el('li', {}, [el('a', { className: 'admin-task', attrs: { href: '#/beheer/' + id } }, [
-        el('span', { className: 'admin-task__icon', attrs: { 'aria-hidden': 'true' } }, [icon(TABS.find((t) => t.id === id).icon)]),
-        el('span', { className: 'admin-task__body' }, [el('span', { className: 'admin-task__title', text: title }), status]),
-        icon('arrow-right', { className: 'admin-task__go' })
-      ])]));
-      return status;
-    };
-    const show = (status, text, due) => {
-      status.textContent = text;
-      status.classList.toggle('is-due', Boolean(due));
-    };
-    const unreadable = (status) => () => show(status, 'Niet te lezen, probeer het later opnieuw');
-    const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-    const reminder = ns.adminNewsletter.reminder();
-
-    if (has('inzendingen')) {
-      const status = task('inzendingen', 'Inzendingen beantwoorden', 'Even kijken…');
-      ns.central.adminListIdeas().then((all) => {
-        const items = all.filter((item) => item.kind !== ns.specialist.KIND && item.kind !== ns.openCockpit.KIND);
-        const fresh = items.filter((item) => item.status === 'nieuw').length;
-        const busy = items.filter((item) => item.status === 'in-behandeling').length;
-        if (fresh) show(status, `${fresh} nieuw${busy ? `, ${busy} in behandeling` : ''}`, true);
-        else show(status, busy ? `${busy} in behandeling` : 'Niets openstaand');
-      }).catch(unreadable(status));
-    }
-    // Open Cockpit: nieuwe agendapunten, en of de volgende sessie gepland is
-    if (has('opencockpit')) {
-      const status = task('opencockpit', 'Open Cockpit', 'Even kijken…');
-      ns.central.adminListIdeas().then((all) => {
-        const fresh = all.filter((item) => item.kind === ns.openCockpit.KIND && item.status === 'nieuw').length;
-        const coming = ns.openCockpit.next(ns.openCockpit.settings());
-        const when = coming ? `volgende sessie ${formatDate(coming.date)}` : 'nog geen volgende sessie gepland';
-        show(status, fresh ? `${plural(fresh, 'nieuw agendapunt', 'nieuwe agendapunten')}, ${when}` : when.replace(/^./, (c) => c.toUpperCase()), fresh > 0 || !coming);
-      }).catch(unreadable(status));
-    }
-    // Teams die de AI-specialist willen invliegen: bovenaan als er iets openstaat
-    if (has('invliegen')) {
-      const status = task('invliegen', 'AI-specialist invliegen', 'Even kijken…');
-      ns.central.adminListIdeas().then((all) => {
-        const items = all.filter((item) => item.kind === ns.specialist.KIND);
-        const fresh = items.filter((item) => item.status === 'nieuw').length;
-        const planned = items.filter((item) => item.status === 'gepland').length;
-        if (fresh) show(status, `${fresh} ${fresh === 1 ? 'team wil' : 'teams willen'} je invliegen${planned ? `, ${planned} ingepland` : ''}`, true);
-        else show(status, planned ? `${planned} ingepland` : 'Niets openstaand');
-      }).catch(unreadable(status));
-    }
-    if (has('reviews')) {
-      const status = task('reviews', 'Reviews lezen', 'Even kijken…');
-      ns.central.adminListReviews().then((items) => {
-        const todo = items.filter((item) => item.comment && !item.is_public).length;
-        show(status, todo ? `${plural(todo, 'toelichting', 'toelichtingen')} nog niet gepubliceerd` : 'Alle toelichtingen gelezen', todo > 0);
-      }).catch(unreadable(status));
-    }
-    if (has('nieuwsbrief')) task('nieuwsbrief', 'Nieuwsbrief maken', reminder ? 'De maandnieuwsbrief staat klaar' : 'Weekupdate of maandnieuwsbrief, als PDF of e-mail');
-    if (has('inhoud')) task('inhoud', `Inhoud ${name} aanpassen`, 'Usecases, prompts, tips, trainingen en agents');
-    if (has('basis')) task('basis', 'Gedeelde basis aanpassen', 'Wat in iedere cockpit staat');
-    // Wat collega's niet vinden, en inhoud die aandacht vraagt (js/admin-onderhoud.js)
-    if (has('onderhoud')) {
-      const status = task('onderhoud', 'Onderhoud', 'Even kijken…');
-      ns.adminOnderhoud.startStatus().then((result) => show(status, result.text, result.due)).catch(unreadable(status));
-    }
-    if (has('copilot')) {
-      const status = task('copilot', 'Copilot-gebruik bijhouden', 'Even kijken…');
-      ns.central.listCopilotUsage().then((rows) => {
-        const imports = (rows || []).filter((row) => ns.adminCopilot.isUsage(row.summary));
-        show(status, imports.length ? `Laatste import t/m ${formatDate(imports[imports.length - 1].period_end)}` : 'Nog geen import: lees de export in');
-      }).catch(unreadable(status));
-    }
-    if (has('doelkoers')) {
-      const status = task('doelkoers', `Doelkoers van ${name}`, 'Even kijken…');
-      ns.adminGoals.startStatus().then((result) => show(status, result.text, result.due)).catch(unreadable(status));
-    }
-    if (has('overzicht')) task('overzicht', 'Stand van zaken voor het bestuur', 'Alle disciplines, af te drukken als PDF');
-    if (reminder) tasks.forEach((item) => {
-      const status = item.querySelector('[href="#/beheer/nieuwsbrief"] .admin-task__status');
-      if (status) status.classList.add('is-due');
-    });
+    // Vanuit het dashboard naar Inzendingen met het juiste filter (bijv. alleen verbetervoorstellen)
+    const openIdeas = (filter) => Object.assign(view, filter);
+    const shortcuts = allowed.filter((t) => t.id !== 'start').map((t) => el('li', {}, [
+      el('a', { className: 'admin-shortcut', attrs: { href: '#/beheer/' + t.id } }, [icon(t.icon), el('span', { text: t.id === 'inhoud' ? `Inhoud ${name}` : t.label })])
+    ]));
 
     const howto = owner
       ? [
@@ -754,12 +680,13 @@
     container.append(el('div', { className: 'admin-start' }, [
       // Wat er nog moet voordat collega's alles kunnen gebruiken (js/admin-launch.js)
       owner ? ns.adminLaunch.render().node : null,
-      tasks.length
-        ? el('section', { className: 'admin-start__tasks', attrs: { 'aria-labelledby': 'admin-tasks-title' } }, [
-          el('h2', { className: 'admin-start__title', attrs: { id: 'admin-tasks-title' }, text: 'Wat wil je doen?' }),
-          el('ul', { className: 'admin-tasks', attrs: { role: 'list' } }, tasks)
-        ])
+      shortcuts.length
+        ? ns.adminDashboard.render(allowed, openIdeas)
         : notice({ tone: 'warning', icon: 'lock', text: `Je hebt geen rol in ${name}. Kies links een andere discipline, of vraag een hoofdbeheerder om rechten.` }),
+      shortcuts.length ? el('section', { className: 'admin-start__tasks', attrs: { 'aria-labelledby': 'admin-tasks-title' } }, [
+        el('h2', { className: 'admin-start__title', attrs: { id: 'admin-tasks-title' }, text: 'Alle onderdelen' }),
+        el('ul', { className: 'admin-shortcuts', attrs: { role: 'list' } }, shortcuts)
+      ]) : null,
       el('section', { className: 'admin-howto', attrs: { 'aria-labelledby': 'admin-howto-title' } }, [
         el('h2', { className: 'admin-start__title', attrs: { id: 'admin-howto-title' }, text: 'Zo werkt Beheer' }),
         el('ol', { className: 'admin-howto__list' }, howto.map(([lead, rest]) => el('li', {}, [el('strong', { text: lead }), rest])))

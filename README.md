@@ -37,6 +37,7 @@ js/check.js           Het AI-beleid (link) en 'Mag dit?': de check in drie vrage
 js/tour.js            Rondleiding bij het eerste bezoek (opnieuw via de voet en Ctrl+K)
 js/improve.js         'Stel een verbetering voor' onder een prompt (stap 11); js/admin-improve.js beoordeelt het in Beheer
 js/opencockpit.js     Open Cockpit, het inloopuur (#/open-cockpit): sessies, agendapunten, .ics; Beheer in js/admin-opencockpit.js
+js/admin-dashboard.js Beheer → Start: het dashboard Deze week per discipline (te doen, nieuw binnen, goed om te weten)
 css/motion.css        Beweging in CSS: overgangen, uitklappers, panelen, scrolleffecten (uit bij 'minder beweging')
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
@@ -120,10 +121,25 @@ inzendingen en tellers gaan naar de discipline waarin je zit. Daarvoor hoeft de 
 Links staat een zijbalk: bovenaan **Je beheert** (de discipline), daaronder de onderdelen per groep: *Start*; *Inhoud*
 (de discipline, de gedeelde basis en *Onderhoud*); *Inbreng van collega's* (inzendingen, reviews, portfolio); *Cijfers* (overzicht,
 gebruik van de cockpit, Copilot-gebruik); *Communicatie* (nieuwsbrief); *Instellingen* (disciplines, beheerders).
-Bovenaan ieder onderdeel staat voor welke discipline het is, of *Alle disciplines*. **Start** (`#/beheer`) laat zien wat
-er te doen is (nieuwe inzendingen, toelichtingen die nog niet gepubliceerd zijn, de nieuwsbrief, de laatste import van
-het Copilot-gebruik) en legt in drie zinnen uit hoe Beheer werkt. Wie alleen een rol voor inhoud heeft, ziet alleen
-Start en die inhoud. De onderdelen staan in `TABS` in `js/view-admin.js`.
+Bovenaan ieder onderdeel staat voor welke discipline het is, of *Alle disciplines*. **Start** (`#/beheer`) is het
+dashboard **Deze week in <discipline>** (`js/admin-dashboard.js`): één plek om te zien wat er deze week te doen is.
+Alles komt uit wat er al in de cockpit staat; afvinken hoeft niet, want wat gedaan is verdwijnt vanzelf.
+- **Te doen**, de urgentste bovenaan, elk met een link naar de plek waar je het afhandelt: nieuwe inzendingen per
+  soort (een verlopen belofte van het AI-team gaat voor alles, met de badge erbij), teams die de AI-specialist willen
+  invliegen, verbetervoorstellen bij prompts (de link opent Inzendingen met dat filter), testervaringen bij agents,
+  nieuwe agendapunten voor Open Cockpit, een sessie die nog moet worden afgerond (reactie bij de punten, het nieuws)
+  of gepland, voorstellen van redacteuren en werkversies die nog niet gepubliceerd zijn, de tip van de week voor de
+  eerstvolgende vrijdag, trainingen die geweest zijn zonder opname of naslag, toelichtingen bij reviews, opgepakte
+  ideeën zonder score in het portfolio, onderhoud, het Copilot-gebruik (laatste import ouder dan 35 dagen) en op de
+  laatste dag van de maand de nieuwsbrief.
+- **Nieuw binnen:** wat er de afgelopen 7 dagen is ingestuurd, met een rode stip bij wat nieuw is sinds je vorige
+  bezoek (bijgehouden op dit apparaat).
+- **Goed om te weten:** de volgende Open Cockpit (binnen een week), de tip van de week, geplande publicaties, de
+  doelkoers en de laatste import van het Copilot-gebruik.
+
+Daaronder staan **Alle onderdelen** om snel naartoe te gaan, en in drie zinnen hoe Beheer werkt. Wie alleen een rol
+voor inhoud heeft, ziet alleen wat bij de inhoud hoort (werkversies, de weektip, trainingen). De onderdelen staan in
+`TABS` in `js/view-admin.js`.
 
 Bovenaan Start staat voor hoofdbeheerders **Klaar voor livegang?** (`js/admin-launch.js`): wat er nog moet voordat
 collega's alles kunnen gebruiken, met een knop naar de plek waar je het regelt.
