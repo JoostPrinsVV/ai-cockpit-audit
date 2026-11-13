@@ -236,6 +236,8 @@
     if (idea.target) row.target = idea.target;
     // AI-specialist invliegen: fase, soort klant, data, wanneer en hoe (stap 13; js/specialist.js)
     if (idea.details) row.details = idea.details;
+    // Een agendapunt voor Open Cockpit: bij welke sessie (stap 19; js/opencockpit.js)
+    if (idea.session) row.session = idea.session;
     return add(TABLES.ideas, row, 'Inzending versturen').then((result) => {
       // Voor je logboek (js/brevet.js), als je meedoet met de AI-brevetten
       if (result === 'ok') document.dispatchEvent(new CustomEvent('ai:ingestuurd', { detail: { ref: idea.ref, kind: idea.kind } }));
@@ -262,9 +264,27 @@
     return read(RPC + 'audit_testfeedback_count', 'Testervaringen tellen', post({ p_namespace: config.namespace }));
   }
 
-  /** Gepubliceerde inzendingen (voor iedereen zichtbaar). */
+  /** Gepubliceerde inzendingen (voor iedereen zichtbaar). Agendapunten staan op de pagina van Open Cockpit. */
   function listIdeas() {
-    return read(tablePath(TABLES.ideas, { select: PUBLIC_COLUMNS, namespace: inNamespace(), is_public: 'eq.true', order: 'created_at.desc', limit: 500 }), 'Inzendingen lezen');
+    return read(tablePath(TABLES.ideas, { select: PUBLIC_COLUMNS, namespace: inNamespace(), is_public: 'eq.true', kind: 'neq.agendapunt', order: 'created_at.desc', limit: 500 }), 'Inzendingen lezen');
+  }
+
+  /**
+   * Gepubliceerde agendapunten van Open Cockpit, met de sessie waar ze bij horen (stap 19).
+   * Zonder stap 19 bestaat de kolom 'session' nog niet (42703): dan 'missing', net als een ontbrekende tabel.
+   * @returns {Promise<{ status: 'ok'|'missing'|'failed'|'off', items: object[] }>}
+   */
+  async function listAgenda() {
+    if (!enabled) return { status: 'off', items: [] };
+    const path = tablePath(TABLES.ideas, { select: PUBLIC_COLUMNS + ',session', namespace: inNamespace(), is_public: 'eq.true', kind: 'eq.agendapunt', order: 'created_at.desc', limit: 1000 });
+    try {
+      const response = await request(path, { headers: headers(null) });
+      if (response.status === 400 && (await errorCode(response)) === '42703') return { status: 'missing', items: [] };
+      const status = await outcome(response, 'Agendapunten lezen');
+      return { status, items: status === 'ok' ? await response.json() : [] };
+    } catch (error) {
+      return { status: 'failed', items: [] };
+    }
   }
 
   /** 'Ik ook'. Dubbel stemmen (zelfde apparaat) geeft 'duplicate': telt als al gestemd. */
@@ -1022,6 +1042,7 @@
     requestStatuses,
     testerCounts,
     listIdeas,
+    listAgenda,
     vote,
     submitReview,
     reviewStats,

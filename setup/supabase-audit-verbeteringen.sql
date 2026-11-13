@@ -22,11 +22,11 @@ begin;
 set local lock_timeout = '5s';
 
 -- ---- 11. Verbetervoorstellen ---------------------------------------------------------------
--- De volledige lijst, ook de soorten van stap 13 (invliegen) en 16 (testfeedback): zo haalt opnieuw
+-- De volledige lijst, ook de soorten van stap 13 (invliegen), 16 (testfeedback) en 19 (agendapunt): zo haalt opnieuw
 -- uitvoeren van dit bestand die soorten niet weg (de volgorde van de stappen maakt niet uit).
 alter table public.audit_ideas drop constraint if exists audit_ideas_kind_check;
 alter table public.audit_ideas add constraint audit_ideas_kind_check
-  check (kind in ('idee', 'vraag', 'verzoek', 'prompt', 'verbetering', 'invliegen', 'testfeedback'));
+  check (kind in ('idee', 'vraag', 'verzoek', 'prompt', 'verbetering', 'invliegen', 'testfeedback', 'agendapunt'));
 
 alter table public.audit_ideas add column if not exists target jsonb;
 alter table public.audit_ideas drop constraint if exists audit_ideas_target_check;

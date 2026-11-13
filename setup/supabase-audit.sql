@@ -94,19 +94,25 @@ alter table public.audit_ideas enable row level security;
 -- Kolomrechten: bezoekers mogen alleen deze kolommen invullen ...
 revoke all on public.audit_ideas from anon, authenticated;
 grant insert (namespace, ref, kind, title, body, phase, name, email, allow_public) on public.audit_ideas to anon, authenticated;
--- Ook de kolommen van latere stappen, als die er al zijn (stap 11: target; stap 13 en 16: details).
--- De revoke hierboven trekt ook die kolomrechten in; zonder deze regels zou opnieuw uitvoeren van dit
--- bestand de verbetervoorstellen, 'AI-specialist invliegen' en de testervaringen laten mislukken.
+-- Ook de kolommen van latere stappen, als die er al zijn (stap 11: target; stap 13 en 16: details;
+-- stap 19: session). De revoke hierboven trekt ook die kolomrechten in; zonder deze regels zou opnieuw
+-- uitvoeren van dit bestand de verbetervoorstellen, 'AI-specialist invliegen', de testervaringen en de
+-- agendapunten van Open Cockpit laten mislukken.
 do $columns$
 declare
   v_column text;
 begin
-  foreach v_column in array array['target', 'details'] loop
+  foreach v_column in array array['target', 'details', 'session'] loop
     if exists (select 1 from information_schema.columns
                where table_schema = 'public' and table_name = 'audit_ideas' and column_name = v_column) then
       execute format('grant insert (%I) on public.audit_ideas to anon, authenticated', v_column);
     end if;
   end loop;
+  -- Bij welke sessie een agendapunt hoort, mag iedereen lezen (stap 19)
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'public' and table_name = 'audit_ideas' and column_name = 'session') then
+    grant select (session) on public.audit_ideas to anon;
+  end if;
 end;
 $columns$;
 -- ... en alleen deze kolommen lezen (nooit naam of e-mailadres).

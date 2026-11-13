@@ -361,6 +361,101 @@
       }
     });
 
+    /* ---- Open Cockpit, het inloopuur ---- */
+    describe('Open Cockpit (js/opencockpit.js)');
+    const ocData = () => ({
+      teams: 'https://teams.microsoft.com/l/meetup-join/reeks',
+      sessions: [
+        { date: '2026-12-10', start: '12:30', location: 'Leeuwarden' },
+        { date: '2026-11-12', start: '12:30', end: '13:30', location: 'Groningen', news: 'Notebooks\n\nAgents in Teams', recording: 'https://voorbeeld.sharepoint.com/opname' },
+        { date: '2027-01-14', start: '09:00', end: '08:00', teams: 'https://teams.microsoft.com/l/meetup-join/eigen' },
+        { date: '2027-02-11', cancelled: true },
+        { date: '2026-12-10', location: 'dubbel' },
+        { date: 'morgen' },
+        { date: '2027-03-11', teams: 'http://onveilig.nl', recording: 'javascript:alert(1)' }
+      ]
+    });
+    await test('sessies: op datum, één per dag, eindtijd en Teams-link aangevuld, alleen https', () => {
+      const O = ns.openCockpit;
+      const cfg = O.settings(ocData());
+      equal(cfg.sessions.map((s) => s.id), ['2026-11-12', '2026-12-10', '2027-01-14', '2027-02-11', '2027-03-11'], 'op datum, zonder dubbele dag of ongeldige datum');
+      const dec = cfg.sessions[1];
+      equal([dec.location, dec.start, dec.end, dec.teams], ['Leeuwarden', '12:30', '13:30', 'https://teams.microsoft.com/l/meetup-join/reeks'], 'standaard een uur, met de link van de reeks');
+      equal([cfg.sessions[2].end, cfg.sessions[2].teams], ['10:00', 'https://teams.microsoft.com/l/meetup-join/eigen'], 'einde vóór begin: een uur; eigen link gaat voor');
+      equal(cfg.sessions[0].news, ['Notebooks', 'Agents in Teams'], 'nieuws: één per regel, lege regels weg');
+      equal([cfg.sessions[4].teams, cfg.sessions[4].recording], ['https://teams.microsoft.com/l/meetup-join/reeks', ''], 'geen http- of javascript-links');
+      equal(O.settings({}).sessions, [], 'zonder instelling: geen sessies');
+    });
+    await test('volgende en eerdere sessies, en bij welke sessie een agendapunt hoort', () => {
+      const O = ns.openCockpit;
+      const cfg = O.settings(ocData());
+      equal(O.next(cfg, '2026-11-20').id, '2026-12-10', 'de eerstvolgende');
+      equal(O.next(cfg, '2026-12-10').id, '2026-12-10', 'vandaag telt mee');
+      equal(O.upcoming(cfg, '2027-01-20').map((s) => s.id), ['2027-03-11'], 'een afgelaste sessie telt niet');
+      equal(O.past(cfg, '2027-01-20').map((s) => s.id), ['2027-01-14', '2026-12-10', '2026-11-12'], 'eerdere sessies: de laatste eerst');
+      equal(O.next(cfg, '2027-04-01'), null, 'niets meer gepland');
+      const day = '2026-11-20';
+      equal(O.sessionOf({ session: '2026-11-12' }, cfg, day), '2026-11-12', 'een bestaande sessie blijft, ook als hij geweest is');
+      equal(O.sessionOf({ session: 'volgende' }, cfg, day), '2026-12-10', 'nog niet gepland: de eerstvolgende');
+      equal(O.sessionOf({ session: '2027-02-11' }, cfg, day), '2027-03-11', 'afgelast: schuift door naar de volgende');
+      equal(O.sessionOf({ session: '2026-12-01' }, cfg, day), '2026-12-10', 'verwijderde sessie: de eerste daarna');
+      equal(O.sessionOf({ session: 'volgende' }, cfg, '2027-04-01'), 'volgende', 'zonder geplande sessie: de eerstvolgende die nog komt');
+      const groups = O.bySession([
+        { id: 1, session: '2026-12-10', votes: 1, created_at: '2026-11-01' },
+        { id: 2, session: 'volgende', votes: 4, created_at: '2026-11-02' },
+        { id: 3, session: '2026-11-12', votes: 0, created_at: '2026-10-01' }
+      ], cfg, day);
+      equal(groups.get('2026-12-10').map((item) => item.id), [2, 1], 'per sessie, de meeste stemmen eerst');
+      equal(groups.get('2026-11-12').map((item) => item.id), [3], 'een eerdere sessie houdt zijn punten');
+    });
+    await test('agenda-item (.ics): Nederlandse tijd, tekens geëscaped, regels van hoogstens 75 tekens', () => {
+      const O = ns.openCockpit;
+      const session = O.settings(ocData()).sessions[1];
+      const raw = O.ics(session, { url: 'https://voorbeeld.nl/cockpit/#/open-cockpit', namespace: 'ai-test', now: new Date('2026-11-13T10:00:00Z') });
+      ok(raw.split('\r\n').every((line) => line.length <= 75), 'geen regel langer dan 75 tekens');
+      // Gevouwen regels weer aan elkaar (zoals een agenda dat doet)
+      const text = raw.replace(/\r\n /g, '');
+      ok(text.includes('DTSTART;TZID=Europe/Amsterdam:20261210T123000'), 'begin in Nederlandse tijd');
+      ok(text.includes('DTEND;TZID=Europe/Amsterdam:20261210T133000'), 'einde');
+      ok(text.includes('BEGIN:VTIMEZONE') && text.includes('TZID:Europe/Amsterdam'), 'met zomer- en wintertijd');
+      ok(text.includes('UID:opencockpit-ai-test-2026-12-10@ai-cockpit'), 'vaste UID per sessie: opnieuw downloaden werkt de afspraak bij');
+      ok(text.includes('DTSTAMP:20261113T100000Z'), 'tijdstempel in UTC');
+      ok(text.includes('LOCATION:Leeuwarden en online via Teams'), 'waar');
+      ok(text.includes('Open Cockpit: het inloopuur over Copilot. Vrij binnenlopen\\, op de vestiging of online.\\n'), 'komma en nieuwe regel geëscaped');
+      ok(text.includes('Agendapunt aandragen: https://voorbeeld.nl/cockpit/#/open-cockpit'), 'met de link naar de pagina');
+      ok(text.endsWith('END:VCALENDAR\r\n'), 'sluit af met een regeleinde');
+    });
+    await test('agenda lezen: alleen gepubliceerde agendapunten, en zonder stap 19 "missing"', async () => {
+      ns.central.init({ config: { centralUrl: 'https://voorbeeld.supabase.co', centralKey: 'sb_publishable_test', namespace: 'ai-test' } });
+      const fake = fakeFetch([[200, [{ id: 1, kind: 'agendapunt', session: '2026-12-10' }]], [400, { code: '42703', message: 'column audit_ideas.session does not exist' }], [200, []]]);
+      try {
+        const result = await ns.central.listAgenda();
+        equal([result.status, result.items.length], ['ok', 1]);
+        const url = decodeURIComponent(fake.calls[0].url);
+        ok(url.includes('kind=eq.agendapunt') && url.includes('is_public=eq.true') && url.includes(',session') && url.includes('namespace=eq.ai-test'), 'filter op soort, gepubliceerd en discipline: ' + url);
+        ok(!/name|email/.test(url.split('select=')[1].split('&')[0]), 'nooit naam of e-mailadres');
+        equal((await ns.central.listAgenda()).status, 'missing', 'kolom session bestaat nog niet');
+        await ns.central.listIdeas();
+        ok(decodeURIComponent(fake.calls[2].url).includes('kind=neq.agendapunt'), 'de ideeënhub laat agendapunten weg');
+      } finally {
+        fake.restore();
+        ns.central.init({ config: {} });
+      }
+    });
+    await test('agendapunt insturen: met de sessie erbij', async () => {
+      ns.central.init({ config: { centralUrl: 'https://voorbeeld.supabase.co', centralKey: 'sb_publishable_test', namespace: 'ai-test' } });
+      const fake = fakeFetch([[201]]);
+      try {
+        const result = await ns.central.submitIdea({ ref: '00000000-0000-4000-8000-000000000000', kind: 'agendapunt', title: 'Notebooks', body: 'Notebooks', session: '2026-12-10' });
+        equal(result, 'ok');
+        const row = JSON.parse(fake.calls[0].init.body)[0];
+        equal([row.kind, row.session, row.namespace], ['agendapunt', '2026-12-10', 'ai-test']);
+      } finally {
+        fake.restore();
+        ns.central.init({ config: {} });
+      }
+    });
+
     /* ---- ui: tekst, zoeken en plaatshouders ---- */
     describe('Tekst en zoeken (js/ui.js)');
     await test('normalize: kleine letters, zonder accenten, één spatie', () => {

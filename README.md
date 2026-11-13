@@ -36,6 +36,7 @@ js/palette.js         Zoekvenster: Ctrl+K, / of de zoekknop, met acties en promp
 js/check.js           Het AI-beleid (link) en 'Mag dit?': de check in drie vragen, en 'Wat mag erin?' per agent
 js/tour.js            Rondleiding bij het eerste bezoek (opnieuw via de voet en Ctrl+K)
 js/improve.js         'Stel een verbetering voor' onder een prompt (stap 11); js/admin-improve.js beoordeelt het in Beheer
+js/opencockpit.js     Open Cockpit, het inloopuur (#/open-cockpit): sessies, agendapunten, .ics; Beheer in js/admin-opencockpit.js
 css/motion.css        Beweging in CSS: overgangen, uitklappers, panelen, scrolleffecten (uit bij 'minder beweging')
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
@@ -51,7 +52,7 @@ assets/branding/      Logo: logo-dark.svg (zonder vierkant, voor de donkere kopb
 assets/videos/        Opgenomen demo's (MP4, uit de snackbar overgenomen)
 assets/demos/         HTML-demo van snack 1 (uit de snackbar overgenomen)
 assets/trainingen/    Slides van trainingen, per training een map (assets/trainingen/<id>/slide-01.jpg …), soms met video
-setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), daarna 9 t/m 18 (zie 'Supabase
+setup/                De SQL-bestanden voor Supabase: stap 1, 7 en 8 (in die volgorde), daarna 9 t/m 19 (zie 'Supabase
                       instellen'); stap 18 laat alleen V&V-accounts toe
 ```
 
@@ -69,6 +70,7 @@ buiten staan alleen in de inhoud (bijv. de opname van een training of een agent)
 | `#/trainingen`, `#/training/<id>` | Opnames van trainingen en sessies om terug te kijken, met hoofdstukken en materiaal, en per training een naslagwerk: slides, wat je meeneemt, acties om af te vinken, uit de zaal en het vervolg |
 | `#/agents`, `#/agent/<id>` | Agents & tools: welke AI-agents en -producten er zijn, waarvoor (en waarvoor niet) en hoe je toegang krijgt |
 | `#/ideeen` | Ideeënhub: idee, vraag, verzoek of prompt insturen; de route van een idee tot toepassing; gepubliceerde inzendingen met antwoord en 'Ik ook' |
+| `#/open-cockpit` | Open Cockpit, het inloopuur over Copilot: de volgende sessie (Teams, in je agenda), agendapunten aandragen en stemmen, en eerdere sessies met nieuws, opname en reacties |
 | `#/zoeken/<woorden>` | Zoeken in usecases, prompts, tips, trainingen en agents tegelijk (snel: Ctrl+K op iedere pagina) |
 | `#/promptbouwer` | Zelf een prompt bouwen in zes stappen, met een meter en wat er nog beter kan |
 | `#/mijn` | Mijn gegevens: naam, functie, vestiging, team en boekjaar, voortaan ingevuld in iedere prompt |
@@ -1001,6 +1003,33 @@ Copilot-gebruik per discipline (laatste import), de ideeënhub en het portfolio,
 **Afdrukken als PDF** maak je er een document van, bijvoorbeeld voor het bestuur. Alles komt uit wat er al is: wat live
 staat, de anonieme tellers, de ideeënhub en de totalen van de Copilot-export; er is geen aparte SQL voor nodig.
 
+## Open Cockpit, het inloopuur (`#/open-cockpit`, Beheer → Open Cockpit, stap 19)
+
+Iedere paar weken een vrijwillige sessie over Copilot: op een vestiging en altijd online via Teams. Eerst het nieuws
+rond Copilot van de afgelopen weken, dan de agendapunten van collega's, en ruimte voor vragen, ervaringen en een
+brainstorm.
+
+- **De pagina** (`js/opencockpit.js`): de volgende sessie (datum, tijd, vestiging, *Deelnemen via Teams* en *Zet in
+  je agenda*, een `.ics` in Nederlandse tijd), het formulier *Draag een agendapunt aan*, **Op de agenda** (de punten
+  van de volgende sessie, met 'Ik ook') en **Eerdere sessies** (nieuws, samenvatting, opname en de behandelde punten
+  met de reactie). In het menu hoort de pagina bij de Ideeënhub; daar staat ook een blok naar Open Cockpit.
+- **De uitnodiging:** stuur zelf een terugkerende Outlook-afspraak naar de hele discipline, met de Teams-vergadering
+  en de link `…/#/open-cockpit`. Die link toont altijd de eerstvolgende sessie, dus hij hoeft nooit te veranderen.
+  Beheer → Open Cockpit heeft de link en een tekst voor de uitnodiging om te kopiëren.
+- **Sessies** plan je in Beheer → Open Cockpit: datum, begin en einde (standaard een uur), vestiging (leeg = alleen
+  online) en de Teams-link van de reeks (of per sessie een eigen). Na afloop zet je bij de sessie het nieuws, een
+  samenvatting en de opname. Opgeslagen als instelling `opencockpit` in `audit_content`, per discipline; direct
+  zichtbaar. Een afgelaste of verwijderde sessie: de punten schuiven door naar de volgende.
+- **Agendapunten** zijn inzendingen van de soort `agendapunt` met de kolom `session` (de datum van de sessie, of
+  `volgende` als er nog niets gepland is). In Beheer → Open Cockpit zet je een punt met één klik *Op de agenda* (dan
+  staat het zonder naam op de pagina, als de collega dat goedvond), verplaats je het naar een andere sessie, en schrijf
+  je na de sessie de reactie erbij (*Behandeld*). Ze staan niet in de ideeënhub en niet bij Beheer → Inzendingen.
+- **Startpagina:** in de week voor een sessie een balk *Open Cockpit over … dagen* (in de bewerkmodus te verbergen
+  of te verplaatsen, zoals de andere secties).
+- **Eenmalig:** voer `setup/supabase-audit-opencockpit.sql` uit (stap 19, na stap 1). Tot dan kunnen collega's nog
+  geen agendapunt aandragen en meldt de pagina dat de agenda nog wordt aangesloten; sessies plannen werkt al wel.
+  Stap 1, 11, 13 en 16 noemen de soort `agendapunt` ook: opnieuw uitvoeren haalt hem niet weg.
+
 ## Route van een idee (Ideeënhub)
 
 In de ideeënhub staat onder het formulier **Wat gebeurt er met je idee?**: de stappen van een idee op de werkvloer tot
@@ -1055,7 +1084,8 @@ er zijn, toont de site de inhoud uit de bestanden en meldt de hub "wordt nog aan
    `setup/supabase-audit-puntenitems.sql` (stap 15, na stap 12), en voor de testervaringen bij agents in testfase
    `setup/supabase-audit-testfase.sql` (stap 16, na stap 13), en voor Beheer → Onderhoud (zoekvragen zonder
    resultaat) `setup/supabase-audit-onderhoud.sql` (stap 17). Voor het inloggen met Microsoft bij de AI-brevetten
-   `setup/supabase-audit-aanmelden.sql` (stap 18: alleen V&V-accounts; zie 'AI-brevetten').
+   `setup/supabase-audit-aanmelden.sql` (stap 18: alleen V&V-accounts; zie 'AI-brevetten'). Voor de agendapunten van
+   Open Cockpit `setup/supabase-audit-opencockpit.sql` (stap 19, na stap 1).
 3. Controleer in Authentication: *Allow anonymous sign-ins* uit, en bij de e-mailprovider *Confirm email* en *Secure
    email change* aan (rechten hangen aan het e-mailadres van een account). *Allow new users to sign up* staat uit,
    tot de AI-brevetten live gaan: dan aan, maar pas nadat stap 18 en zijn Auth Hook aanstaan.

@@ -39,7 +39,8 @@
   const own = (table, key) => (Object.prototype.hasOwnProperty.call(table, key) ? table[key] : null);
   const byList = Object.fromEntries(Object.values(PAGES).map((kind) => [kind.list, kind]));
   // Pagina's zonder soort met een eigen plek in het menu (of de kopbalk); de promptbouwer hoort bij Prompts
-  const OTHER_NAV = { ideeen: 'ideeen', mijn: 'mijn', promptbouwer: 'prompts' };
+  // Open Cockpit (het inloopuur) hoort bij de Ideeënhub
+  const OTHER_NAV = { ideeen: 'ideeen', 'open-cockpit': 'ideeen', mijn: 'mijn', promptbouwer: 'prompts' };
 
   ns.kinds = {
     /** De soorten met een eigen pagina, in de volgorde van het menu. */

@@ -1325,3 +1325,23 @@ ul.onderhoud-list { display: grid; gap: var(--space-2); margin: 0; padding: 0; l
   .menu-editor__number { display: none; }
   .menu-editor__show { grid-column: 1; }
 }
+
+/* ---- Beheer → Open Cockpit (js/admin-opencockpit.js) ---------------------------------------- */
+.oc-admin { display: grid; gap: var(--space-6); }
+.oc-admin__link code { display: block; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--color-surface-muted); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.oc-admin__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.oc-admin__card { gap: var(--space-4); }
+.oc-admin__bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-2); }
+.oc-admin__sessions { display: grid; gap: var(--space-3); }
+.oc-admin__session { border: 1px solid var(--color-border); border-radius: var(--radius); background: var(--color-surface); }
+.oc-admin__session > .form-grid { padding: 0 var(--space-4) var(--space-4); }
+.oc-admin__session-head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); cursor: pointer; list-style: none; font-weight: var(--fw-semibold); }
+.oc-admin__session-head::-webkit-details-marker { display: none; }
+.oc-admin__session-head > .icon:first-child { color: var(--accent-teal-ink); }
+.oc-admin__session-title { flex: 1; min-width: 0; }
+.oc-admin__chevron { color: var(--color-text-muted); transition: transform var(--duration) var(--ease-out); }
+.oc-admin__session[open] .oc-admin__chevron { transform: rotate(180deg); }
+.oc-admin__agenda { display: grid; gap: var(--space-5); }
+.oc-admin__group { display: grid; gap: var(--space-2); }
+.oc-admin__group-title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-size: var(--fs-md); }
+.oc-admin .form-grid > .check { grid-column: 1 / -1; }

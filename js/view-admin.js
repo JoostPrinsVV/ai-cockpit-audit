@@ -55,6 +55,7 @@
     { id: 'onderhoud', group: 'inhoud', label: 'Onderhoud', icon: 'checklist', perDiscipline: true, lead: (name) => `Wat collega's in ${name} zoeken en niet vinden, en welke inhoud aandacht vraagt.` },
     { id: 'invliegen', group: 'collegas', label: 'Invliegen', icon: 'plane', perDiscipline: true, lead: (name) => `Teams in ${name} die de AI-specialist willen invliegen bij een klantcasus: op urgentie, met status en contact.` },
     { id: 'inzendingen', group: 'collegas', label: 'Inzendingen', icon: 'message-plus', perDiscipline: true, lead: (name) => `Ideeën, vragen en verzoeken uit de ideeënhub van ${name}: beantwoorden, publiceren en beoordelen.` },
+    { id: 'opencockpit', group: 'collegas', label: 'Open Cockpit', icon: 'calendar', perDiscipline: true, lead: (name) => `Het inloopuur over Copilot voor ${name}: sessies plannen, agendapunten op de agenda zetten en na afloop de reactie erbij.` },
     { id: 'reviews', group: 'collegas', label: 'Reviews', icon: 'star', perDiscipline: true, lead: (name) => `Sterren en toelichtingen bij de usecases en prompts van ${name}. Een toelichting staat pas bij de usecase of prompt als jij hem publiceert.` },
     { id: 'portfolio', group: 'collegas', label: 'Portfolio', icon: 'flag', perDiscipline: true, lead: (name) => `De beoordeelde ideeën van ${name} in de AI Value Matrix, met de registerregels.` },
     { id: 'brevetten', group: 'collegas', label: 'AI-brevetten', icon: 'cap', lead: () => 'Wie meedoet met de AI-brevetten: brevetten, AI-miles en logboeken, trainingen vullen, miles toekennen, en de regels (ook per discipline).' },
@@ -252,7 +253,7 @@
     statusFilter.value = view.status;
     const kindFilter = el('select', { className: 'field__input field__input--sm', attrs: { id: 'adm-kind' } }, [
       el('option', { attrs: { value: 'all' }, text: 'Alle soorten' }),
-      ...ns.ideas.ALL_KINDS.filter((kind) => kind.id !== ns.specialist.KIND).map((kind) => el('option', { attrs: { value: kind.id }, text: kind.label }))
+      ...ns.ideas.ALL_KINDS.filter((kind) => kind.id !== ns.specialist.KIND && kind.id !== ns.openCockpit.KIND).map((kind) => el('option', { attrs: { value: kind.id }, text: kind.label }))
     ]);
     kindFilter.value = view.kind;
 
@@ -284,8 +285,9 @@
     async function load() {
       list.replaceChildren(el('p', { className: 'loading', text: 'Inzendingen laden…' }));
       try {
-        // Verzoeken om de AI-specialist in te vliegen hebben een eigen onderdeel (js/admin-specialist.js)
-        items = (await ns.central.adminListIdeas()).filter((item) => item.kind !== ns.specialist.KIND);
+        // Verzoeken om de AI-specialist in te vliegen en agendapunten van Open Cockpit hebben een eigen onderdeel
+        // (js/admin-specialist.js en js/admin-opencockpit.js)
+        items = (await ns.central.adminListIdeas()).filter((item) => item.kind !== ns.specialist.KIND && item.kind !== ns.openCockpit.KIND);
         update();
       } catch (error) {
         list.replaceChildren(loadFailed(error));
@@ -679,11 +681,21 @@
     if (has('inzendingen')) {
       const status = task('inzendingen', 'Inzendingen beantwoorden', 'Even kijken…');
       ns.central.adminListIdeas().then((all) => {
-        const items = all.filter((item) => item.kind !== ns.specialist.KIND);
+        const items = all.filter((item) => item.kind !== ns.specialist.KIND && item.kind !== ns.openCockpit.KIND);
         const fresh = items.filter((item) => item.status === 'nieuw').length;
         const busy = items.filter((item) => item.status === 'in-behandeling').length;
         if (fresh) show(status, `${fresh} nieuw${busy ? `, ${busy} in behandeling` : ''}`, true);
         else show(status, busy ? `${busy} in behandeling` : 'Niets openstaand');
+      }).catch(unreadable(status));
+    }
+    // Open Cockpit: nieuwe agendapunten, en of de volgende sessie gepland is
+    if (has('opencockpit')) {
+      const status = task('opencockpit', 'Open Cockpit', 'Even kijken…');
+      ns.central.adminListIdeas().then((all) => {
+        const fresh = all.filter((item) => item.kind === ns.openCockpit.KIND && item.status === 'nieuw').length;
+        const coming = ns.openCockpit.next(ns.openCockpit.settings());
+        const when = coming ? `volgende sessie ${formatDate(coming.date)}` : 'nog geen volgende sessie gepland';
+        show(status, fresh ? `${plural(fresh, 'nieuw agendapunt', 'nieuwe agendapunten')}, ${when}` : when.replace(/^./, (c) => c.toUpperCase()), fresh > 0 || !coming);
       }).catch(unreadable(status));
     }
     // Teams die de AI-specialist willen invliegen: bovenaan als er iets openstaat
@@ -829,6 +841,11 @@
     else if (tab === 'inzendingen') ideasTab(panel);
     else if (tab === 'reviews') reviewsTab(panel);
     else if (tab === 'nieuwsbrief') panel.append(ns.adminNewsletter.render().node);
+    else if (tab === 'opencockpit') {
+      const result = ns.adminOpenCockpit.render();
+      panel.append(result.node);
+      canLeave = result.canLeave;
+    }
     else if (tab === 'wrapped') {
       const result = ns.adminWrapped.render();
       panel.append(result.node);

@@ -27,7 +27,7 @@ alter table public.audit_ideas add column if not exists details jsonb;
 
 alter table public.audit_ideas drop constraint if exists audit_ideas_kind_check;
 alter table public.audit_ideas add constraint audit_ideas_kind_check
-  check (kind in ('idee', 'vraag', 'verzoek', 'prompt', 'verbetering', 'invliegen', 'testfeedback'));
+  check (kind in ('idee', 'vraag', 'verzoek', 'prompt', 'verbetering', 'invliegen', 'testfeedback', 'agendapunt'));
 
 alter table public.audit_ideas drop constraint if exists audit_ideas_details_check;
 alter table public.audit_ideas add constraint audit_ideas_details_check

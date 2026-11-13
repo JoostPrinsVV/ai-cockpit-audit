@@ -46,7 +46,9 @@
   const FLY_IN = { id: 'invliegen', label: 'Specialist invliegen', icon: 'plane', accent: 'navy' };
   // Testervaring bij een agent in testfase (js/agent-test.js): alleen voor het AI-team, nooit openbaar
   const TEST = { id: 'testfeedback', label: 'Testervaring', icon: 'flask', accent: 'teal' };
-  const ALL_KINDS = KINDS.concat(IMPROVEMENT, FLY_IN, TEST);
+  // Agendapunt voor Open Cockpit, het inloopuur (js/opencockpit.js): een eigen formulier en een eigen pagina
+  const AGENDA = { id: 'agendapunt', label: 'Agendapunt', icon: 'calendar', accent: 'steel' };
+  const ALL_KINDS = KINDS.concat(IMPROVEMENT, FLY_IN, TEST, AGENDA);
   const KIND_BY_ID = new Map(ALL_KINDS.map((kind) => [kind.id, kind]));
 
   const STATUSES = {
@@ -62,8 +64,8 @@
   const SENSITIVE = /\b\d{9}\b|\bNL\d{2}\s?[A-Z]{4}(\s?\d){10}\b/i;
   const listState = { kind: 'all', sort: 'new' };
 
-  function statusBadge(status) {
-    const info = STATUSES[status] || STATUSES.nieuw;
+  function statusBadge(status, labels) {
+    const info = (labels && labels[status]) || STATUSES[status] || STATUSES.nieuw;
     return el('span', { className: 'status status--' + info.tone, text: info.label });
   }
 
@@ -287,7 +289,12 @@
   }
 
   /* ---- Lijst met gepubliceerde inzendingen --------------------------------------------- */
-  function ideaItem(item, mine) {
+  /**
+   * Eén gepubliceerde inzending. options (Open Cockpit): statuses (eigen namen per status),
+   * answerLabel (kop boven de reactie), votes: false (geen 'Ik ook'), headingTag, chip: false (geen soort).
+   */
+  function ideaItem(item, mine, options) {
+    const opts = options || {};
     const kind = KIND_BY_ID.get(item.kind) || KINDS[0];
     const voted = myVotes().includes(item.id);
     const bodyNode = el('p', { className: 'idea__body', text: item.body });
@@ -305,7 +312,7 @@
     const phase = item.phase ? ns.content.phaseById.get(item.phase) : null;
 
     let voteButton = null;
-    if (ns.app.config().enableVotes !== false) {
+    if (ns.app.config().enableVotes !== false && opts.votes !== false) {
       let count = Number(item.votes) || 0;
       const countNode = el('span', { className: 'vote__count', text: String(count) });
       voteButton = el('button', { className: 'vote', attrs: { type: 'button' } }, [icon('thumb'), el('span', { text: 'Ik ook' }), countNode]);
@@ -341,16 +348,17 @@
 
     return el('article', { className: 'idea ' + accentClass(kind.accent), attrs: { id: 'idea-' + item.id } }, [
       el('div', { className: 'idea__head' }, [
-        kindChip(item.kind),
-        statusBadge(item.status),
+        opts.chip === false ? null : kindChip(item.kind),
+        statusBadge(item.status, opts.statuses),
         mine ? el('span', { className: 'badge badge--mine' }, [icon('star-filled'), 'Jouw inzending']) : null,
         el('span', { className: 'idea__date', text: formatDate(item.created_at) })
       ]),
-      el('h3', { className: 'idea__title', text: item.title }),
-      bodyNode,
+      el(opts.headingTag || 'h3', { className: 'idea__title', text: item.title }),
+      // Een agendapunt zonder toelichting heeft de titel als tekst: dan niet twee keer
+      item.body && item.body !== item.title ? bodyNode : null,
       more,
       item.answer ? el('div', { className: 'idea__answer' }, [
-        el('p', { className: 'idea__answer-label' }, [icon('chat'), el('span', { text: 'Reactie van het AI-team' + (item.answered_at ? ' · ' + formatDate(item.answered_at) : '') })]),
+        el('p', { className: 'idea__answer-label' }, [icon('chat'), el('span', { text: (opts.answerLabel || 'Reactie van het AI-team') + (item.answered_at ? ' · ' + formatDate(item.answered_at) : '') })]),
         el('p', { className: 'idea__answer-text', text: item.answer })
       ]) : null,
       el('div', { className: 'idea__foot' }, [
@@ -630,7 +638,8 @@
       }),
       // Secties: in de bewerkmodus te verplaatsen en te verbergen (js/layout.js)
       ...ns.layout.arrange('ideeen', [
-        { key: 'insturen', label: 'Insturen', node: el('div', { className: 'ideas-layout' }, [formCard, el('div', { className: 'ideas-layout__side' }, [how, mine.node])]) },
+        // Naast het formulier ook Open Cockpit, het inloopuur (js/opencockpit.js): agendapunten hebben daar een eigen formulier
+        { key: 'insturen', label: 'Insturen', node: el('div', { className: 'ideas-layout' }, [formCard, el('div', { className: 'ideas-layout__side' }, [ns.openCockpit.hubCard(), how, mine.node])]) },
         { key: 'route', label: 'Van idee tot toepassing (route)', node: route },
         { key: 'hub', label: 'Uit de hub', node: hubList(mine) }
       ])
@@ -803,7 +812,7 @@
     (title.value ? body : title).focus();
   }
 
-  ns.ideas = { KINDS, ALL_KINDS, STATUSES, statusBadge, kindChip, routeOf, rememberSubmission, SENSITIVE, quick };
+  ns.ideas = { KINDS, ALL_KINDS, AGENDA, STATUSES, statusBadge, kindChip, ideaItem, mySubmissions, routeOf, rememberSubmission, SENSITIVE, quick };
   ns.views = ns.views || {};
   ns.views.ideas = { render };
 })(window.AIAudit);

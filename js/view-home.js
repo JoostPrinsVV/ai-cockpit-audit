@@ -248,6 +248,8 @@
     const node = el('div', { className: 'home' }, [hero(config, radar)].concat(ns.layout.arrange('home', [
       { key: 'tegels', label: 'Tegels naar de onderdelen', node: tiles() },
       { key: 'wrapped', label: 'Cockpit Wrapped', node: ns.wrapped.teaser() },
+      // Open Cockpit (js/opencockpit.js): alleen in de week voor een sessie
+      { key: 'opencockpit', label: 'Open Cockpit (in de week voor een sessie)', node: ns.openCockpit.teaser() },
       { key: 'tijdwinst', label: 'Tijdwinst van collega\'s', node: proof },
       { key: 'kickstart', label: 'Kickstart', node: kickstart.node },
       { key: 'kompas', label: 'Seizoenskompas', node: compass },

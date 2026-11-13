@@ -3771,3 +3771,58 @@ ul.wr-highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax
 
 /* Secties die een beheerder kan verplaatsen of verbergen (js/layout.js): voor bezoekers onzichtbaar omhulsel */
 .layout-block { display: contents; }
+
+/* ---- Open Cockpit, het inloopuur (js/opencockpit.js) ---------------------------------------- */
+/* Datum als kalenderblaadje: maand boven, dag groot */
+.oc-date { display: grid; flex: none; place-items: center; align-content: center; width: 4.25rem; height: 4.5rem; border-radius: var(--radius); background: var(--color-chrome); color: var(--vv-white); line-height: 1; }
+.oc-date__month { color: var(--vv-teal); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.08em; text-transform: uppercase; }
+.oc-date__day { margin-top: 0.2rem; font-size: 1.85rem; font-weight: var(--fw-bold); }
+
+/* De volgende sessie */
+.oc-next { display: flex; align-items: flex-start; gap: var(--space-5); margin-bottom: var(--space-7); padding: clamp(1.25rem, 2.4vw, 2rem); border: 1px solid var(--color-border); border-left: 5px solid var(--vv-teal); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-card); }
+.oc-next__icon { display: grid; flex: none; place-items: center; width: 3rem; height: 3rem; border-radius: 50%; background: var(--accent-teal-tint); color: var(--accent-teal-ink); }
+.oc-next__body { display: grid; flex: 1; gap: var(--space-3); min-width: 0; }
+.oc-next__eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--accent-teal-ink); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: 0.08em; text-transform: uppercase; }
+.oc-next__count { padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--accent-teal-tint); letter-spacing: 0; text-transform: none; }
+.oc-next__title { font-size: var(--fs-xl); line-height: var(--lh-snug); }
+.oc-next__meta { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; padding: 0; color: var(--color-text-body); list-style: none; }
+.oc-next__meta li { display: inline-flex; align-items: center; gap: var(--space-2); }
+.oc-next__meta .icon { color: var(--accent-teal-ink); }
+.oc-next--empty .oc-next__meta { display: block; color: var(--color-text-muted); }
+.oc-next__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-1); }
+.oc-next__later { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.oc-next__later-label { font-weight: var(--fw-semibold); }
+.section__title-note { color: var(--color-text-muted); font-size: var(--fs-md); font-weight: var(--fw-semibold); }
+
+/* Eerdere sessies: in te klappen, de laatste staat open */
+.oc-pasts { display: grid; gap: var(--space-3); }
+.oc-pasts__more { justify-self: start; }
+.oc-past { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.oc-past__summary { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4) var(--space-5); cursor: pointer; list-style: none; }
+.oc-past__summary::-webkit-details-marker { display: none; }
+.oc-past__summary:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-lg); }
+.oc-past .oc-date { width: 3.25rem; height: 3.5rem; }
+.oc-past .oc-date__day { font-size: 1.4rem; }
+.oc-past__head { display: grid; flex: 1; gap: 2px; min-width: 0; }
+.oc-past__title { color: var(--color-text); font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.oc-past__meta { color: var(--color-text-muted); font-size: var(--fs-sm); }
+.oc-past__chevron { flex: none; color: var(--color-text-muted); transition: transform var(--duration) var(--ease-out); }
+.oc-past[open] .oc-past__chevron { transform: rotate(180deg); }
+.oc-past__body { display: grid; justify-items: start; gap: var(--space-4); padding: 0 var(--space-5) var(--space-5); }
+.oc-past__text { max-width: 70ch; white-space: pre-line; }
+.oc-past__news { display: grid; gap: var(--space-2); }
+.oc-past__label { display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-base); }
+.oc-past__label .icon { color: var(--accent-teal-ink); }
+.oc-past__list { display: grid; gap: var(--space-1); margin: 0; padding-left: 1.25rem; }
+.oc-past__items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: var(--grid-gap); justify-self: stretch; }
+
+@media (max-width: 600px) {
+  .oc-next { flex-direction: column; gap: var(--space-4); }
+  .oc-next__actions > .btn { flex: 1 1 100%; justify-content: center; }
+  .oc-past__summary { gap: var(--space-3); padding: var(--space-3) var(--space-4); }
+  .oc-past__body { padding: 0 var(--space-4) var(--space-4); }
+}
+@media print {
+  .oc-next__actions, .oc-pasts__more { display: none; }
+  .oc-past:not([open]) > .oc-past__body { display: grid; }
+}
