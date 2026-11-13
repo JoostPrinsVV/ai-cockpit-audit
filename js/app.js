@@ -639,6 +639,28 @@
     fatal.hidden = false;
   }
 
+  /* ---- Naar boven ------------------------------------------------------------------------
+     Een knop rechtsonder zodra je anderhalf scherm hebt gescrold: de lijsten zijn lang, en op een
+     telefoon scrolt het menu mee uit beeld. */
+  function initToTop() {
+    const button = ns.ui.el('button', { className: 'to-top', attrs: { type: 'button', 'aria-label': 'Naar boven', title: 'Naar boven', hidden: true } }, [ns.ui.icon('arrow-up')]);
+    button.addEventListener('click', () => {
+      window.scrollTo({ top: 0, behavior: ns.motion.calm() ? 'auto' : 'smooth' });
+      // De focus mee naar boven (anders staat hij op een knop die zo verdwijnt)
+      document.getElementById('main').focus({ preventScroll: true });
+    });
+    document.body.append(button);
+    let queued = false;
+    window.addEventListener('scroll', () => {
+      if (queued) return;
+      queued = true;
+      window.requestAnimationFrame(() => {
+        queued = false;
+        button.hidden = window.scrollY < window.innerHeight * 1.5;
+      });
+    }, { passive: true });
+  }
+
   function boot() {
     try {
       baseConfig = Object.assign({
@@ -684,6 +706,7 @@
         event.preventDefault();
         document.getElementById('main').focus();
       });
+      initToTop();
       loadContent().catch((error) => {
         console.error('[AI-cockpit Audit] Inhoud laden mislukt', error);
         if (!contentReady) useFiles().then(() => route());

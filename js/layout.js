@@ -10,7 +10,8 @@
       de aangepaste tekst of de standaardtekst; editable() markeert een
       element, zodat je er in de bewerkmodus op kunt klikken en typen.
    Alles staat in de rij 'Teksten van de site' (type setting, id site):
-     layout: { <pagina>: { order: [sleutels], hidden: [sleutels] } }
+     layout: { <pagina>: { order: [sleutels], hidden: [sleutels], shown: [sleutels] } }
+             (shown: secties die standaard uit staan en die een beheerder heeft aangezet)
      texts:  { <sleutel>: 'tekst' }
    Zo gaat het mee met Opslaan, Publiceren en Ongedaan maken (js/editor.js).
    Een lege tekst = terug naar de standaard.
@@ -27,7 +28,9 @@
     const own = all && typeof all === 'object' ? all[page] : null;
     return {
       order: own && Array.isArray(own.order) ? own.order.slice() : [],
-      hidden: own && Array.isArray(own.hidden) ? own.hidden.slice() : []
+      hidden: own && Array.isArray(own.hidden) ? own.hidden.slice() : [],
+      // Secties die standaard uit staan (optional) en die een beheerder heeft aangezet
+      shown: own && Array.isArray(own.shown) ? own.shown.slice() : []
     };
   }
 
@@ -52,9 +55,12 @@
       .map(({ thing }) => thing);
   }
 
+  /* optional: true = de sectie staat standaard uit (de pagina blijft kort); een beheerder zet hem in de
+     bewerkmodus aan met het oogje, net als bij een verborgen sectie. */
   function arrange(page, sections) {
     const saved = pageLayout(page);
-    const hidden = new Set(saved.hidden);
+    const shown = new Set(saved.shown);
+    const hidden = new Set(saved.hidden.concat(sections.filter((section) => section.optional && !shown.has(section.key)).map((section) => section.key)));
     const showHidden = editing();
     return sortSaved(sections, saved.order)
       .filter((section) => section.node && (showHidden || !hidden.has(section.key)))
@@ -112,9 +118,16 @@
       const layout = Object.assign({}, data.layout || {});
       const current = Object.assign({ order: [], hidden: [] }, layout[page] || {});
       const hidden = new Set(current.hidden || []);
-      if (hide) hidden.add(key);
-      else hidden.delete(key);
-      layout[page] = Object.assign({}, current, { hidden: Array.from(hidden) });
+      // shown: voor een sectie die standaard uit staat (optional in arrange) onthouden dat hij aan is gezet
+      const shown = new Set(current.shown || []);
+      if (hide) {
+        hidden.add(key);
+        shown.delete(key);
+      } else {
+        hidden.delete(key);
+        shown.add(key);
+      }
+      layout[page] = Object.assign({}, current, { hidden: Array.from(hidden), shown: Array.from(shown) });
       data.layout = layout;
     });
   }

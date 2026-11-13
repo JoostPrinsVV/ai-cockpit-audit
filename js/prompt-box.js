@@ -42,7 +42,8 @@
     }
     renderText();
 
-    const copy = copyButton(() => fillPlaceholders(text, values), { label: opts.copyLabel || 'Kopieer prompt', onCopy: opts.onCopy });
+    // Dé actie van dit blok: de opvallendste knop (btn--main, css/audit.css)
+    const copy = copyButton(() => fillPlaceholders(text, values), { label: opts.copyLabel || 'Kopieer prompt', className: 'btn--main', onCopy: opts.onCopy });
     // Kopiëren en meteen Copilot openen (met wat je hebt ingevuld)
     const open = copilotButton(() => fillPlaceholders(text, values), { className: 'btn--sm', onCopy: opts.onCopy });
 

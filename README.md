@@ -195,6 +195,9 @@ Sloeg iemand het intussen op, dan kies je of jouw versie of die van de ander bli
 **Bewerken** zet de pagina zelf in de bewerkmodus: klik op een titel of korte tekst om hem aan te passen, versleep
 kaarten (of gebruik de pijltjes), open met het potlood alle velden in een zijpaneel, verwijder met de prullenbak en
 voeg toe met de plusknop aan het eind van een lijst. Op de startpagina pas je ook naam, slogan en uitleg aan.
+Secties verplaats of verberg je daar ook (pijltjes, oogje). De sectie *Uitgelichte tips* op de startpagina staat
+standaard uit (dezelfde tips staan bovenaan Tips & tricks, en de startpagina blijft zo korter): zet hem aan met het
+oogje. Een sectie die standaard uit staat, heeft in `js/view-home.js` `optional: true`.
 
 **Rollen** (Beheer → Beheerders, alleen voor hoofdbeheerders), per discipline, voor de gedeelde basis of voor alle
 disciplines, en eventueel alleen voor bepaalde onderdelen (bijv. alleen tips):

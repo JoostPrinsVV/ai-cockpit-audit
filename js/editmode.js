@@ -445,7 +445,7 @@
     if (first && !view.querySelector('.block-reset')) {
       const page = first.dataset.layoutPage;
       const saved = ns.layout.pageLayout(page);
-      if (saved.order.length || saved.hidden.length) {
+      if (saved.order.length || saved.hidden.length || saved.shown.length) {
         const reset = el('button', { className: 'block-reset btn btn--secondary btn--sm', attrs: { type: 'button' } }, [icon('replay'), el('span', { text: 'Standaardindeling van deze pagina terugzetten' })]);
         reset.addEventListener('click', () => ns.layout.resetPage(page));
         first.parentElement.append(el('div', { className: 'container block-reset-wrap' }, [reset]));

@@ -19,7 +19,7 @@
     const meta = [];
     if (usecase.hasDemo) meta.push(el('span', { className: 'meta' }, [icon(usecase.video ? 'film' : 'play-circle'), el('span', { text: (usecase.duration ? usecase.duration + ' ' : '') + 'demo' })]));
     else meta.push(el('span', { className: 'meta meta--muted' }, [icon('clock'), el('span', { text: 'Demo volgt' })]));
-    if (usecase.level) meta.push(el('span', { className: 'meta' }, [icon('sparkle'), el('span', { text: usecase.level })]));
+    // Het niveau (Starter, Gevorderd) staat op de pagina van de usecase: hier alleen wat je helpt kiezen
     // Tijdwinst: de schatting van het AI-team (js/tijdwinst.js)
     if (usecase.saves) meta.push(el('span', { className: 'meta meta--saves', attrs: { title: 'Schatting van het AI-team, per keer dat je de usecase doorloopt' } }, [icon('clock'), el('span', { text: 'Scheelt ±' + ns.tijdwinst.format(usecase.saves) })]));
     const rating = ns.reviews.ratingChip('usecase', usecase.id);
@@ -28,7 +28,7 @@
     return el('article', { className: 'uc-card ' + accentClass(usecase.accent), dataset: { kind: 'usecase', id: usecase.id } }, [
       el('div', { className: 'uc-card__top' }, [
         el('span', { className: 'uc-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon(usecase.icon)]),
-        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), ns.ui.dutchBadge(usecase), ns.cockpit.sharedBadge(usecase), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })]),
+        el('div', { className: 'uc-card__badges' }, [ns.ui.draftBadge(usecase), ns.ui.dutchBadge(usecase), ns.cockpit.sharedBadge(usecase, { card: true }), newBadge(usecase.added), licenseBadge(usecase.license, { short: true })]),
         saveButton('usecase', usecase.id, usecase.title)
       ]),
       el('div', { className: 'uc-card__body' }, [
@@ -113,12 +113,13 @@
         title: `Copilot in de praktijk van ${ns.cockpit.active().label}`,
         lead: `Per fase van ${ns.cockpit.active().phases}: wat je met Copilot kunt doen, hoe het eruitziet in een demo en welke prompts je direct kunt gebruiken. Alle demo's werken met fictieve gegevens.`
       }),
-      el('div', { className: 'filters' }, [
-        B.filterRow('Fase', B.phaseFilter(all, filters, update)),
-        B.filterRow('Toon', B.licenseFilter(filters, update), B.extraFilters(saved.button), count),
-        sort ? B.filterRow('Volgorde', sort) : null
-      ]),
-      list,
+      el('div', { className: 'filters' }, B.moreFilters(
+        B.filterRow('Toon', B.licenseFilter(filters, update), B.extraFilters(saved.button), B.sortInline(sort)),
+        filters.license !== 'all' || filters.saved || filters.sort !== 'default'
+      )),
+      // De fasen als balk die blijft staan terwijl je door de lijst scrolt, met de teller erin (samen in
+      // één blok: de balk blijft niet staan over wat onder de lijst komt)
+      el('div', { className: 'phase-scope' }, [B.phaseBar(B.phaseFilter(all, filters, update), count, list), list]),
       empty
     ]);
     update();

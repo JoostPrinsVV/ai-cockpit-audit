@@ -74,16 +74,13 @@ details[open]::details-content { block-size: auto; }
   /* De kompasroos draait mee en vervaagt als je naar beneden scrolt */
   .hero__rose { animation: motion-rose-turn linear both; animation-timeline: scroll(root); animation-range: 0 520px; }
   @keyframes motion-rose-turn { to { rotate: 45deg; opacity: 0.25; } }
-  /* Kaarten verderop verschijnen zodra ze in beeld komen */
-  .view .section .card-grid > li,
-  .view .recent > li { animation: motion-reveal linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
-  @keyframes motion-reveal { from { opacity: 0; transform: translateY(24px); } }
 }
+/* Kaarten verderop verschijnen één keer, de eerste keer dat je er langs scrolt: js/motion.js (revealOnce) */
 
 /* ---- Minder beweging: alles uit (ook de overgangen in css/audit.css en css/admin.css) ---- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
   details::details-content { transition: none; }
-  .hero__rose, .view .section .card-grid > li, .view .recent > li { animation: none; }
+  .hero__rose { animation: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

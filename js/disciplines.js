@@ -134,8 +134,10 @@
   /** Label 'Voor iedereen' tonen: zodra er meer dan één cockpit open is, en altijd voor beheerders. */
   const showShared = () => admin || openOnes().length > 1;
 
-  function sharedBadge(item) {
+  /** options.card: op een kaart in een lijst alleen voor beheerders (voor een collega is het daar ruis). */
+  function sharedBadge(item, options) {
     if (!item || !item.shared || !showShared()) return null;
+    if (options && options.card && !admin) return null;
     return el('span', { className: 'badge badge--shared', attrs: { title: 'Gedeelde basis: staat in de cockpit van iedere discipline' } }, [icon('globe'), 'Voor iedereen']);
   }
 

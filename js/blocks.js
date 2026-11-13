@@ -151,6 +151,51 @@
   /** Losse aan/uit-filters bij elkaar (bijv. 'Met demo' en 'Bewaard'). */
   const extraFilters = (...buttons) => el('div', { className: 'toggles toggles--compact', attrs: { role: 'group', 'aria-label': 'Extra filters' } }, buttons);
 
+  /** De volgorde naast de filters in dezelfde rij (scheelt een regel boven de lijst). Zonder volgorde: null. */
+  const sortInline = (sort) => (sort ? el('div', { className: 'filters__inline' }, [el('span', { className: 'filters__label', text: 'Volgorde' }), sort]) : null);
+
+  /**
+   * De rij met de overige filters. Op een telefoon ingeklapt achter 'Filters en volgorde' (de lijst begint
+   * dan een stuk hoger); open als er al een filter aan staat. Geeft [knop, rij] voor in het filterblok.
+   */
+  function moreFilters(row, active) {
+    const id = 'more-filters-' + (++moreCount);
+    const button = el('button', { className: 'filters__more', attrs: { type: 'button', 'aria-expanded': String(Boolean(active)), 'aria-controls': id } }, [
+      icon('sliders'),
+      el('span', { text: 'Filters en volgorde' }),
+      icon('chevron-down')
+    ]);
+    row.id = id;
+    row.classList.add('filters__row--more');
+    row.classList.toggle('is-open', Boolean(active));
+    button.addEventListener('click', () => {
+      const open = !row.classList.contains('is-open');
+      row.classList.toggle('is-open', open);
+      button.setAttribute('aria-expanded', String(open));
+    });
+    return [button, row];
+  }
+  let moreCount = 0;
+
+  /**
+   * De fasen als balk die bovenaan blijft staan terwijl je door een lange lijst scrolt, met de teller
+   * erin: je ziet steeds waar je bent en wisselt van fase zonder terug te scrollen. Kies je een fase
+   * terwijl de lijst al onder de balk door is gescrold, dan begint de lijst weer bovenaan.
+   */
+  function phaseBar(phases, count, list) {
+    const bar = el('div', { className: 'phasebar' }, [phases, count]);
+    // In de vangfase: eerst naar het begin van de lijst, daarna bouwt het filter de lijst opnieuw op
+    bar.addEventListener('click', (event) => {
+      const toggle = event.target.closest && event.target.closest('.toggle');
+      if (!toggle) return;
+      if (list.getBoundingClientRect().top < bar.getBoundingClientRect().bottom) list.scrollIntoView({ block: 'start', behavior: 'instant' });
+      // Past de balk niet op het scherm (telefoon), dan de gekozen fase in beeld schuiven
+      const strip = toggle.parentElement;
+      if (strip.scrollWidth > strip.clientWidth) strip.scrollTo({ left: toggle.offsetLeft - strip.clientWidth / 2 + toggle.offsetWidth / 2, behavior: 'instant' });
+    }, true);
+    return bar;
+  }
+
   /** De teller onder de filters; alleen die wordt voorgelezen, niet de hele lijst. */
   const resultCount = () => el('p', { className: 'results-count', attrs: { 'aria-live': 'polite' } });
   const countText = (n, one, many) => (n === 1 ? '1 ' + one : n + ' ' + many);
@@ -236,6 +281,6 @@
 
   ns.blocks = {
     detailHeader, relatedList, itemLinks, stepsList, infoNote, tipCallout, warningList, askCard, notice, linkButton, statusPanel, openButton,
-    filterRow, extraFilters, resultCount, countText, phaseFilter, licenseFilter, licenseMatch, ratingSort, savedFilter, cardCache
+    filterRow, extraFilters, sortInline, moreFilters, phaseBar, resultCount, countText, phaseFilter, licenseFilter, licenseMatch, ratingSort, savedFilter, cardCache
   };
 })(window.AIAudit);

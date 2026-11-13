@@ -76,10 +76,10 @@
           ns.ui.draftBadge(training),
           // Een training wordt niet vertaald: wel zien in welke taal hij is
           ns.ui.languageBadge(training),
-          ns.cockpit.sharedBadge(training),
+          ns.cockpit.sharedBadge(training, { card: true }),
           ...audienceChips(training),
           training.hasNaslag ? chip('Naslagwerk', { icon: 'book' }) : null,
-          training.level ? chip(training.level, { icon: 'sparkle' }) : null,
+          // Het niveau staat op de pagina van de training
           licenseBadge(training.license, { short: true }),
           newBadge(training.added)
         ].filter(Boolean))

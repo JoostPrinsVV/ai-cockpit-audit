@@ -21,19 +21,23 @@
   /** Zoals je hem kopieert: met je naam, functie en boekjaar uit Mijn gegevens erin. */
   const filledOf = (prompt) => ns.profile.fill(textOf(prompt));
 
-  /** withTask: false als de taak al bovenaan de kaart staat. */
-  function chipsFor(prompt, withTask) {
+  /**
+   * withTask: false als de taak al bovenaan de kaart staat. onCard: op een kaart in de lijst alleen wat
+   * de ene prompt van de andere onderscheidt. De tool (bijna altijd Copilot Chat), 'Met demo' (de
+   * bovenregel zegt al 'Usecase') en 'Voor iedereen' staan op de pagina van de prompt zelf.
+   */
+  function chipsFor(prompt, withTask, onCard) {
     return [
       ns.ui.draftBadge(prompt),
       ns.ui.dutchBadge(prompt),
-      ns.cockpit.sharedBadge(prompt),
-      prompt.tool ? chip(prompt.tool, { icon: 'robot' }) : null,
+      ns.cockpit.sharedBadge(prompt, { card: onCard }),
+      prompt.tool && !onCard ? chip(prompt.tool, { icon: 'robot' }) : null,
       prompt.task && withTask !== false ? chip(prompt.task) : null,
       prompt.followUps.length ? chip(`${prompt.followUps.length + 1} stappen`, { icon: 'checklist' }) : null,
       // Tijdwinst (js/tijdwinst.js); bij een prompt uit een usecase staat die bij de usecase
       ns.tijdwinst.chip(prompt),
       licenseBadge(licenseOf(prompt), { short: true }),
-      prompt.usecase && prompt.usecase.hasDemo ? el('span', { className: 'badge badge--demo' }, [icon('play-circle'), 'Met demo']) : null,
+      prompt.usecase && prompt.usecase.hasDemo && !onCard ? el('span', { className: 'badge badge--demo' }, [icon('play-circle'), 'Met demo']) : null,
       ns.reviews.ratingChip('prompt', prompt.id),
       newBadge(prompt.added)
     ].filter(Boolean);
@@ -45,6 +49,49 @@
     if (grouped) return [el('span', { text: usecaseLabel || prompt.task || prompt.phase.short })];
     return [el('span', { text: prompt.phase.short }), usecaseLabel ? el('span', { className: 'p-card__step', text: usecaseLabel }) : null];
   }
+
+  /**
+   * Kaarten in één rij zijn even hoog. Staat er een prompt uitgeklapt, dan houdt iedere kaart in die rij
+   * zijn eigen hoogte: anders rekt de buurkaart mee en valt daar een leeg vlak tussen tekst en knoppen.
+   * Opnieuw na uitklappen, na filteren (de kaarten verhuizen) en bij een andere vensterbreedte.
+   */
+  const OPENED = '.p-card__toggle[aria-expanded="true"]';
+  function alignRows() {
+    const lists = new Set();
+    document.querySelectorAll(OPENED + ', li.is-open-row').forEach((node) => {
+      const list = node.closest('ul');
+      if (list) lists.add(list);
+    });
+    lists.forEach((list) => {
+      const items = Array.from(list.children);
+      // Eerst alles meten, dan pas aanpassen (anders rekent de browser per kaart opnieuw)
+      const tops = items.map((item) => item.offsetTop);
+      const rows = new Set(tops.filter((top, index) => items[index].querySelector(OPENED)));
+      items.forEach((item, index) => {
+        item.classList.toggle('is-open-row', rows.has(tops[index]));
+        item.style.minHeight = '';
+      });
+      // Iedere kaart in zo'n rij blijft minstens zo hoog als de rij dicht was: de knoppen blijven op hun
+      // plek (ook die waar je net op klikte) en alleen de uitgeklapte prompt komt eronder
+      rows.forEach((top) => {
+        const row = items.filter((item, index) => tops[index] === top);
+        // Per kaart: de hoogte zonder de uitgeklapte prompt, en wat die prompt (met de ruimte erboven) inneemt
+        const sizes = row.map((item) => {
+          const own = item.getBoundingClientRect().height;
+          const preview = item.querySelector('.p-card__preview:not([hidden])');
+          const extra = preview ? preview.getBoundingClientRect().height + (parseFloat(getComputedStyle(preview.parentNode).rowGap) || 0) : 0;
+          return { closed: own - extra, extra };
+        });
+        const height = Math.max(...sizes.map((size) => size.closed));
+        row.forEach((item, index) => { item.style.minHeight = (height + sizes[index].extra) + 'px'; });
+      });
+    });
+  }
+  let aligning = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(aligning);
+    aligning = requestAnimationFrame(alignRows);
+  });
 
   /** Kaart in de lijst: titel, omschrijving, direct kopiëren, prompt uitklappen, bewaren. */
   function card(prompt, headingTag, grouped) {
@@ -60,11 +107,16 @@
       if (open) {
         const text = textOf(prompt);
         const mine = ns.profile.values(text);
-        preview.replaceChildren(el('pre', { className: 'prompt-box__text prompt-box__text--plain', attrs: { tabindex: '0', role: 'region', 'aria-label': 'Prompt: ' + prompt.title } }, ns.ui.promptNodes(text, mine, Object.keys(mine))));
+        preview.replaceChildren(
+          el('pre', { className: 'prompt-box__text prompt-box__text--plain', attrs: { tabindex: '0', role: 'region', 'aria-label': 'Prompt: ' + prompt.title } }, ns.ui.promptNodes(text, mine, Object.keys(mine))),
+          // Invullen doe je op de pagina van de prompt: hier, bij de tekst, in plaats van als vierde knop op iedere kaart
+          el('a', { className: 'p-card__fill', attrs: { href: '#/prompt/' + prompt.id, 'aria-label': 'Invullen en details: ' + prompt.title } }, [icon('pencil-line'), el('span', { text: 'Invullen en details' }), icon('arrow-right')])
+        );
       }
       preview.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));
       toggle.querySelector('span').textContent = open ? 'Verberg' : 'Bekijk';
+      alignRows();
     });
 
     return el('article', { className: 'p-card ' + accentClass(prompt.accent), dataset: { kind: 'prompt', id: prompt.id } }, [
@@ -74,13 +126,13 @@
       ]),
       el(headingTag || 'h2', { className: 'p-card__title' }, [el('a', { attrs: { href: '#/prompt/' + prompt.id }, text: prompt.title })]),
       prompt.description ? el('p', { className: 'p-card__desc', text: prompt.description }) : null,
-      el('div', { className: 'chips' }, chipsFor(prompt, !grouped)),
+      el('div', { className: 'chips' }, chipsFor(prompt, !grouped, true)),
+      // Drie knoppen op één regel: kopiëren (de hoofdactie), naar Copilot, en de tekst bekijken
       el('div', { className: 'p-card__actions' }, [
         // Bij meer stappen kopieer je hier de eerste; de rest staat bij de prompt zelf
         copyButton(() => filledOf(prompt), { label: prompt.followUps.length ? 'Kopieer stap 1' : 'Kopieer', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
         copilotButton(() => filledOf(prompt), { label: 'Copilot', className: 'btn--sm', onCopy: () => ns.central.track('copy_prompt', prompt.id) }),
-        toggle,
-        el('a', { className: 'btn btn--quiet btn--sm', attrs: { href: '#/prompt/' + prompt.id, 'aria-label': 'Invullen en details: ' + prompt.title } }, [icon('pencil-line'), el('span', { text: 'Invullen' })])
+        toggle
       ]),
       preview
     ]);
@@ -150,6 +202,8 @@
       }
       count.textContent = B.countText(items.length, 'prompt', 'prompts');
       empty.hidden = items.length > 0;
+      // Uitgeklapte kaarten staan na het filteren naast andere kaarten
+      alignRows();
     }
     const stopSaved = saved.watch(list);
 
@@ -192,8 +246,20 @@
         title: 'Prompts die je direct kunt gebruiken',
         lead: 'Kopieer een prompt, plak hem in Copilot en vul de [PLAATSHOUDERS] in. Of vul ze hier alvast in via "Invullen". Prompts met een demo horen bij een usecase.'
       }),
-      // Staat je prompt er niet bij: meteen aanvragen of delen (zonder naar de ideeënhub), of zelf bouwen
-      el('div', { className: 'prompt-cta' }, [
+      // Eerst de prompts zelf: zoeken en filteren, de fasen als balk die blijft staan, dan de lijst
+      el('div', { className: 'filters' }, [
+        search,
+        ...B.moreFilters(
+          B.filterRow('Toon', B.licenseFilter(filters, update), B.extraFilters(withDemo, saved.button), B.sortInline(sort)),
+          filters.license !== 'all' || filters.demo || filters.saved || filters.sort !== 'phase'
+        )
+      ]),
+      // Samen in één blok: de balk blijft staan zolang je in de lijst bent, niet over wat eronder komt
+      el('div', { className: 'phase-scope' }, [B.phaseBar(B.phaseFilter(all, filters, update), count, list), list]),
+      empty,
+      // Staat je prompt er niet bij: aanvragen of delen (zonder naar de ideeënhub), of zelf bouwen. Onder de
+      // lijst: wie hier komt, zoekt eerst een prompt; bij niets gevonden staat dezelfde vraag in de lege staat.
+      el('div', { className: 'prompt-cta prompt-cta--after' }, [
         el('div', { className: 'prompt-help' }, [
           el('span', { className: 'prompt-help__icon', attrs: { 'aria-hidden': 'true' } }, [icon('message-plus')]),
           el('div', { className: 'prompt-help__text' }, [
@@ -201,18 +267,10 @@
             el('p', { text: 'Vraag hem aan: het AI-team maakt hem. Of deel een prompt die bij jou goed werkt.' }),
             ns.promises.line('prompt')
           ]),
-          el('div', { className: 'prompt-help__actions' }, [askButton('Vraag een prompt aan', 'btn--primary btn--sm'), shareButton()])
+          el('div', { className: 'prompt-help__actions' }, [askButton('Vraag een prompt aan', 'btn--secondary btn--sm'), shareButton()])
         ]),
         ns.views.builder.teaser()
-      ]),
-      el('div', { className: 'filters' }, [
-        search,
-        B.filterRow('Fase', B.phaseFilter(all, filters, update)),
-        B.filterRow('Toon', B.licenseFilter(filters, update), B.extraFilters(withDemo, saved.button), count),
-        sort ? B.filterRow('Volgorde', sort) : null
-      ]),
-      list,
-      empty
+      ])
     ]);
     update();
     return {

@@ -149,6 +149,8 @@
               ns.ui.setIcon(l.querySelector('svg'), index < n ? 'star-filled' : 'star');
             });
             send.disabled = false;
+            // Nu pas de toelichting en de knop: tot je sterren kiest, blijft het blok klein
+            more.hidden = false;
           });
           return el('span', {}, [input, label]);
         }))
@@ -160,8 +162,8 @@
         count.textContent = comment.value.length + '/' + MAX_COMMENT;
       });
       const send = el('button', { className: 'btn btn--primary btn--sm', attrs: { type: 'submit', disabled: true } }, [icon('send'), el('span', { text: 'Versturen' })]);
-      const formNode = el('form', { className: 'review__form', attrs: { novalidate: true } }, [
-        stars,
+      // Eerst alleen de sterren; de toelichting en 'Versturen' komen erbij zodra je er een kiest
+      const more = el('div', { className: 'review__more', attrs: { hidden: true } }, [
         el('div', { className: 'field' }, [
           el('label', { className: 'field__label', text: 'Toelichting (optioneel)', attrs: { for: commentId } }),
           comment,
@@ -172,6 +174,7 @@
         ]),
         el('div', { className: 'review__actions' }, [send])
       ]);
+      const formNode = el('form', { className: 'review__form', attrs: { novalidate: true } }, [stars, more]);
       formNode.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (!rating) return;

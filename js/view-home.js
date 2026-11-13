@@ -4,7 +4,7 @@
 (function (ns) {
   'use strict';
 
-  const { el, icon, chip } = ns.ui;
+  const { el, icon } = ns.ui;
   // Vaste teksten die een beheerder in de bewerkmodus kan aanpassen (js/layout.js)
   const edit = (node, key, fallback, label, multiline) => ns.layout.editable(node, key, fallback, { label, multiline });
 
@@ -215,19 +215,14 @@
         el('div', { className: 'cta__text' }, [
           edit(el('h2', { className: 'cta__title', attrs: { id: 'home-ideas' } }), 'home.ideeen.titel', 'Mis je iets? Laat het weten.', 'Kop'),
           edit(el('p', { className: 'cta__lead' }), 'home.ideeen.tekst', 'Een idee voor een usecase, een vraag over Copilot, een verzoek voor een demo of een prompt die je wilt delen: de ideeënhub is van ons allemaal.', 'Tekst', true),
-          el('ul', { className: 'chips', attrs: { role: 'list' } }, [
-            el('li', {}, [chip('Idee', { icon: 'bulb', className: 'chip--dark' })]),
-            el('li', {}, [chip('Vraag', { icon: 'question', className: 'chip--dark' })]),
-            el('li', {}, [chip('Verzoek', { icon: 'flag', className: 'chip--dark' })]),
-            el('li', {}, [chip('Prompt delen', { icon: 'chat', className: 'chip--dark' })])
-          ]),
           // Een klantcasus: de AI-specialist invliegen (js/specialist.js)
           el('p', { className: 'cta__flyin' }, [
             edit(el('span'), 'home.ideeen.specialist', 'Klantcasus waarbij je wilt weten wat Copilot kan?', 'Tekst'),
             el('button', { className: 'cta__flyin-button', attrs: { type: 'button', 'aria-haspopup': 'dialog' }, on: { click: () => ns.specialist.open() } }, [icon('plane'), el('span', { text: 'AI-specialist invliegen' }), icon('arrow-right')])
           ])
         ]),
-        el('a', { className: 'btn btn--primary btn--lg', attrs: { href: '#/ideeen' } }, [icon('message-plus'), edit(el('span'), 'home.ideeen.knop', 'Naar de ideeënhub', 'Knoptekst')])
+        // Rustig omlijnd: de opvallendste kleur is voor de hoofdactie van een pagina (zoeken, kopiëren)
+        el('a', { className: 'btn btn--ghost-dark btn--lg', attrs: { href: '#/ideeen' } }, [icon('message-plus'), edit(el('span'), 'home.ideeen.knop', 'Naar de ideeënhub', 'Knoptekst')])
       ])
     ]);
   }
@@ -260,7 +255,9 @@
       { key: 'voor-jou', label: 'Voor jou (bewaard en bekeken)', node: mine },
       { key: 'usecases', label: 'Uitgelichte usecases', node: featuredUsecases() },
       { key: 'favoriet', label: 'Favoriet bij collega\'s', node: colleagues() },
-      { key: 'tips', label: 'Uitgelichte tips', node: featuredTips() },
+      // Standaard uit: dezelfde tips staan bovenaan Tips & tricks ('Begin hier'), en de startpagina is al lang.
+      // Een beheerder zet de sectie in de bewerkmodus aan met het oogje.
+      { key: 'tips', label: 'Uitgelichte tips', node: featuredTips(), optional: true },
       { key: 'ideeen', label: 'Oproep ideeënhub', node: ideasCta() }
     ])));
     // Eerste bezoek: de rondleiding (js/tour.js), even na het opstarten van de instrumenten

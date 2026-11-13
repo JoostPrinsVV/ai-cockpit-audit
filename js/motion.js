@@ -12,8 +12,9 @@
    - Opstarten (startpagina): de ringen van de kompasroos tekenen zich, de
      naald zoekt het noorden, de koersband draait bij, de tellers lopen op en
      de lampjes in het menu doen een korte lampentest.
-   - Kaarten komen kort na elkaar binnen; bij filteren en sorteren schuiven
-     ze naar hun nieuwe plek.
+   - Kaarten komen kort na elkaar binnen (samen binnen 0,4 seconde); kaarten
+     verderop verschijnen één keer als je er voor het eerst langs scrolt. Bij
+     filteren en sorteren schuiven ze naar hun nieuwe plek.
    - Thema: licht/donker opent als een cirkel vanuit de knop.
    - Kleine reacties: kopiëren scant de prompt, de bladwijzer en de sterren
      veren even op.
@@ -129,9 +130,30 @@
     // Eerst alles meten, dan pas animeren (afwisselend meten en animeren laat de browser steeds opnieuw rekenen);
     // alleen wat je meteen ziet, ook als je terugkomt halverwege een lange lijst
     const visible = items.filter((item) => inView(item.getBoundingClientRect(), 0));
+    // Kort: je komt hier iedere dag. De laatste kaart staat er binnen 0,4 seconde.
     visible.forEach((item, index) => {
-      item.animate([{ opacity: 0, transform: 'translateY(14px)' }, { opacity: 1, transform: 'none' }], { duration: 420, delay: Math.min(index, 12) * 45, easing: EASE, fill: 'backwards' });
+      item.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 240, delay: Math.min(index, 8) * 20, easing: EASE, fill: 'backwards' });
     });
+  }
+
+  /* ---- Kaarten verderop: één keer verschijnen als je er voor het eerst langs scrolt ----------- */
+  // Niet bij iedere keer scrollen opnieuw (dan zijn de kaarten onderaan het scherm altijd half vervaagd)
+  let revealer = null;
+  function revealOnce(scope) {
+    if (revealer) revealer.disconnect();
+    revealer = null;
+    if (calm() || typeof window.IntersectionObserver !== 'function') return;
+    const waiting = Array.from(scope.querySelectorAll('.section .card-grid > li, .recent > li'))
+      .filter((item) => !inView(item.getBoundingClientRect(), 0));
+    if (!waiting.length) return;
+    revealer = new window.IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        entry.target.animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: EASE });
+      });
+    });
+    waiting.forEach((item) => revealer.observe(item));
   }
 
   // Is de pagina herladen (F5 of Ctrl+F5)? Doorklikken binnen de site telt niet.
@@ -142,7 +164,10 @@
 
   function arrived(parsed, first) {
     const view = document.getElementById('view');
-    if (view) stagger(view);
+    if (view) {
+      stagger(view);
+      revealOnce(view);
+    }
     if (parsed && parsed.name === '' && !calm()) {
       let done = false;
       try {
