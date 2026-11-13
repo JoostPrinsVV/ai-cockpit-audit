@@ -687,6 +687,7 @@
       ns.tijdwinst.init(); // na het kopiëren: 'Scheelde dit tijd?'
       ns.kickstart.init(); // de stappen van de Kickstart afvinken
       ns.wrapped.init(); // jouw jaar voor Cockpit Wrapped (alleen in deze browser)
+      ns.openCockpit.init(); // het lampje bij de Ideeënhub op de dag van een Open Cockpit-sessie
       ns.palette.init(); // zoekvenster: Ctrl+K, / of de zoekknop
       fillChrome();
       ns.instruments.init();

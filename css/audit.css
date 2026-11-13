@@ -3826,3 +3826,35 @@ ul.wr-highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax
   .oc-next__actions, .oc-pasts__more { display: none; }
   .oc-past:not([open]) > .oc-past__body { display: grid; }
 }
+
+/* Open Cockpit op de startpagina (js/opencockpit.js): de hele balk is klikbaar via de titel; de knoppen liggen erboven */
+.oc-teaser { position: relative; }
+.oc-teaser__link { color: inherit; text-decoration: none; }
+.oc-teaser__link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.oc-teaser__link:focus-visible { outline: none; }
+.oc-teaser:has(.oc-teaser__link:focus-visible) { outline: var(--focus-width) solid var(--color-focus); outline-offset: 3px; }
+.oc-teaser__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-left: auto; }
+.oc-teaser__actions > * { position: relative; z-index: 1; }
+.oc-teaser .wr-teaser__go { pointer-events: none; }
+.oc-teaser__close { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; color: rgba(255, 255, 255, 0.72); cursor: pointer; }
+.oc-teaser__close:hover { border-color: var(--on-dark-line-strong); color: var(--vv-white); }
+.oc-teaser__close:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: 2px; }
+.oc-teaser.is-live { box-shadow: var(--shadow-card), inset 4px 0 0 var(--vv-crimson); }
+
+/* Nu bezig: een rood bolletje dat rustig uitdijt (stil bij 'minder beweging', css/motion.css) */
+.oc-live { position: relative; display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--vv-crimson); }
+.oc-live::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--vv-crimson); animation: blip-ping 1.8s ease-out infinite; }
+.oc-next.is-live { border-left-color: var(--vv-crimson); }
+.oc-next.is-live .oc-next__eyebrow { color: var(--accent-crimson-ink); }
+
+/* Op de dag van een sessie: het lampje van de Ideeënhub in het menu brandt rood, tijdens de sessie knipperend */
+.nav__link[data-live]::before { background: var(--vv-crimson); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-crimson) 28%, transparent); }
+.nav__link[data-live='live']::before { animation: oc-lamp 1.6s ease-in-out infinite; }
+@keyframes oc-lamp { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--vv-crimson) 12%, transparent); opacity: 0.6; } }
+
+@media (max-width: 600px) {
+  .oc-teaser__actions { width: 100%; margin-left: 0; }
+  .oc-teaser__actions > .btn { flex: 1; justify-content: center; }
+  .oc-teaser__close { position: absolute; top: 0.4rem; right: 0.4rem; }
+  .oc-teaser .wr-teaser__body { padding-right: 2rem; }
+}

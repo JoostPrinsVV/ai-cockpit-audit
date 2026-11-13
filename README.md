@@ -1024,8 +1024,11 @@ brainstorm.
   `volgende` als er nog niets gepland is). In Beheer → Open Cockpit zet je een punt met één klik *Op de agenda* (dan
   staat het zonder naam op de pagina, als de collega dat goedvond), verplaats je het naar een andere sessie, en schrijf
   je na de sessie de reactie erbij (*Behandeld*). Ze staan niet in de ideeënhub en niet bij Beheer → Inzendingen.
-- **Startpagina:** in de week voor een sessie een balk *Open Cockpit over … dagen* (in de bewerkmodus te verbergen
-  of te verplaatsen, zoals de andere secties).
+- **Startpagina:** in de twee weken voor een sessie een balk *Open Cockpit over … dagen*; op de dag zelf *vandaag om
+  12:30 uur* met de knop *Deelnemen via Teams*, en tijdens de sessie *nu bezig* (met een rood bolletje). Met het kruisje
+  verbergt een collega de balk tot de volgende sessie (alleen op dat apparaat). Op de dag zelf brandt ook het lampje van
+  de Ideeënhub in het menu rood, tijdens de sessie knipperend. De balk is in de bewerkmodus te verbergen
+  of te verplaatsen, zoals de andere secties.
 - **Eenmalig:** voer `setup/supabase-audit-opencockpit.sql` uit (stap 19, na stap 1). Tot dan kunnen collega's nog
   geen agendapunt aandragen en meldt de pagina dat de agenda nog wordt aangesloten; sessies plannen werkt al wel.
   Stap 1, 11, 13 en 16 noemen de soort `agendapunt` ook: opnieuw uitvoeren haalt hem niet weg.

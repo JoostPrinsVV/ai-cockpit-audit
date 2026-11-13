@@ -408,6 +408,22 @@
       equal(groups.get('2026-12-10').map((item) => item.id), [2, 1], 'per sessie, de meeste stemmen eerst');
       equal(groups.get('2026-11-12').map((item) => item.id), [3], 'een eerdere sessie houdt zijn punten');
     });
+    await test('aankondiging: twee weken vooraf, vandaag, nu bezig, en een voorbije sessie telt niet meer', () => {
+      const O = ns.openCockpit;
+      const cfg = O.settings(ocData());
+      const at = (text) => new Date(text);
+      equal(O.moment(cfg, at('2026-11-20T09:00:00')), null, 'meer dan twee weken vooraf (20 dagen): niets');
+      equal(O.moment(cfg, at('2026-11-26T09:00:00')).state + ' ' + O.moment(cfg, at('2026-11-26T09:00:00')).days, 'soon 14', 'twee weken vooraf');
+      equal(O.teaserText(O.moment(cfg, at('2026-12-09T09:00:00'))).title, 'Open Cockpit morgen', 'de dag ervoor');
+      const today = O.moment(cfg, at('2026-12-10T09:00:00'));
+      equal([today.state, today.session.id, O.teaserText(today).title], ['today', '2026-12-10', 'Open Cockpit vandaag om 12:30 uur'], 'op de dag, voor het begin');
+      const live = O.moment(cfg, at('2026-12-10T12:45:00'));
+      equal([live.state, O.teaserText(live).title, O.teaserText(live).text], ['live', 'Open Cockpit is nu bezig', 'Tot 13:30 uur · Leeuwarden en online via Teams. Haak gerust nog aan.'], 'tijdens de sessie');
+      equal(O.moment(cfg, at('2026-12-10T13:30:00')), null, 'na afloop: de volgende is meer dan twee weken weg');
+      equal(O.next(cfg, '2026-12-10', '14:00').id, '2027-01-14', 'na afloop is de volgende sessie de eerstvolgende');
+      equal(O.past(cfg, '2026-12-10', '14:00').map((s) => s.id), ['2026-12-10', '2026-11-12'], 'en staat die van vandaag bij eerdere sessies');
+      equal(O.next(cfg, '2026-12-10').id, '2026-12-10', 'zonder tijd telt de hele dag mee');
+    });
     await test('agenda-item (.ics): Nederlandse tijd, tekens geëscaped, regels van hoogstens 75 tekens', () => {
       const O = ns.openCockpit;
       const session = O.settings(ocData()).sessions[1];

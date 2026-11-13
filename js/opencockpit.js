@@ -30,8 +30,10 @@
   const KIND = 'agendapunt';
   const DEFAULT_START = '12:00';
   const DEFAULT_MINUTES = 60;
-  // Hoeveel dagen vooraf de startpagina en de ideeënhub de sessie aankondigen
-  const ANNOUNCE_DAYS = 7;
+  // Hoeveel dagen vooraf de startpagina de sessie aankondigt (dan is er nog tijd om iets aan te dragen)
+  const ANNOUNCE_DAYS = 14;
+  // De sessie waarvan je de balk op de startpagina hebt weggeklikt (alleen op dit apparaat)
+  const DISMISS_KEY = 'openCockpitVerborgen';
   const PAST_SHOWN = 4;
 
   // De statussen van een inzending, in de woorden van een agenda
@@ -86,11 +88,40 @@
   }
 
   const today = () => (ns.content ? ns.content.today() : new Date().toISOString().slice(0, 10));
-  /** De sessies die nog komen (vandaag telt mee), zonder afgelaste. */
-  const upcoming = (cfg, day) => cfg.sessions.filter((s) => s.date >= (day || today()) && !s.cancelled);
-  /** De sessies die geweest zijn, de laatste eerst. */
-  const past = (cfg, day) => cfg.sessions.filter((s) => s.date < (day || today()) && !s.cancelled).reverse();
-  const next = (cfg, day) => upcoming(cfg, day)[0] || null;
+  const pad = (n) => String(n).padStart(2, '0');
+  /** De datum ('2026-11-19') en tijd ('12:45') van een moment, in de tijd van dit apparaat. */
+  const dayOf = (at) => `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+  const timeOf = (at) => `${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  /** Hoeveel dagen van de ene datum tot de andere. */
+  const utc = (date) => {
+    const [y, m, d] = date.split('-').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  const daysBetween = (from, to) => Math.round((utc(to) - utc(from)) / 86400000);
+  // Is een sessie van vandaag al voorbij? Alleen als je de tijd meegeeft (time); zonder telt de hele dag mee
+  const ended = (s, day, time) => s.date === day && Boolean(time) && s.end <= time;
+  /** De sessies die nog komen (vandaag telt mee, tot het einde als je de tijd meegeeft), zonder afgelaste. */
+  const upcoming = (cfg, day, time) => cfg.sessions.filter((s) => s.date >= (day || today()) && !s.cancelled && !ended(s, day || today(), time));
+  /** De sessies die geweest zijn (met de tijd erbij ook die van vandaag die al voorbij is), de laatste eerst. */
+  const past = (cfg, day, time) => cfg.sessions.filter((s) => !s.cancelled && (s.date < (day || today()) || ended(s, day || today(), time))).reverse();
+  const next = (cfg, day, time) => upcoming(cfg, day, time)[0] || null;
+
+  /** Nu: de datum (met ?datum= in de testmodus, zie js/content.js) en de tijd. at: alleen voor de tests. */
+  const now = (at) => (at ? { day: dayOf(at), time: timeOf(at) } : { day: today(), time: timeOf(new Date()) });
+
+  /**
+   * De stand van de eerstvolgende sessie voor een aankondiging: { session, state, days }, of null.
+   * state: 'soon' (binnen twee weken), 'today' (vandaag, nog niet begonnen) of 'live' (nu bezig).
+   * Een sessie van vandaag die al voorbij is, telt niet meer: dan gaat het over de volgende.
+   */
+  function moment(cfg, at) {
+    const { day, time } = now(at);
+    const session = next(cfg, day, time);
+    if (!session) return null;
+    if (session.date === day) return { session, state: time >= session.start ? 'live' : 'today', days: 0 };
+    const days = daysBetween(day, session.date);
+    return days <= ANNOUNCE_DAYS ? { session, state: 'soon', days } : null;
+  }
 
   /**
    * Bij welke sessie een agendapunt hoort: die van de kolom 'session' als hij bestaat. Anders (nog geen
@@ -239,7 +270,8 @@
 
   /** De volgende sessie: wanneer, waar, en meteen in je agenda of naar Teams. */
   function nextCard(cfg) {
-    const session = next(cfg);
+    const { day, time } = now();
+    const session = next(cfg, day, time);
     if (!session) {
       return el('section', { className: 'oc-next oc-next--empty', attrs: { 'aria-labelledby': 'oc-next-title' } }, [
         el('span', { className: 'oc-next__icon', attrs: { 'aria-hidden': 'true' } }, [icon('calendar')]),
@@ -249,12 +281,15 @@
         ])
       ]);
     }
-    const later = upcoming(cfg).slice(1, 4);
-    const isToday = session.date === today();
-    return el('section', { className: 'oc-next', attrs: { 'aria-labelledby': 'oc-next-title' } }, [
+    const later = upcoming(cfg, day, time).slice(1, 4);
+    const isToday = session.date === day;
+    const live = isToday && time >= session.start;
+    return el('section', { className: 'oc-next' + (live ? ' is-live' : ''), attrs: { 'aria-labelledby': 'oc-next-title' } }, [
       dateBadge(session.date),
       el('div', { className: 'oc-next__body' }, [
-        el('p', { className: 'oc-next__eyebrow' }, [el('span', { text: 'Volgende sessie' }), el('span', { className: 'oc-next__count', text: countdown(session.date) })]),
+        el('p', { className: 'oc-next__eyebrow' }, live
+          ? [el('span', { className: 'oc-live', attrs: { 'aria-hidden': 'true' } }), el('span', { text: 'Nu bezig' }), el('span', { className: 'oc-next__count', text: `Tot ${session.end} uur` })]
+          : [el('span', { text: 'Volgende sessie' }), el('span', { className: 'oc-next__count', text: countdown(session.date) })]),
         el('h2', { className: 'oc-next__title', attrs: { id: 'oc-next-title' } }, [longDate(session.date).replace(/^./, (c) => c.toUpperCase())]),
         el('ul', { className: 'oc-next__meta', attrs: { role: 'list' } }, [
           el('li', {}, [icon('clock'), el('span', { text: `${session.start} – ${session.end} uur` })]),
@@ -275,7 +310,9 @@
   /** Agendapunt aandragen: titel, toelichting, voor welke sessie, en of hij zichtbaar mag worden. */
   function agendaForm(cfg, onSent) {
     const config = ns.app.config();
-    const coming = upcoming(cfg);
+    // Alleen sessies die nog moeten beginnen: tijdens of na de sessie van vandaag gaat een nieuw punt naar de volgende
+    const clock = now();
+    const coming = upcoming(cfg, clock.day).filter((s) => s.date > clock.day || s.start > clock.time);
     const title = el('input', { className: 'field__input', attrs: { id: 'oc-title', type: 'text', maxlength: '120', required: true, autocomplete: 'off', placeholder: 'Bijv. "Hoe gebruiken jullie Copilot bij de managementletter?"', 'aria-describedby': 'oc-title-error' } });
     const titleError = el('p', { className: 'field__error', attrs: { id: 'oc-title-error' } });
     const body = el('textarea', { className: 'field__input field__textarea', attrs: { id: 'oc-body', rows: '4', maxlength: '2000', 'aria-describedby': 'oc-body-hint' } });
@@ -470,7 +507,9 @@
       el('div', { className: 'section__head' }, [edit(el('h2', { className: 'section__title', attrs: { id: 'oc-past-title' } }), 'opencockpit.eerder.titel', 'Eerdere sessies', 'Kop')]),
       pastList
     ]);
-    const comingSession = next(cfg);
+    // Een sessie van vandaag die al voorbij is, staat bij Eerdere sessies; de agenda gaat dan over de volgende
+    const clock = now();
+    const comingSession = next(cfg, clock.day, clock.time);
 
     const form = ns.app.config().enableIdeas === false
       ? el('p', { text: 'Agendapunten aandragen staat op dit moment uit.' })
@@ -517,7 +556,7 @@
         ? open.map((item) => agendaItem(item, mineRefs.has(item.ref), !DONE.includes(item.status)))
         : [emptyState('Nog geen agendapunten', 'Draag het eerste onderwerp aan. Het nieuws rond Copilot staat sowieso op de agenda.', null, 'calendar')]));
       // Eerdere sessies: met wat er staat (samenvatting, nieuws, opname of punten)
-      const shown = past(cfg, day).filter((s) => s.summary || s.news.length || s.recording || (groups.get(s.id) || []).length);
+      const shown = past(cfg, day, clock.time).filter((s) => s.summary || s.news.length || s.recording || (groups.get(s.id) || []).length);
       pastSection.hidden = !shown.length;
       const nodes = shown.map((s, index) => pastSession(s, groups.get(s.id) || [], mineRefs, index === 0));
       pastList.replaceChildren(...nodes.slice(0, PAST_SHOWN));
@@ -575,34 +614,117 @@
   }
 
   /* ---- Aankondigingen elders ----------------------------------------------------------- */
-  /** De volgende sessie als die binnen een week is (startpagina), anders null. */
-  function soon(cfg) {
-    const session = next(cfg || settings());
-    if (!session || !ns.content) return null;
-    return ns.content.daysUntil(session.date) <= ANNOUNCE_DAYS ? session : null;
+  /** Wat de balk op de startpagina zegt, per stand van de sessie (zie moment). */
+  function teaserText(m) {
+    const s = m.session;
+    if (m.state === 'live') return { title: `${NAME} is nu bezig`, text: `Tot ${s.end} uur · ${where(s)}. Haak gerust nog aan.` };
+    if (m.state === 'today') return { title: `${NAME} vandaag om ${s.start} uur`, text: `${where(s)}. Loop binnen wanneer het je uitkomt.` };
+    return {
+      title: `${NAME} ${(m.days === 1 ? 'morgen' : `over ${m.days} dagen`)}`,
+      text: `${longDate(s.date).replace(/^./, (c) => c.toUpperCase())}, ${s.start} uur · ${where(s)}. Draag nog een agendapunt aan.`
+    };
   }
 
-  /** Op de startpagina, in de week voor een sessie: een balk naar de pagina. */
-  function teaser() {
-    const session = soon();
-    if (!session) return null;
-    return el('div', { className: 'container wr-teaser-wrap' }, [
-      el('a', { className: 'wr-teaser oc-teaser', attrs: { href: ROUTE } }, [
-        el('span', { className: 'wr-teaser__icon', attrs: { 'aria-hidden': 'true' } }, [icon('calendar')]),
+  const dismissed = (session) => ns.ui.storage.get(DISMISS_KEY, '') === session.id;
+
+  /** Hoeveel milliseconden tot de balk anders moet (de sessie begint of is voorbij), of 0 als dat niet vandaag is. */
+  function untilChange(m) {
+    if (m.state === 'soon') return 0;
+    const at = new Date();
+    const [h, min] = (m.state === 'live' ? m.session.end : m.session.start).split(':').map(Number);
+    const change = new Date(at.getFullYear(), at.getMonth(), at.getDate(), h, min, 0).getTime() - at.getTime();
+    return change > 0 ? change + 1000 : 0;
+  }
+
+  /**
+   * Op de startpagina, in de twee weken voor een sessie: een balk naar de pagina. Op de dag zelf met
+   * meteen de knop naar Teams, en tijdens de sessie 'nu bezig'. Met het kruisje weg tot de volgende sessie.
+   */
+  function teaser(at) {
+    const m = moment(settings(), at);
+    if (!m || dismissed(m.session)) return null;
+    const s = m.session;
+    const words = teaserText(m);
+    const join = m.state !== 'soon' && s.teams;
+    const close = el('button', { className: 'oc-teaser__close', attrs: { type: 'button', 'aria-label': 'Verberg tot de volgende sessie', title: 'Verberg tot de volgende sessie' } }, [icon('close')]);
+    const wrap = el('div', { className: 'container wr-teaser-wrap' }, [
+      el('div', { className: 'wr-teaser oc-teaser is-' + m.state }, [
+        el('span', { className: 'wr-teaser__icon', attrs: { 'aria-hidden': 'true' } }, [m.state === 'live' ? el('span', { className: 'oc-live' }) : icon('calendar')]),
         el('span', { className: 'wr-teaser__body' }, [
-          el('span', { className: 'wr-teaser__title', text: `${NAME} ${countdown(session.date).toLowerCase()}` }),
-          el('span', { className: 'wr-teaser__text', text: `${longDate(session.date).replace(/^./, (c) => c.toUpperCase())}, ${session.start} uur · ${where(session)}. Draag nog een agendapunt aan.` })
+          // De hele balk is klikbaar via deze link (zie .oc-teaser__link::after); de knoppen liggen erboven
+          el('a', { className: 'wr-teaser__title oc-teaser__link', attrs: { href: ROUTE }, text: words.title }),
+          el('span', { className: 'wr-teaser__text', text: words.text })
         ]),
-        el('span', { className: 'wr-teaser__go' }, [el('span', { text: 'Naar de agenda' }), icon('arrow-right')])
+        el('span', { className: 'oc-teaser__actions' }, [
+          join
+            ? el('a', { className: 'btn btn--primary btn--sm', attrs: { href: s.teams, target: '_blank', rel: 'noopener' } }, [icon('external'), el('span', { text: 'Deelnemen via Teams' })])
+            : el('span', { className: 'wr-teaser__go', attrs: { 'aria-hidden': 'true' } }, [el('span', { text: 'Naar de agenda' }), icon('arrow-right')]),
+          close
+        ])
       ])
     ]);
+    close.addEventListener('click', () => {
+      ns.ui.storage.set(DISMISS_KEY, s.id);
+      wrap.hidden = true;
+      const main = document.getElementById('main');
+      if (main) main.focus({ preventScroll: true });
+      toast('Verborgen tot de volgende sessie. Open Cockpit vind je in de Ideeënhub.');
+    });
+    // Blijft de startpagina open staan: om het begin of einde van de sessie de balk bijwerken
+    const wait = untilChange(m);
+    if (wait && wait < 12 * 3600000) {
+      window.setTimeout(() => {
+        if (!wrap.isConnected || wrap.hidden) return;
+        const fresh = teaser();
+        if (fresh) wrap.replaceWith(fresh);
+        else wrap.hidden = true;
+      }, wait);
+    }
+    return wrap;
+  }
+
+  /* ---- Lampje in het menu op de dag zelf ----------------------------------------------- */
+  /**
+   * Op de dag van een sessie brandt het lampje van de Ideeënhub in het menu (rood; tijdens de sessie
+   * knipperend), met 'Open Cockpit vandaag' of 'nu bezig' voor schermlezers. Zo zie je het ook als je
+   * niet op de startpagina begint.
+   */
+  function updateNav() {
+    const link = document.querySelector('.nav__link[data-nav="ideeen"]');
+    if (!link) return;
+    const m = ns.content && ns.content.openCockpit ? moment(settings()) : null;
+    const state = m && m.state !== 'soon' ? m.state : '';
+    let note = link.querySelector('.oc-nav-note');
+    if (!state) {
+      delete link.dataset.live;
+      if (note) note.remove();
+      link.removeAttribute('title');
+      return;
+    }
+    link.dataset.live = state;
+    const label = state === 'live' ? `${NAME} is nu bezig` : `${NAME} vandaag om ${m.session.start} uur`;
+    link.title = label;
+    if (!note) {
+      note = el('span', { className: 'sr-only oc-nav-note' });
+      link.append(note);
+    }
+    note.textContent = ', ' + label;
+  }
+
+  let navTimer = 0;
+  /** Bij het opstarten (js/app.js): het lampje zodra de inhoud er is, en daarna iedere minuut. */
+  function init() {
+    document.addEventListener('ai:inhoud', updateNav);
+    window.clearInterval(navTimer);
+    navTimer = window.setInterval(updateNav, 60000);
   }
 
   /** In de ideeënhub: een blok naar Open Cockpit (met de volgende sessie, als die gepland is). */
   function hubCard() {
     const cfg = settings();
     if (cfg.off) return null;
-    const session = next(cfg);
+    const clock = now();
+    const session = next(cfg, clock.day, clock.time);
     return el('section', { className: 'side-card oc-hub', attrs: { 'aria-labelledby': 'oc-hub-title' } }, [
       el('h2', { className: 'side-card__title', attrs: { id: 'oc-hub-title' } }, [icon('calendar'), el('span', { text: `${NAME}: het inloopuur` })]),
       el('p', { className: 'side-card__text', text: session
@@ -612,7 +734,7 @@
     ]);
   }
 
-  ns.openCockpit = { NAME, ROUTE, KIND, NEXT, STATUSES, settings, upcoming, past, next, sessionOf, bySession, ics, longDate, where, pageUrl, soon, teaser, hubCard };
+  ns.openCockpit = { NAME, ROUTE, KIND, NEXT, STATUSES, ANNOUNCE_DAYS, settings, upcoming, past, next, moment, teaserText, sessionOf, bySession, ics, longDate, where, pageUrl, teaser, hubCard, updateNav, init };
   ns.views = ns.views || {};
   ns.views.openCockpit = { render };
 })(window.AIAudit);
