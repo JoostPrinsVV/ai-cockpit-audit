@@ -213,7 +213,11 @@
       if (last) info.push({ id: 'copilot', icon: 'chart', label: 'Copilot-gebruik', value: 't/m ' + formatDate(last.period_end).replace(/ \d{4}$/, ''), text: age > USAGE_DAYS ? 'Tijd voor een nieuwe import' : 'Laatste import', tab: 'copilot' });
     }
 
-    if (has('doelkoers') && data.goals && data.goals.text) info.push({ id: 'doelkoers', icon: 'compass', label: 'Doelkoers', value: data.goals.due ? 'Let op' : 'Op koers', text: data.goals.text, tab: 'doelkoers', tone: data.goals.due ? 'due' : '' });
+    if (has('doelkoers') && data.goals && data.goals.text) {
+      // Zonder doelen is er geen koers: dan niet 'Op koers'
+      const none = /^Nog geen doelen/.test(data.goals.text);
+      info.push({ id: 'doelkoers', icon: 'compass', label: 'Doelkoers', value: none ? 'Geen doelen' : data.goals.due ? 'Let op' : 'Op koers', text: none ? 'Stel de doelen in' : data.goals.text, tab: 'doelkoers', tone: data.goals.due ? 'due' : '' });
+    }
 
     if (has('nieuwsbrief') && data.newsletterDay) add({ id: 'nieuwsbrief', tab: 'nieuwsbrief', icon: 'mail', rank: 12, tone: 'due', title: 'De maandnieuwsbrief staat klaar', text: 'Vandaag is de laatste dag van de maand: download hem als PDF of e-mail.', badge: 'Vandaag' });
 
@@ -323,11 +327,12 @@
       ns.ui.storage.set(VISIT_KEY, new Date().toISOString());
 
       const kpi = (value, label, tone) => el('li', { className: 'dash-kpi' + (tone ? ' is-' + tone : '') }, [el('span', { className: 'dash-kpi__value', text: String(value) }), el('span', { className: 'dash-kpi__label', text: label })]);
-      kpis.replaceChildren(
-        kpi(result.counts.todo, result.counts.todo === 1 ? 'te doen' : 'te doen', result.counts.todo ? 'due' : 'ok'),
-        result.counts.late ? kpi(result.counts.late, result.counts.late === 1 ? 'verlopen' : 'verlopen', 'late') : null,
+      // replaceChildren maakt van null de tekst 'null': alleen echte tellers
+      kpis.replaceChildren(...[
+        kpi(result.counts.todo, 'te doen', result.counts.todo ? 'due' : 'ok'),
+        result.counts.late ? kpi(result.counts.late, 'verlopen', 'late') : null,
         kpi(result.counts.unseen, 'nieuw sinds je vorige bezoek', result.counts.unseen ? 'new' : '')
-      );
+      ].filter(Boolean));
 
       const todoPanel = el('section', { className: 'dash__panel dash__todo', attrs: { 'aria-labelledby': 'dash-todo-title' } }, [
         el('h3', { className: 'dash__panel-title', attrs: { id: 'dash-todo-title' } }, [icon('checklist'), el('span', { text: 'Te doen' })]),
@@ -350,7 +355,7 @@
         el('h3', { className: 'dash__panel-title', attrs: { id: 'dash-info-title' } }, [icon('info'), el('span', { text: 'Goed om te weten' })]),
         el('ul', { className: 'dash-infos', attrs: { role: 'list' } }, result.info.map(infoTile))
       ]) : null;
-      body.replaceChildren(el('div', { className: 'dash__grid' }, [todoPanel, freshPanel]), infoPanel);
+      body.replaceChildren(...[el('div', { className: 'dash__grid' }, [todoPanel, freshPanel]), infoPanel].filter(Boolean));
       body.setAttribute('aria-busy', 'false');
     });
     return node;
