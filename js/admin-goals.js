@@ -44,10 +44,10 @@
     return { date: point.date, value: part.reduce((total, p) => total + p.value, 0) / part.length };
   });
 
-  /** De weken uit de imports, met het aantal personen van die import (bij overlap de nieuwste). */
+  /** De weken uit de imports, met het aantal personen van die import (bij overlap de nieuwste). De maandexport heeft geen weken. */
   function weeksOf(snapshots) {
     const map = new Map();
-    snapshots.forEach((snapshot) => snapshot.weekly.forEach((week) => map.set(week.week, {
+    snapshots.forEach((snapshot) => (snapshot.weekly || []).forEach((week) => map.set(week.week, {
       date: week.week, active: week.active.basic + week.active.premium, volume: week.volume.basic + week.volume.premium, people: snapshot.people
     })));
     return Array.from(map.values()).sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -77,12 +77,14 @@
   }
 
   const share = (part, whole) => (whole ? (part / whole) * 100 : null);
+  // De maandexport (versie 2): alleen licentiehouders, één periode zonder weken
+  const monthly = (snapshot) => ns.adminCopilot.isMonthly(snapshot);
   /* De kengetallen. Hoger is beter. unit '%' (procentpunten) of 'per week' (aantal keer per week). */
   const METRICS = [
     {
       id: 'adoptie', source: 'copilot', label: 'Adoptie', unit: '%',
       text: 'Deel van de collega\'s met Copilot dat in de laatste 4 weken actief was (per import).',
-      points: (d) => d.snapshots.map((s) => ({ date: s.periodEnd, value: share(s.licences.basic.active4w + s.licences.premium.active4w, s.licences.basic.people + s.licences.premium.people) }))
+      points: (d) => d.snapshots.map((s) => ({ date: s.periodEnd, value: monthly(s) ? share(s.active, s.people) : share(s.licences.basic.active4w + s.licences.premium.active4w, s.licences.basic.people + s.licences.premium.people) }))
     },
     {
       id: 'wekelijks', source: 'copilot', label: 'Wekelijks actief', unit: '%',
@@ -91,13 +93,16 @@
     },
     {
       id: 'licenties', source: 'copilot', label: 'Licenties benut', unit: '%',
-      text: 'Deel van de collega\'s met een Copilot-licentie (Premium) dat in de laatste 4 weken actief was (per import).',
-      points: (d) => d.snapshots.filter((s) => s.licences.premium.people).map((s) => ({ date: s.periodEnd, value: share(s.licences.premium.active4w, s.licences.premium.people) }))
+      text: 'Deel van de collega\'s met een Copilot-licentie (Premium) dat in de laatste 4 weken actief was (per import; bij de maandexport: in de periode).',
+      points: (d) => d.snapshots.filter((s) => (monthly(s) ? s.people : s.licences.premium.people))
+        .map((s) => ({ date: s.periodEnd, value: monthly(s) ? share(s.active, s.people) : share(s.licences.premium.active4w, s.licences.premium.people) }))
     },
     {
       id: 'intensiteit', source: 'copilot', label: 'Gebruik per actieve collega', unit: 'per week',
-      text: 'Hoe vaak een actieve collega Copilot gemiddeld per week gebruikt (lopend gemiddelde over 4 weken).',
+      text: 'Hoe vaak een actieve collega Copilot gemiddeld per week gebruikt (lopend gemiddelde over 4 weken; bij de maandexport: prompts per week over de periode).',
       points: (d) => rolling(weeksOf(d.snapshots).filter((w) => w.active).map((w) => ({ date: w.date, value: w.volume / w.active })), 4)
+        .concat(d.snapshots.filter((s) => monthly(s) && s.active && s.days).map((s) => ({ date: s.periodEnd, value: s.prompts / s.active / (s.days / 7) })))
+        .sort((a, b) => (a.date < b.date ? -1 : 1))
     },
     {
       id: 'kopieen', source: 'cockpit', label: 'Prompts gekopieerd', unit: 'per week',

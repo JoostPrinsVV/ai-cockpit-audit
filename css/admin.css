@@ -829,6 +829,16 @@ ul.admin-roles { display: grid; gap: var(--space-2); margin: 0 0 var(--space-5);
 .bars__bar { flex: none; width: calc(var(--share, 0) * (100% - 6.5rem)); height: 14px; border-radius: 0 4px 4px 0; background: var(--series-1); }
 .bars__value { color: var(--color-text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* Intensiteit per team (maandexport): één gestapelde balk, van intensief (vol) naar niet actief (lichtst) */
+.copilot__mix { display: flex; width: 8rem; height: 14px; overflow: hidden; border-radius: 3px; background: var(--color-border); }
+.copilot__mix-part { flex: none; width: calc(var(--share, 0) * 100%); height: 100%; }
+.copilot__mix-part--1 { background: var(--series-1); }
+.copilot__mix-part--2 { background: color-mix(in srgb, var(--series-1) 55%, var(--color-surface)); }
+.copilot__mix-part--3 { background: color-mix(in srgb, var(--series-1) 25%, var(--color-surface)); }
+.copilot__mix-part--4 { background: var(--color-border); }
+.copilot__mix-legend { margin-top: var(--space-3); }
+.copilot__mix-key { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+
 /* ---- Portfolio en beoordelen (js/admin-portfolio.js) -------------------------------------- */
 /* Kwadrant als label: dezelfde kleuren als de andere labels; de tekst zegt het, niet de kleur */
 .quadrant--direct { background: var(--badge-free-bg); color: var(--badge-free-ink); }
@@ -923,7 +933,7 @@ ul.admin-roles { display: grid; gap: var(--space-2); margin: 0 0 var(--space-5);
 }
 /* Hoge-contrastmodus: de kleuren van de reeksen blijven, reeks 2 krijgt een gestippelde lijn erbij */
 @media (forced-colors: active) {
-  .chart__key, .chart__line, .chart__dot, .bars__bar { forced-color-adjust: none; }
+  .chart__key, .chart__line, .chart__dot, .bars__bar, .copilot__mix, .copilot__mix-key { forced-color-adjust: none; }
   .chart__line--2 { stroke-dasharray: 6 4; }
 }
 

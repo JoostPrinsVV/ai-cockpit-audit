@@ -957,12 +957,31 @@ Hoe het gebruik van Copilot zich ontwikkelt, van periode tot periode. Alleen voo
    mensen actief zijn en 'Wat valt op'. Onder **Alle imports** staan de kerncijfers per periode; daar verwijder je ook
    een import.
 
-Welk bestand: nu het analysebestand (`Copilot gebruik analyse.xlsx`). De pagina zoekt de tabellen op de namen van de
-kolommen, niet op de plek: per persoon `Huidige licentie`, `Totaal volume`, `Volume laatste 4 weken` en `Actieve
-weken`; per week `Week`, `Actieve gebruikers Basic`, `Actieve gebruikers Premium`, `Basic-prompts` en
-`Premium-acties`; per kanaal (mag ontbreken) `Basic-kanaal` en `Prompts laatste 4 weken`. Een kolom of tabblad erbij
-maakt niet uit, een andere kolomnaam wel. Voor een ander soort export (bijvoorbeeld rechtstreeks uit Copilot) komt er
-een lezer bij in `FORMATS` in `js/admin-copilot.js`; de rest blijft gelijk.
+Welk bestand: twee soorten. De pagina zoekt de tabellen op de namen van de kolommen, niet op de plek; een kolom of
+tabblad erbij maakt niet uit, een andere kolomnaam wel. Een ander soort export krijgt een eigen lezer in `FORMATS` in
+`js/admin-copilot.js`.
+
+- **De maandexport** (vanaf november 2026): de e-mail met Excel die IT iedere 1e van de maand stuurt
+  (`Copilot_Gebruik_<discipline>_geanonimiseerd_<datum>.xlsx`, uit het Microsoft 365 Copilot-gebruiksrapport,
+  gekoppeld aan AFAS). Al opgeteld, alleen licentiehouders, één periode van ± 28 dagen. Nodig: op `Samenvatting` de
+  kolommen `Onderdeel` en `Waarde` met de rij `Periode` (bijv. `19 oktober 2026 t/m 15 november 2026 (28 dagen)`) en
+  `Discipline`; op `Per team` de kolommen `Team`, `Licenties`, `Actief`, `Prompts totaal` en `Gem. actieve dagen per
+  actieve gebruiker` (met `Intensief`, `Regelmatig`, `Incidenteel` en `Niet actief` als die er zijn). `Per onderdeel` en
+  `Intensiteit` mogen ontbreken. De totalen rekent de pagina zelf uit `Per team`: op de Samenvatting staan ze als tekst,
+  en daar vallen komma's weg (2039 voor 203,9). De discipline in het bestand wint: `Audit & Assurance` hoort bij Audit,
+  en een bestand van een andere discipline wordt daar opgeslagen. Op de pagina: tegels (licenties, actief, adoptie,
+  prompts, per actieve gebruiker), Wat valt op, intensiteit, gebruik per onderdeel, een tabel per team met de intensiteit
+  als balk, en vanaf twee maandexporten het verloop per maand.
+- **Het analysebestand** (`Copilot gebruik analyse.xlsx`, tot november 2026): per persoon `Huidige licentie`, `Totaal
+  volume`, `Volume laatste 4 weken` en `Actieve weken`; per week `Week`, `Actieve gebruikers Basic`, `Actieve
+  gebruikers Premium`, `Basic-prompts` en `Premium-acties`; per kanaal (mag ontbreken) `Basic-kanaal` en `Prompts
+  laatste 4 weken`.
+
+De twee hebben andere maten (Basic en Premium met acties per week, tegenover licentiehouders met prompts over de
+periode). De pagina vergelijkt daarom alleen met de vorige import van **dezelfde soort**; de eerste maandexport begint
+een nieuwe reeks. Onder Alle imports staan ze wel samen, met de soort erbij. Doelkoers telt de maandexport mee bij
+*Adoptie*, *Licenties benut* en *Gebruik per actieve collega* (prompts per week over de periode); *Wekelijks actief*
+heeft weken nodig en stopt dus bij het analysebestand.
 
 **Meerdere disciplines in één bestand** (bijvoorbeeld tabbladen `Audit`, `Accountants` en `Belastingadviseurs`): staan
 alle tabellen van een discipline op één tabblad, dan leest de pagina ieder tabblad apart en hoort het tabblad bij de
@@ -984,8 +1003,9 @@ waardoor. Opslag: in dezelfde tabel als de imports (dus geen nieuwe SQL), als é
 
 Privacy: het bestand wordt in de browser gelezen en nergens heen gestuurd. Alleen totalen per periode gaan naar de
 database (`audit_copilot_usage`): aantallen personen en actieve gebruikers per licentie, volume per week en per kanaal,
-hoe vaak mensen actief zijn en het aandeel van de tien meest actieve personen samen. Geen PersonId's, geen cijfers per
-persoon en geen bestandsnaam. Is een groep heel klein (een licentie met een of twee personen), dan liggen de totalen
+hoe vaak mensen actief zijn en het aandeel van de tien meest actieve personen samen; bij de maandexport de cijfers per
+team, per onderdeel en per intensiteit zoals IT ze aanlevert (teams onder de 5 licentiehouders al samengevoegd). Geen
+PersonId's, geen cijfers per persoon en geen bestandsnaam. Is een groep heel klein (een licentie met een of twee personen), dan liggen de totalen
 dicht bij cijfers per persoon; houd daar rekening mee. Een echte export hoort nooit in deze (openbare) repository.
 
 ## Doelkoers (Beheer → Doelkoers)

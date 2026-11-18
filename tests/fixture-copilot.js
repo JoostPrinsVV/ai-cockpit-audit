@@ -11,6 +11,8 @@
        → Uint8Array, een tabblad per discipline (zoals Audit/Accountants/Belastingadviseurs)
      AIAuditTest.copilotSample({ weeks, basic, premium, start, seed })
        → { people, weekly, channels } met realistische, vaste toevalscijfers
+     AIAuditTest.copilotMonthlyWorkbook({ discipline, period, teams, apps, withoutIntensity })
+       → Uint8Array, de maandexport van IT (Samenvatting, Per onderdeel, Per team, Intensiteit)
    Ook te gebruiken in de site zelf (Beheer → Copilot-gebruik uitproberen
    zonder echte gegevens): laad dit script en zet het bestand in het
    bestandsveld.
@@ -194,6 +196,72 @@
     return zip(files, { deflate: true });
   }
 
+  /** Een werkmap met deze tabbladen ({ naam: rijen }), zonder verdere opsmuk. */
+  function plainWorkbook(named) {
+    const strings = new Map();
+    const names = Object.keys(named);
+    const sheets = names.map((name) => sheetXml(named[name], strings));
+    const sst = Array.from(strings.keys()).map((text) => `<si><t>${escape(text)}</t></si>`).join('');
+    const files = {
+      '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/></Types>',
+      '_rels/.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${PACKAGE}"><Relationship Id="rId1" Type="${REL}/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+      'xl/workbook.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${MAIN}" xmlns:r="${REL}"><sheets>${names.map((name, i) => `<sheet name="${escape(name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>`,
+      'xl/_rels/workbook.xml.rels': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${PACKAGE}">${names.map((name, i) => `<Relationship Id="rId${i + 1}" Type="${REL}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${names.length + 1}" Type="${REL}/sharedStrings" Target="sharedStrings.xml"/></Relationships>`,
+      'xl/sharedStrings.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="${MAIN}" count="${strings.size}" uniqueCount="${strings.size}">${sst}</sst>`
+    };
+    sheets.forEach((xml, i) => {
+      files[`xl/worksheets/sheet${i + 1}.xml`] = xml;
+    });
+    return zip(files, { deflate: true });
+  }
+
+  /**
+   * Een verzonnen maandexport, zoals IT die iedere 1e van de maand mailt (AFAS/Microsoft Graph): de
+   * tabbladen Samenvatting (tekst, met de weggevallen komma's van het echte bestand), Per onderdeel,
+   * Per team en Intensiteit. Alle namen en cijfers zijn verzonnen.
+   * Opties: discipline, period (de tekst bij 'Periode'), teams, apps; withoutIntensity: geen tabblad Intensiteit.
+   */
+  function copilotMonthlySample(options) {
+    return Object.assign({
+      discipline: 'Audit & Assurance',
+      period: '7 september 2026 t/m 4 oktober 2026 (28 dagen)',
+      teams: [
+        { name: 'Team A', people: 12, active: 11, prompts: 1800, days: 11.4, mix: [7, 3, 1, 1] },
+        { name: 'Team B', people: 8, active: 8, prompts: 950, days: 9.2, mix: [4, 4, 0, 0] },
+        { name: 'Team C', people: 6, active: 5, prompts: 420, days: 7.5, mix: [2, 2, 1, 1] },
+        // Zoals op de Samenvatting: een aantal als tekst met een punt voor de duizendtallen
+        { name: 'Overige teams (samengevoegd)', people: 7, active: 6, prompts: '1.210', days: 13, mix: [5, 1, 0, 1] }
+      ],
+      apps: [['Copilot Chat', 29], ['Copilot Chat (werk)', 29], ['Teams', 28], ['Outlook', 20], ['Word', 15], ['PowerPoint', 3]]
+    }, options);
+  }
+
+  function copilotMonthlyWorkbook(data) {
+    const { discipline, period, teams, apps, withoutIntensity } = copilotMonthlySample(data);
+    const bands = ['Intensief', 'Regelmatig', 'Incidenteel', 'Niet actief'];
+    const sheets = {
+      Samenvatting: [
+        ['Onderdeel', 'Waarde'],
+        ['Discipline', discipline],
+        ['Periode', period],
+        ['Gebruikers met Copilot-licentie', '33'],
+        ['Actief in periode', '30 (91%)'],
+        ['Prompts totaal', '4.380'],
+        ['Gem. prompts per actieve gebruiker', '1460'],
+        ['Gem. actieve dagen per actieve gebruiker', '105'],
+        ['Anonimisering', 'Alleen groepscijfers; teams met minder dan 5 personen samengevoegd']
+      ],
+      'Per onderdeel': [['Onderdeel', 'Actieve gebruikers', '% van licenties']].concat(apps.map(([name, active]) => [name, active, active / 33])),
+      'Per team': [['Team', 'Licenties', 'Actief', '% actief', 'Prompts totaal', 'Gem. prompts per actieve gebruiker', 'Gem. actieve dagen per actieve gebruiker', ...bands]]
+        .concat(teams.map((t) => [t.name, t.people, t.active, t.active / t.people, t.prompts, 0, t.days, ...t.mix]))
+    };
+    if (!withoutIntensity) {
+      sheets.Intensiteit = [['Intensiteit', 'Gebruikers', '% van licenties']]
+        .concat(bands.map((band, i) => [band, teams.reduce((sum, t) => sum + t.mix[i], 0), 0]));
+    }
+    return plainWorkbook(sheets);
+  }
+
   /** Verzonnen cijfers die er echt uitzien: groepen, een zomerdip en wat groei. Zelfde seed, zelfde cijfers. */
   function copilotSample(options) {
     const { weeks = 27, basic = 80, premium = 24, start = '2026-03-08', seed = 1 } = options || {};
@@ -232,5 +300,5 @@
     return { people, weekly, channels };
   }
 
-  window.AIAuditTest = Object.assign(window.AIAuditTest || {}, { zip, copilotWorkbook, copilotDisciplineWorkbook, copilotSample });
+  window.AIAuditTest = Object.assign(window.AIAuditTest || {}, { zip, copilotWorkbook, copilotDisciplineWorkbook, copilotSample, copilotMonthlyWorkbook, copilotMonthlySample });
 })();

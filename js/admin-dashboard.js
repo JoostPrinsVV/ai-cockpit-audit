@@ -209,7 +209,7 @@
       const imports = data.usage.filter((row) => ns.adminCopilot && ns.adminCopilot.isUsage(row.summary)).sort((a, b) => (a.period_end < b.period_end ? -1 : 1));
       const last = imports[imports.length - 1];
       const age = last ? daysBetween(String(last.period_end).slice(0, 10), today) : null;
-      if (!last || age > USAGE_DAYS) add({ id: 'copilot', tab: 'copilot', icon: 'sparkle', rank: 70, title: 'Lees het Copilot-gebruik in', text: last ? `De laatste import loopt tot ${formatDate(last.period_end)}.` : 'Er is nog geen import: lees de export uit het Microsoft 365-beheercentrum in.' });
+      if (!last || age > USAGE_DAYS) add({ id: 'copilot', tab: 'copilot', icon: 'sparkle', rank: 70, title: 'Lees het Copilot-gebruik in', text: last ? `De laatste import loopt tot ${formatDate(last.period_end)}. De maandexport komt op de 1e van de maand.` : 'Er is nog geen import: lees de maandexport in (de e-mail van IT op de 1e van de maand).' });
       if (last) info.push({ id: 'copilot', icon: 'chart', label: 'Copilot-gebruik', value: 't/m ' + formatDate(last.period_end).replace(/ \d{4}$/, ''), text: age > USAGE_DAYS ? 'Tijd voor een nieuwe import' : 'Laatste import', tab: 'copilot' });
     }
 

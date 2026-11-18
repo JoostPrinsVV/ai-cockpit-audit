@@ -1576,6 +1576,62 @@
       ok(message.includes("'Audit' en 'Audit oud'"), message || 'geen fout');
     });
 
+    /* ---- de maandexport van IT (versie 2) ---- */
+    let monthly = null;
+    await test('maandexport: totalen uit Per team (niet uit de tekst op de Samenvatting), met periode en discipline', async () => {
+      const { parts } = await copilot.readExport(fileOf(await fixture.copilotMonthlyWorkbook()), REGISTRY);
+      equal([parts.length, parts[0].sheet, parts[0].discipline], [1, null, 'audit'], "'Audit & Assurance' hoort bij Audit");
+      monthly = parts[0].summary;
+      equal([monthly.version, monthly.source, monthly.periodStart, monthly.periodEnd, monthly.days, monthly.discipline], [2, 'maandrapport', '2026-09-07', '2026-10-04', 28, 'Audit & Assurance']);
+      equal([monthly.people, monthly.active, monthly.prompts, monthly.daysPerActive], [33, 30, 4380, 10.48], "'1.210' is 1210; niet de 1460 en 105 van de Samenvatting");
+      equal(monthly.intensity, { intensief: 18, regelmatig: 10, incidenteel: 2, nietActief: 3 });
+      equal([monthly.apps.length, monthly.apps[2], monthly.teams.length, monthly.teams[2]], [6, { name: 'Teams', active: 28 }, 4,
+        { name: 'Team C', people: 6, active: 5, prompts: 420, daysPerActive: 7.5, intensity: { intensief: 2, regelmatig: 2, incidenteel: 1, nietActief: 1 } }]);
+      equal(Object.keys(monthly).sort(), ['active', 'apps', 'days', 'discipline', 'intensity', 'people', 'periodEnd', 'periodStart', 'prompts', 'daysPerActive', 'source', 'teams', 'version'].sort(), 'alleen groepscijfers');
+    });
+    await test('maandexport: zonder tabblad Intensiteit opgeteld uit de teams; periode met afkortingen of datums', async () => {
+      const read = async (options) => (await copilot.readExport(fileOf(await fixture.copilotMonthlyWorkbook(options)), REGISTRY)).parts[0].summary;
+      equal((await read({ withoutIntensity: true })).intensity, monthly.intensity);
+      const short = await read({ period: '1 okt. 2026 t/m 31 okt. 2026' });
+      equal([short.periodStart, short.periodEnd, short.days], ['2026-10-01', '2026-10-31', 31]);
+      equal((await read({ period: '1-11-2026 t/m 30-11-2026' })).days, 30);
+    });
+    await test('maandexport: zonder periode, of met meer actief dan licenties, een uitleg', async () => {
+      const message = async (options) => {
+        try {
+          await copilot.readExport(fileOf(await fixture.copilotMonthlyWorkbook(options)), REGISTRY);
+          return '';
+        } catch (error) {
+          return error.message;
+        }
+      };
+      ok((await message({ period: 'oktober' })).includes('de periode staat niet in het bestand'), 'periode');
+      ok((await message({ teams: [{ name: 'Team X', people: 5, active: 6, prompts: 10, days: 2, mix: [0, 0, 0, 0] }] })).includes("bij 'Team X'"), 'actief > licenties');
+    });
+    await test('maandexport: kengetallen, herkennen en vergelijken alleen met dezelfde soort', () => {
+      const m = copilot.measures(monthly);
+      equal([m.basic, m.total.people, m.total.active, m.total.adoption, m.total.volume, m.total.perActive, m.total.wau, m.total.growth], [null, 33, 30, 30 / 33, 4380, 146, null, null]);
+      equal([copilot.isUsage(monthly), copilot.isUsage(snapshot), copilot.isUsage({ version: 2, people: 1 }), copilot.isMonthly(monthly), copilot.isMonthly(snapshot)], [true, true, false, true, false]);
+      equal([copilot.comparable(monthly, monthly), copilot.comparable(monthly, snapshot), copilot.comparable(snapshot, null)], [true, false, false]);
+      equal(copilot.timeline([snapshot, monthly]).length, 8, 'de maandexport heeft geen weken');
+    });
+    await test('maandexport: wat valt op, en een nieuwe reeks na het analysebestand', () => {
+      const text = copilot.monthlyInsights(monthly, null, null).join(' | ');
+      ok(/30 van de 33 licentiehouders \(91\s?%\)/.test(text) && /3 licenties zijn/.test(text), text);
+      ok(/van 84 prompts \(Team C\) tot 202 \(Overige teams \(samengevoegd\)\)/.test(text), text);
+      ok(/Onder de 90% actief: Team C \(83\s?%\), Overige teams \(samengevoegd\) \(86\s?%\)/.test(text), text);
+      ok(/meest gebruikt in Teams \(85\s?%\) en Outlook \(61\s?%\); het minst in PowerPoint \(9\s?%\)/.test(text), text);
+      ok(/nieuwe reeks/.test(copilot.monthlyInsights(monthly, null, snapshot).join(' ')), 'na het analysebestand');
+      const later = Object.assign({}, monthly, { periodEnd: '2026-11-01', active: 32, prompts: 5256 });
+      ok(/\+2 actieve gebruikers, adoptie van 91\s?% naar 97\s?%, prompts \+20\s?%/.test(copilot.monthlyInsights(later, monthly, null).join(' ')), 'verschil met de vorige maandexport');
+    });
+    await test('maandexport in Doelkoers: adoptie en licenties benut per import, gebruik per week uit de prompts', () => {
+      const G = ns.adminGoals;
+      const data = G.dataFor([{ period_start: '2026-09-07', period_end: '2026-10-04', summary: monthly }], [], '2026-10-10');
+      const of = (id) => G.pointsOf(G.metricOf(id), data).map((point) => [point.date, Math.round(point.value * 10) / 10]);
+      equal([of('adoptie'), of('licenties'), of('wekelijks'), of('intensiteit')], [[['2026-10-04', 90.9]], [['2026-10-04', 90.9]], [], [['2026-10-04', 36.5]]]);
+    });
+
     /* ---- portfolio ---- */
     describe('Portfolio: AI Value Matrix (js/admin-portfolio.js)');
     const P = ns.adminPortfolio;

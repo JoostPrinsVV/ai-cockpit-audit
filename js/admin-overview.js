@@ -94,11 +94,14 @@
       const sorted = list.slice().sort((a, b) => (a.period_end < b.period_end ? -1 : 1));
       try {
         const latest = sorted[sorted.length - 1];
-        const previous = sorted.length > 1 ? sorted[sorted.length - 2] : null;
+        // Alleen vergelijken met een import van dezelfde soort export (andere soort: andere maten)
+        const earlier = sorted.slice(0, -1);
+        const previous = earlier.filter((row) => ns.adminCopilot.comparable(row.summary, latest.summary)).pop() || null;
         result.push({
           namespace,
           latest,
           previous,
+          newSeries: !previous && earlier.length > 0,
           now: ns.adminCopilot.measures(latest.summary).total,
           then: previous ? ns.adminCopilot.measures(previous.summary).total : null
         });
@@ -254,7 +257,7 @@
         copilotSection = section('Copilot-gebruik', 'De laatste import per discipline, met het verschil met de import ervoor. Alleen totalen, geen gegevens per persoon.',
           table(['Discipline', 'Periode', 'Personen', 'Actief (4 wkn)', 'Adoptie', 'Verschil'], copilotList.map((item) => {
             const diff = item.then ? Math.round((item.now.adoption - item.then.adoption) * 100) : null;
-            return { cells: [nameOf(item.namespace), ns.adminCopilot.period({ periodStart: item.latest.period_start, periodEnd: item.latest.period_end }), NUMBER.format(item.now.people), NUMBER.format(item.now.active), item.now.adoption == null ? '–' : PERCENT.format(item.now.adoption), diff == null ? 'Eerste import' : `${SIGNED.format(diff)} %-punt`] };
+            return { cells: [nameOf(item.namespace), ns.adminCopilot.period({ periodStart: item.latest.period_start, periodEnd: item.latest.period_end }), NUMBER.format(item.now.people), NUMBER.format(item.now.active), item.now.adoption == null ? '–' : PERCENT.format(item.now.adoption), diff == null ? (item.newSeries ? 'Nieuwe reeks' : 'Eerste import') : `${SIGNED.format(diff)} %-punt`] };
           }), (index) => index > 1 && index < 5));
       }
 

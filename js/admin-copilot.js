@@ -17,7 +17,21 @@
        licences: { basic|premium: { people, active4w, volume4w, volumeTotal,
                                     frequency: { wekelijks, regelmatig, soms, nooit } } },
        weekly, channels, top10Share }
-   Een ander soort export? Voeg een lezer toe aan FORMATS; de rest blijft gelijk.
+   Een ander soort export? Voeg een lezer toe aan FORMATS, met een eigen summarize.
+
+   De maandexport (versie 2, bron 'maandrapport'): de e-mail met Excel die IT
+   (AFAS/Microsoft Graph) iedere 1e van de maand stuurt. Al opgeteld, alleen
+   licentiehouders, één periode van ± 28 dagen zonder weken: tabbladen
+   Samenvatting (discipline en periode), Per onderdeel, Per team en Intensiteit.
+   De totalen rekenen we zelf uit de tabel Per team (op de Samenvatting staan
+   ze als tekst, en daar vallen komma's weg: 2039 voor 203,9). Opgeslagen:
+     { version: 2, source, periodStart, periodEnd, days, discipline, people,
+       active, prompts, daysPerActive,
+       intensity: { intensief, regelmatig, incidenteel, nietActief } | null,
+       apps: [{ name, active }], teams: [{ name, people, active, prompts,
+       daysPerActive, intensity | null }] }
+   Versie 1 en 2 hebben andere maten: alleen binnen dezelfde versie vergelijken
+   we met de vorige import (comparable); een nieuwe versie begint een nieuwe reeks.
 
    Een bestand met een tabblad per discipline (ieder tabblad met alle tabellen,
    bijv. 'Audit', 'Accountants', 'Belastingadviseurs'): ieder tabblad wordt apart
@@ -63,6 +77,67 @@
     return result;
   }
 
+  const text = (value) => String(value == null ? '' : value).trim().replace(/\s+/g, ' ');
+
+  /** Heel aantal uit de maandexport: een getal, of tekst als '9014' of '9.014' (punt als duizendtal). Leeg telt als 0. */
+  function whole(row, column) {
+    const value = row[column];
+    if (value === undefined || value === null || value === '') return 0;
+    const result = typeof value === 'number' ? value : sheets.number(String(value).replace(/\s/g, '').replace(/^(\d{1,3})((?:\.\d{3})+)$/, (all, head, rest) => head + rest.replace(/\./g, '')));
+    if (!Number.isFinite(result) || result < 0 || Math.abs(result - Math.round(result)) > 1e-9) throw new Error(`in de kolom '${column}' staat iets dat geen aantal is`);
+    return Math.round(result);
+  }
+
+  /** Getal met decimalen ('12,1' of 12.1), 0 of meer. Leeg telt als 0. */
+  function decimal(row, column) {
+    const value = row[column];
+    if (value === undefined || value === null || value === '') return 0;
+    const result = sheets.number(value);
+    if (!Number.isFinite(result) || result < 0) throw new Error(`in de kolom '${column}' staat iets dat geen getal is`);
+    return result;
+  }
+
+  // Intensiteit in de maandexport: gemiddeld aantal actieve dagen per week in de periode
+  const INTENSITY = [
+    { id: 'intensief', column: 'Intensief', label: 'Intensief', text: '2,5 dagen per week of meer' },
+    { id: 'regelmatig', column: 'Regelmatig', label: 'Regelmatig', text: '1 tot 2,5 dagen per week' },
+    { id: 'incidenteel', column: 'Incidenteel', label: 'Incidenteel', text: 'minder dan 1 dag per week' },
+    { id: 'nietActief', column: 'Niet actief', label: 'Niet actief', text: 'geen enkele dag' }
+  ];
+
+  const MONTHS = ['januari', 'februari', 'maart', 'april', 'mei', 'juni', 'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
+  const DAY = 86400000;
+  const dayOf = (value) => Date.parse(value + 'T00:00:00Z');
+
+  /** Datum als 'JJJJ-MM-DD' uit '19 oktober 2026', '19 okt. 2026', '19-10-2026', '2026-10-19' of een Excel-getal; '' als het niet lukt. */
+  function dutchDate(value, date1904) {
+    const plain = sheets.excelDate(value, date1904);
+    if (plain) return plain;
+    const match = /^(\d{1,2})\s+([a-z]+)\.?\s+(\d{4})$/i.exec(text(value));
+    if (!match) return '';
+    const word = match[2].toLowerCase();
+    const month = word.length >= 3 ? MONTHS.findIndex((name) => name.startsWith(word) || (word === 'mrt' && name === 'maart')) : -1;
+    return month < 0 ? '' : sheets.excelDate(`${match[3]}-${month + 1}-${match[1]}`);
+  }
+
+  /** De periode uit de Samenvatting: 'Periode' = '19 oktober 2026 t/m 15 november 2026 (28 dagen)', of losse begin- en einddatums. */
+  function periodOf(facts, date1904) {
+    const find = (pattern) => facts.find((fact) => pattern.test(fact.key.toLowerCase()));
+    const both = find(/^periode$/);
+    if (both) {
+      const parts = text(both.value).replace(/\(.*\)/, '').split(/\s+(?:t\/m|tot en met|-|–)\s+/);
+      if (parts.length === 2) {
+        const start = dutchDate(parts[0], date1904);
+        const end = dutchDate(parts[1], date1904);
+        if (start && end) return { start, end };
+      }
+    }
+    const start = find(/^(periode )?(start|begin)(datum)?$/);
+    const end = find(/^(periode )?(eind|einde)(datum)?$/);
+    if (start && end) return { start: dutchDate(start.value, date1904), end: dutchDate(end.value, date1904) };
+    return null;
+  }
+
   const FORMATS = [
     {
       // Het analysebestand: een tabblad per persoon (Gebruikers) en een tabblad met de weken en kanalen
@@ -87,7 +162,47 @@
           })),
           channels: channels ? channels.rows.map((row) => ({ name: String(row['Basic-kanaal'] == null ? '' : row['Basic-kanaal']).trim(), volume4w: count(row, 'Prompts laatste 4 weken') })) : []
         };
-      }
+      },
+      summarize: (input, source) => summarize(input, source)
+    },
+    {
+      // De maandexport van IT (AFAS/Microsoft Graph): al opgeteld, per team, onderdeel en intensiteit
+      id: 'maandrapport',
+      expects: "de maandexport met een tabblad 'Samenvatting' (kolommen 'Onderdeel' en 'Waarde', met de periode) en een tabblad 'Per team' (kolommen 'Team', 'Licenties', 'Actief', 'Prompts totaal' en 'Gem. actieve dagen per actieve gebruiker')",
+      read(book) {
+        const teams = sheets.findTable(book, ['Team', 'Licenties', 'Actief', 'Prompts totaal', 'Gem. actieve dagen per actieve gebruiker']);
+        const facts = sheets.findTable(book, ['Onderdeel', 'Waarde']);
+        if (!teams || !facts) return null;
+        const mix = sheets.findTable(book, ['Team', ...INTENSITY.map((band) => band.column)]);
+        const apps = sheets.findTable(book, ['Onderdeel', 'Actieve gebruikers']);
+        const intensity = sheets.findTable(book, ['Intensiteit', 'Gebruikers']);
+        const mixOf = (name) => {
+          const row = mix && mix.rows.find((other) => text(other.Team) === name);
+          return row ? Object.fromEntries(INTENSITY.map((band) => [band.id, whole(row, band.column)])) : null;
+        };
+        let bands = null;
+        if (intensity) {
+          bands = Object.fromEntries(INTENSITY.map((band) => {
+            const row = intensity.rows.find((other) => text(other.Intensiteit).toLowerCase() === band.column.toLowerCase());
+            return [band.id, row ? whole(row, 'Gebruikers') : 0];
+          }));
+        }
+        return {
+          facts: facts.rows.map((row) => ({ key: text(row.Onderdeel), value: row.Waarde })).filter((fact) => fact.key),
+          date1904: book.date1904,
+          teams: teams.rows.filter((row) => text(row.Team)).map((row) => ({
+            name: text(row.Team),
+            people: whole(row, 'Licenties'),
+            active: whole(row, 'Actief'),
+            prompts: whole(row, 'Prompts totaal'),
+            daysPerActive: decimal(row, 'Gem. actieve dagen per actieve gebruiker'),
+            intensity: mixOf(text(row.Team))
+          })),
+          apps: apps ? apps.rows.filter((row) => text(row.Onderdeel)).map((row) => ({ name: text(row.Onderdeel), active: whole(row, 'Actieve gebruikers') })) : [],
+          intensity: bands
+        };
+      },
+      summarize: (input, source) => summarizeMonthly(input, source)
     }
   ];
 
@@ -142,6 +257,44 @@
     };
   }
 
+  /** Van de maandexport naar de totalen die worden opgeslagen (versie 2). */
+  function summarizeMonthly(input, source) {
+    const period = periodOf(input.facts, input.date1904);
+    if (!period || !period.start || !period.end) throw new Error("de periode staat niet in het bestand (verwacht op het tabblad Samenvatting: 'Periode', bijv. '19 oktober 2026 t/m 15 november 2026')");
+    if (period.end < period.start) throw new Error('de periode eindigt voordat hij begint');
+    const days = Math.round((dayOf(period.end) - dayOf(period.start)) / DAY) + 1;
+    if (days > 400) throw new Error('de periode is langer dan een jaar: dit klopt niet');
+    const teams = input.teams;
+    if (!teams.length) throw new Error('er staan geen teams in het bestand');
+    if (teams.length > 100) throw new Error('meer dan 100 teams: dit klopt niet');
+    const wrong = teams.find((team) => team.active > team.people);
+    if (wrong) throw new Error(`bij '${wrong.name.slice(0, 40)}' zijn meer mensen actief dan er licenties zijn`);
+    const sum = (list, pick) => list.reduce((total, item) => total + pick(item), 0);
+    const people = sum(teams, (team) => team.people);
+    const active = sum(teams, (team) => team.active);
+    if (!people) throw new Error('er staan geen licenties in het bestand');
+    // Intensiteit: het tabblad Intensiteit, anders opgeteld uit de teams (als die het hebben)
+    let intensity = input.intensity;
+    if (!intensity && teams.every((team) => team.intensity)) intensity = Object.fromEntries(INTENSITY.map((band) => [band.id, sum(teams, (team) => team.intensity[band.id])]));
+    const discipline = input.facts.find((fact) => fact.key.toLowerCase() === 'discipline');
+    const round = (value) => Math.round(value * 100) / 100;
+    return {
+      version: 2,
+      source,
+      periodStart: period.start,
+      periodEnd: period.end,
+      days,
+      discipline: discipline ? text(discipline.value).slice(0, 60) : '',
+      people,
+      active,
+      prompts: sum(teams, (team) => team.prompts),
+      daysPerActive: active ? round(sum(teams, (team) => team.daysPerActive * team.active) / active) : null,
+      intensity: intensity || null,
+      apps: input.apps.slice(0, 30).map((app) => ({ name: app.name.slice(0, 40), active: app.active })),
+      teams: teams.map((team) => ({ name: team.name.slice(0, 60), people: team.people, active: team.active, prompts: team.prompts, daysPerActive: round(team.daysPerActive), intensity: team.intensity }))
+    };
+  }
+
   /** Eerste lezer die (dit deel van) het boek herkent: { format, input } of null. */
   function recognize(book) {
     for (const format of FORMATS) {
@@ -187,7 +340,7 @@
       .map((sheet) => ({ sheet, found: recognize(Object.assign({}, book, { sheets: [sheet] })) }))
       .filter((item) => item.found);
     if (perSheet.length > 1) {
-      const parts = perSheet.map(({ sheet, found }) => ({ sheet: sheet.name, discipline: disciplineOf(sheet.name, disciplines), summary: summarize(found.input, found.format.id) }));
+      const parts = perSheet.map(({ sheet, found }) => ({ sheet: sheet.name, discipline: disciplineOf(sheet.name, disciplines), summary: found.format.summarize(found.input, found.format.id) }));
       const seen = new Map();
       parts.filter((part) => part.discipline).forEach((part) => {
         if (seen.has(part.discipline)) throw new Error(`de tabbladen '${seen.get(part.discipline)}' en '${part.sheet}' horen allebei bij ${disciplines.find((d) => d.id === part.discipline).name}`);
@@ -197,16 +350,40 @@
     }
     const found = recognize(book);
     if (!found) throw new Error('dit bestand herken ik niet. Verwacht: ' + FORMATS.map((format) => format.expects).join('; of ') + '.');
-    return { parts: [{ sheet: null, discipline: null, summary: summarize(found.input, found.format.id) }] };
+    const summary = found.format.summarize(found.input, found.format.id);
+    // De maandexport noemt zijn discipline: die wint (anders: de discipline waarin je zit)
+    return { parts: [{ sheet: null, discipline: summary.discipline ? disciplineOf(summary.discipline, disciplines) : null, summary }] };
   }
 
   /** Is dit een opgeslagen samenvatting die deze versie kan tonen? */
-  const usable = (summary) => Boolean(summary && summary.version === 1 && Array.isArray(summary.weekly) && summary.weekly.length
-    && summary.licences && LICENCES.every(({ id }) => summary.licences[id]) && Array.isArray(summary.channels));
+  const usable = (summary) => Boolean(summary && (
+    (summary.version === 1 && Array.isArray(summary.weekly) && summary.weekly.length
+      && summary.licences && LICENCES.every(({ id }) => summary.licences[id]) && Array.isArray(summary.channels))
+    || (summary.version === 2 && Number.isFinite(summary.people) && Number.isFinite(summary.active) && Number.isFinite(summary.prompts)
+      && Array.isArray(summary.teams) && Array.isArray(summary.apps))
+  ));
+
+  /** Zijn twee imports met elkaar te vergelijken (dezelfde soort export, dus dezelfde maten)? */
+  const comparable = (a, b) => Boolean(a && b && a.version === b.version);
+  const isMonthly = (summary) => Boolean(summary && summary.version === 2);
 
   /* ---- Kengetallen ------------------------------------------------------------------- */
   /** Per licentie en samen: personen, actief en volume (laatste 4 weken), adoptie, per actieve gebruiker, per week actief en groei. */
   function measures(snapshot) {
+    if (isMonthly(snapshot)) {
+      // Maandexport: alleen licentiehouders, één periode zonder weken (dus geen 'per week' en geen groei)
+      const own = {
+        people: snapshot.people,
+        active: snapshot.active,
+        volume: snapshot.prompts,
+        adoption: snapshot.people ? snapshot.active / snapshot.people : null,
+        perActive: snapshot.active ? snapshot.prompts / snapshot.active : null,
+        daysPerActive: snapshot.daysPerActive,
+        wau: null,
+        growth: null
+      };
+      return { basic: null, premium: own, total: own };
+    }
     const recent = snapshot.weekly.slice(-4);
     const before = snapshot.weekly.slice(-8, -4);
     const sum = (list, pick) => list.reduce((total, week) => total + pick(week), 0);
@@ -251,7 +428,7 @@
   /** Alle weken van alle imports op een rij; bij een week die in meer imports staat, telt de nieuwste. */
   function timeline(snapshots) {
     const weeks = new Map();
-    snapshots.forEach((snapshot) => snapshot.weekly.forEach((week) => weeks.set(week.week, week)));
+    snapshots.forEach((snapshot) => (snapshot.weekly || []).forEach((week) => weeks.set(week.week, week)));
     return Array.from(weeks.values()).sort((a, b) => (a.week < b.week ? -1 : 1));
   }
 
@@ -298,8 +475,6 @@
   // Belangrijke data (een Boost & Learn, iedereen een licentie): een lijn in de grafieken, en bij
   // 'Wat valt op' het gemiddelde per week ervoor en erna. Opslag: central.listMoments/saveMoments.
   const MOMENT_WEEKS = 4; // zoveel volle weken ervoor en erna
-  const DAY = 86400000;
-  const dayOf = (value) => Date.parse(value + 'T00:00:00Z');
 
   /**
    * Gemiddeld per week, ervoor (de laatste 4 weken die vóór het moment eindigen) en erna (de eerste 4
@@ -348,8 +523,8 @@
     ]);
   }
 
-  function kpiRow(now, then, previous) {
-    return el('div', { className: 'kpis copilot__kpis' }, MEASURES.map((measure) => el('div', { className: 'kpi' }, [
+  function kpiRow(now, then, previous, list) {
+    return el('div', { className: 'kpis copilot__kpis' }, (list || MEASURES).map((measure) => el('div', { className: 'kpi' }, [
       el('span', { className: 'kpi__value', text: show(measure.format, now.total[measure.id]) }),
       el('span', { className: 'kpi__label', text: measure.label }),
       then ? deltaNode(measure, now.total[measure.id], then.total[measure.id], previous) : null
@@ -432,6 +607,145 @@
     return el('details', { className: 'copilot__definitions' }, [
       el('summary', { text: 'Hoe lees je deze cijfers?' }),
       el('dl', {}, items.map(([term, text]) => el('div', {}, [el('dt', { text: term }), el('dd', { text })])))
+    ]);
+  }
+
+  /* ---- Maandexport (versie 2) ------------------------------------------------------------ */
+  const MONTHLY_MEASURES = [
+    { id: 'people', label: 'Licenties', format: NUMBER, kind: 'absolute', neutral: true },
+    { id: 'active', label: 'Actief in de periode', short: 'Actief', format: NUMBER, kind: 'absolute' },
+    { id: 'adoption', label: 'Adoptie', format: PERCENT, kind: 'points' },
+    { id: 'volume', label: 'Prompts in de periode', short: 'Prompts', format: NUMBER, kind: 'relative' },
+    { id: 'perActive', label: 'Prompts per actieve gebruiker', short: 'Prompts p.p.', format: NUMBER, kind: 'relative' },
+    { id: 'daysPerActive', label: 'Actieve dagen per actieve gebruiker', short: 'Dagen p.p.', format: DECIMAL, kind: 'absolute' }
+  ];
+
+  const share = (part, whole) => (whole ? part / whole : null);
+
+  /** Wat valt op bij een maandexport. previous: de vorige maandexport; other: de import ervoor als die van een andere soort is. */
+  function monthlyInsights(latest, previous, other) {
+    const items = [];
+    const now = measures(latest).total;
+    const bands = latest.intensity;
+    items.push(`${NUMBER.format(latest.active)} van de ${NUMBER.format(latest.people)} licentiehouders (${show(PERCENT, now.adoption)}) gebruikte Copilot in de periode van ${latest.days} dagen${bands ? `; ${show(PERCENT, share(bands.intensief, latest.people))} intensief (${INTENSITY[0].text})` : ''}.`);
+    const unused = latest.people - latest.active;
+    if (unused > 0) items.push(`${NUMBER.format(unused)} ${unused === 1 ? 'licentie is' : 'licenties zijn'} in de hele periode niet gebruikt.`);
+    const teams = latest.teams.filter((team) => team.active);
+    if (teams.length > 1) {
+      const byPrompts = teams.slice().sort((a, b) => a.prompts / a.active - b.prompts / b.active);
+      const low = byPrompts[0];
+      const high = byPrompts[byPrompts.length - 1];
+      items.push(`Per actieve gebruiker loopt het uiteen van ${NUMBER.format(low.prompts / low.active)} prompts (${low.name}) tot ${NUMBER.format(high.prompts / high.active)} (${high.name}).`);
+    }
+    const behind = latest.teams.filter((team) => team.people && team.active / team.people < 0.9);
+    if (behind.length) items.push(`Onder de 90% actief: ${behind.map((team) => `${team.name} (${PERCENT.format(team.active / team.people)})`).join(', ')}.`);
+    // Onderdelen naast Copilot Chat: de twee meest gebruikte en het minst gebruikte
+    const apps = latest.apps.filter((app) => !/^copilot chat/i.test(app.name)).sort((a, b) => b.active - a.active);
+    if (apps.length >= 3) {
+      const of = (app) => `${app.name} (${PERCENT.format(app.active / latest.people)})`;
+      items.push(`Naast Copilot Chat wordt Copilot het meest gebruikt in ${of(apps[0])} en ${of(apps[1])}; het minst in ${of(apps[apps.length - 1])}.`);
+    }
+    if (previous) {
+      const then = measures(previous).total;
+      const prompts = change('relative', now.volume, then.volume);
+      items.push(`Sinds de vorige maandexport (t/m ${formatDate(previous.periodEnd)}): ${SIGNED.format(now.active - then.active)} actieve gebruikers, adoptie van ${show(PERCENT, then.adoption)} naar ${show(PERCENT, now.adoption)}${prompts ? ', prompts ' + prompts.text : ''}.`);
+    } else if (other) {
+      items.push(`De import hiervoor (t/m ${formatDate(other.periodEnd)}) kwam uit het analysebestand, met andere maten: met deze maandexport begint een nieuwe reeks. Vanaf de volgende maandexport zie je hier het verschil.`);
+    }
+    return items;
+  }
+
+  /** Liggende balken: [{ label, note, value, of }] met de waarde en het deel van 'of' erachter. */
+  function barList(rows) {
+    const max = Math.max(1, ...rows.map((row) => row.value));
+    return el('ul', { className: 'bars', attrs: { role: 'list' } }, rows.map((row) => {
+      const bar = el('span', { className: 'bars__bar' });
+      bar.style.setProperty('--share', String(row.value / max));
+      return el('li', { className: 'bars__row' }, [
+        el('span', { className: 'bars__label' }, [row.label, row.note ? el('span', { className: 'copilot__note', text: row.note }) : null]),
+        el('span', { className: 'bars__track' }, [
+          bar,
+          el('span', { className: 'bars__value', text: NUMBER.format(row.value) + (row.of ? ' · ' + PERCENT.format(row.value / row.of) : '') })
+        ])
+      ]);
+    }));
+  }
+
+  function intensityBlock(snapshot) {
+    return el('section', { className: 'usage-table' }, [
+      el('h3', { className: 'usage-table__title', text: 'Hoe intensief' }),
+      el('p', { className: 'chart__sub', text: 'Gemiddeld aantal dagen per week waarop iemand Copilot gebruikte; het deel van alle licenties.' }),
+      snapshot.intensity
+        ? barList(INTENSITY.map((band) => ({ label: band.label, note: band.text, value: snapshot.intensity[band.id], of: snapshot.people })))
+        : el('p', { className: 'section__lead', text: 'Niet in dit bestand.' })
+    ]);
+  }
+
+  function appsBlock(snapshot) {
+    return el('section', { className: 'usage-table' }, [
+      el('h3', { className: 'usage-table__title', text: 'Per onderdeel' }),
+      el('p', { className: 'chart__sub', text: 'Hoeveel licentiehouders het onderdeel minstens één keer gebruikten. Wie meer onderdelen gebruikte, telt bij elk ervan mee: niet optellen.' }),
+      snapshot.apps.length
+        ? barList(snapshot.apps.slice().sort((a, b) => b.active - a.active).map((app) => ({ label: app.name, value: app.active, of: snapshot.people })))
+        : el('p', { className: 'section__lead', text: 'Niet in dit bestand.' })
+    ]);
+  }
+
+  /** De intensiteit van een team als één gestapelde balk (delen van de licenties), met de tekst erbij voor schermlezers. */
+  function mixBar(team) {
+    if (!team.intensity || !team.people) return el('span', { text: '–' });
+    const words = INTENSITY.filter((band) => team.intensity[band.id]).map((band) => `${band.label.toLowerCase()} ${PERCENT.format(team.intensity[band.id] / team.people)}`).join(', ');
+    return el('span', { className: 'copilot__mix', attrs: { role: 'img', 'aria-label': words, title: words } }, INTENSITY.map((band, index) => {
+      const part = el('span', { className: `copilot__mix-part copilot__mix-part--${index + 1}` });
+      part.style.setProperty('--share', String(team.intensity[band.id] / team.people));
+      return part;
+    }));
+  }
+
+  function teamsBlock(snapshot, previous) {
+    const before = previous && comparable(snapshot, previous) ? new Map(previous.teams.map((team) => [team.name, team])) : null;
+    const columns = ['Team', 'Licenties', 'Actief', '% actief', 'Prompts', 'Prompts p.p.', 'Dagen p.p.', 'Intensiteit'];
+    const percent = (team) => {
+      const value = share(team.active, team.people);
+      const old = before && before.get(team.name);
+      const diff = old ? change('points', value, share(old.active, old.people)) : null;
+      return show(PERCENT, value) + (diff && diff.value ? ` (${diff.text})` : '');
+    };
+    const hasMix = snapshot.teams.some((team) => team.intensity);
+    return el('section', { className: 'usage-table' }, [
+      el('h3', { className: 'usage-table__title', text: 'Per team' }),
+      el('p', { className: 'chart__sub', text: 'Teams met minder dan 5 licentiehouders zijn al samengevoegd in de export. Prompts p.p. en Dagen p.p.: gemiddeld per actieve gebruiker.' }),
+      el('table', { className: 'table' }, [
+        before ? el('caption', { className: 'copilot__caption', text: `Tussen haakjes: het verschil in %-punt met de maandexport t/m ${formatDate(previous.periodEnd)}.` }) : null,
+        el('thead', {}, [el('tr', {}, columns.slice(0, hasMix ? 8 : 7).map((column, index) => el('th', { text: column, attrs: { scope: 'col', class: index > 0 && index < 7 ? 'num' : null } })))]),
+        el('tbody', {}, snapshot.teams.map((team) => el('tr', {}, [
+          el('th', { attrs: { scope: 'row' }, text: team.name }),
+          el('td', { className: 'num', text: NUMBER.format(team.people) }),
+          el('td', { className: 'num', text: NUMBER.format(team.active) }),
+          el('td', { className: 'num', text: percent(team) }),
+          el('td', { className: 'num', text: NUMBER.format(team.prompts) }),
+          el('td', { className: 'num', text: show(NUMBER, share(team.prompts, team.active)) }),
+          el('td', { className: 'num', text: show(DECIMAL, team.daysPerActive) }),
+          hasMix ? el('td', {}, [mixBar(team)]) : null
+        ])))
+      ]),
+      hasMix ? el('ul', { className: 'chart__legend copilot__mix-legend', attrs: { role: 'list' } }, INTENSITY.map((band, index) =>
+        el('li', {}, [el('span', { className: `copilot__mix-key copilot__mix-part--${index + 1}`, attrs: { 'aria-hidden': 'true' } }), el('span', { text: band.label })]))) : null
+    ]);
+  }
+
+  function monthlyDefinitions() {
+    const items = [
+      ['Bron', 'De maandexport van IT: het Microsoft 365 Copilot-gebruiksrapport (Microsoft Graph), gekoppeld aan AFAS. Alleen groepscijfers.'],
+      ['Licenties', 'Collega\'s met een licentie voor Microsoft 365 Copilot. Gebruik van Copilot Chat zonder licentie staat niet in deze export.'],
+      ['Actief', 'Minstens één Copilot-activiteit in de periode. Adoptie: het deel van de licenties.'],
+      ['Intensiteit', 'Op basis van het gemiddeld aantal actieve dagen per week: intensief 2,5 of meer, regelmatig 1 tot 2,5, incidenteel minder dan 1.'],
+      ['Prompts p.p.', 'Prompts in de periode, gedeeld door het aantal actieve gebruikers. Dagen p.p.: idem voor de actieve dagen.'],
+      ['Vergelijking', 'Alleen met de vorige maandexport. Het analysebestand van daarvoor had andere maten (Basic en Premium, acties per week): die cijfers staan bij Alle imports, maar we zetten ze niet tegen elkaar af.']
+    ];
+    return el('details', { className: 'copilot__definitions' }, [
+      el('summary', { text: 'Hoe lees je deze cijfers?' }),
+      el('dl', {}, items.map(([term, value]) => el('div', {}, [el('dt', { text: term }), el('dd', { text: value })])))
     ]);
   }
 
@@ -549,7 +863,9 @@
       const done = kit.busy(choose, 'Inlezen…');
       try {
         const { parts } = await readExport(chosen);
-        const multi = parts.length > 1;
+        // Eén deel dat zegt bij een andere discipline te horen: net als een tabblad per discipline daar opslaan
+        const elsewhere = parts.length === 1 && parts[0].discipline && parts[0].discipline !== here();
+        const multi = parts.length > 1 || Boolean(elsewhere);
         const mine = multi ? parts.find((part) => part.discipline === here()) : parts[0];
         pending = mine ? mine.summary : null;
         pendingParts = multi ? parts : [];
@@ -566,13 +882,16 @@
     });
 
     const factsOf = (summary) => {
+      if (isMonthly(summary)) return [`${summary.days} dagen`, `${NUMBER.format(summary.people)} licenties`, `${summary.teams.length} ${summary.teams.length === 1 ? 'team' : 'teams'}`];
       const facts = [`${summary.weeks} weken`, `${NUMBER.format(summary.people)} personen`];
       if (summary.skipped) facts.push(`${NUMBER.format(summary.skipped)} ${summary.skipped === 1 ? 'rij' : 'rijen'} zonder licentie overgeslagen`);
       return facts;
     };
 
     function pendingNotice() {
-      const multi = pendingParts.length > 1;
+      // Opslaan per discipline: een tabblad per discipline, of één bestand van een andere discipline
+      const multi = pendingParts.length > 0;
+      const single = pendingParts.length === 1 && !pendingParts[0].sheet;
       // Wat er bij Opslaan naar de database gaat: per discipline de totalen (een tabblad zonder discipline niet)
       const savable = multi ? pendingParts.filter((part) => part.discipline) : [{ discipline: here(), summary: pending }];
       const replaces = Boolean(pending) && saved.some((row) => row.period_end === pending.periodEnd);
@@ -628,28 +947,34 @@
       }
       const sheetList = el('ul', { className: 'copilot__sheets' }, pendingParts.map((part) => el('li', {}, [
         el('strong', { text: part.discipline ? nameOf(part.discipline) : 'Niet opgeslagen' }),
-        ` · tabblad '${part.sheet}' · ${period(part.summary)} · ${factsOf(part.summary).join(' · ')}`,
+        `${part.sheet ? ` · tabblad '${part.sheet}'` : ''} · ${period(part.summary)} · ${factsOf(part.summary).join(' · ')}`,
         part.discipline ? null : el('span', { className: 'copilot__note', text: 'Bij geen enkele discipline te plaatsen: geef het tabblad de naam van een discipline.' })
       ])));
       const hereStored = storedParts.some((part) => part.discipline === here());
-      let shown = `Er is geen tabblad voor ${nameOf(here())}, dus hier verandert niets.`;
+      const named = single ? pendingParts[0].summary.discipline : ''; // zoals het in het bestand staat
+      const target = single ? nameOf(pendingParts[0].discipline) : '';
+      let shown = single
+        ? `Dit bestand is van ${target}${named && named !== target ? ` ('${named}')` : ''}, niet van ${nameOf(here())}: het wordt bij ${target} opgeslagen en hier verandert niets.`
+        : `Er is geen tabblad voor ${nameOf(here())}, dus hier verandert niets.`;
       if (pending) shown = `Hieronder zie je hoe het eruitziet voor ${nameOf(here())}; de andere disciplines zie je daar na het opslaan.`;
       if (hereStored) shown = '';
       if (storedParts.length) shown = `${shown} Al opgeslagen: ${names(storedParts)}.`.trim();
       return notice({
         icon: 'table',
         className: 'copilot__pending',
-        title: `Ingelezen uit ${pendingName}: een tabblad per discipline`,
-        text: `${storedParts.length ? 'Nog niet alles opgeslagen.' : 'Nog niet opgeslagen.'} ${shown} Bij opslaan gaan per discipline alleen de totalen naar de database; een import met dezelfde einddatum wordt vervangen.`,
-        more: [sheetList],
+        title: single ? `Ingelezen uit ${pendingName}: cijfers van ${nameOf(pendingParts[0].discipline)}` : `Ingelezen uit ${pendingName}: een tabblad per discipline`,
+        text: `${storedParts.length ? 'Nog niet alles opgeslagen.' : 'Nog niet opgeslagen.'} ${shown} Bij opslaan gaan ${single ? '' : 'per discipline '}alleen de totalen naar de database; een import met dezelfde einddatum wordt vervangen.`,
+        more: single ? [] : [sheetList],
         action
       });
     }
 
     function historyBlock(list) {
-      const columns = ['Periode', 'Weken', 'Personen', 'Actief (4 wkn)', 'Adoptie', 'Volume (4 wkn)', 'Per actieve gebruiker', 'Ingelezen', ''];
+      const columns = ['Periode', 'Duur', 'Personen', 'Actief (4 wkn)', 'Adoptie', 'Volume (4 wkn)', 'Per actieve gebruiker', 'Ingelezen', ''];
+      const mixed = list.some(isMonthly) && list.some((snapshot) => !isMonthly(snapshot));
       return el('section', { className: 'usage-table' }, [
         el('h3', { className: 'usage-table__title', text: list.length === 1 ? 'Import' : `Alle imports (${list.length})` }),
+        mixed ? el('p', { className: 'chart__sub', text: 'Twee soorten export met andere maten: vergelijk alleen imports van dezelfde soort.' }) : null,
         el('table', { className: 'table' }, [
           el('thead', {}, [el('tr', {}, columns.map((column, index) => el('th', { text: column, attrs: { scope: 'col', class: index > 0 && index < 7 ? 'num' : null } })))]),
           el('tbody', {}, list.slice().reverse().map((snapshot) => {
@@ -672,8 +997,9 @@
               });
             }
             return el('tr', {}, [
-              el('th', { className: 'copilot__period', attrs: { scope: 'row' }, text: period(snapshot) }),
-              ...[snapshot.weeks, total.people, total.active].map((value) => el('td', { className: 'num', text: show(NUMBER, value) })),
+              el('th', { className: 'copilot__period', attrs: { scope: 'row' } }, [period(snapshot), mixed ? el('span', { className: 'copilot__note', text: isMonthly(snapshot) ? 'Maandexport (licenties, prompts)' : 'Analysebestand (Basic + Premium)' }) : null]),
+              el('td', { className: 'num', text: isMonthly(snapshot) ? `${snapshot.days} dgn` : `${snapshot.weeks} wkn` }),
+              ...[total.people, total.active].map((value) => el('td', { className: 'num', text: show(NUMBER, value) })),
               el('td', { className: 'num', text: show(PERCENT, total.adoption) }),
               el('td', { className: 'num', text: show(NUMBER, total.volume) }),
               el('td', { className: 'num', text: show(NUMBER, total.perActive) }),
@@ -685,9 +1011,47 @@
       ]);
     }
 
+    /** De maandexport: tegels, wat valt op, intensiteit, onderdelen, teams en (vanaf twee) het verloop per maand. */
+    function monthlyDashboard(list, latest, previous, other) {
+      const now = measures(latest);
+      const then = previous ? measures(previous) : null;
+      const months = list.filter(isMonthly);
+      const facts = [`${latest.days} dagen`, `${NUMBER.format(latest.people)} licenties`];
+      if (latest.discipline) facts.unshift(latest.discipline);
+      facts.push(previous ? `vergeleken met de maandexport t/m ${formatDate(previous.periodEnd)}` : 'de eerste maandexport: bij de volgende zie je hier het verschil');
+      if (latest.pending) facts.push('nog niet opgeslagen');
+      const point = (snapshot) => {
+        const m = measures(snapshot).total;
+        return { week: snapshot.periodEnd, values: { active: m.active, people: m.people, perActive: Math.round(m.perActive || 0), daysPerActive: m.daysPerActive || 0 } };
+      };
+      return el('div', { className: 'copilot__dashboard' }, [
+        el('div', { className: 'copilot__head' }, [
+          el('h2', { className: 'section__title', text: 'Periode ' + period(latest) }),
+          el('p', { className: 'copilot__meta', text: facts.join(' · ') })
+        ]),
+        kpiRow(now, then, previous, MONTHLY_MEASURES),
+        el('section', { className: 'copilot__insights' }, [
+          el('h3', { className: 'usage-table__title', text: 'Wat valt op' }),
+          el('ul', {}, monthlyInsights(latest, previous, other).map((value) => el('li', { text: value })))
+        ]),
+        el('div', { className: 'usage-grid' }, [intensityBlock(latest), appsBlock(latest)]),
+        teamsBlock(latest, previous),
+        months.length > 1 ? el('div', { className: 'copilot__charts' }, [
+          lineChart({ title: 'Licenties en actief, per maandexport', series: [{ id: 'active', label: 'Actief' }, { id: 'people', label: 'Licenties' }], pointLabel: 'Periode t/m', gapDays: 40, markers: markers(), points: months.map(point) }),
+          lineChart({ title: 'Prompts per actieve gebruiker, per maandexport', series: [{ id: 'perActive', label: 'Prompts p.p.' }], pointLabel: 'Periode t/m', gapDays: 40, markers: markers(), points: months.map(point) })
+        ]) : null,
+        missing ? null : momentsBlock(),
+        historyBlock(list),
+        monthlyDefinitions()
+      ]);
+    }
+
     function dashboard(list) {
       const latest = list[list.length - 1];
-      const previous = list.length > 1 ? list[list.length - 2] : null;
+      const earlier = list.slice(0, -1);
+      // Vergelijken alleen met een import van dezelfde soort (dezelfde maten)
+      const previous = earlier.filter((snapshot) => comparable(snapshot, latest)).pop() || null;
+      if (isMonthly(latest)) return monthlyDashboard(list, latest, previous, previous ? null : earlier[earlier.length - 1] || null);
       const now = measures(latest);
       const then = previous ? measures(previous) : null;
       const weeks = timeline(list);
@@ -757,5 +1121,5 @@
     return { node };
   }
 
-  ns.adminCopilot = { render, readExport, disciplineOf, summarize, measures, timeline, change, period, aroundMoment, momentInsight, isUsage: usable, FORMATS, LICENCES };
+  ns.adminCopilot = { render, readExport, disciplineOf, summarize, summarizeMonthly, measures, timeline, change, period, aroundMoment, momentInsight, monthlyInsights, isUsage: usable, isMonthly, comparable, FORMATS, LICENCES, INTENSITY };
 })(window.AIAudit);

@@ -53,8 +53,9 @@
    * points: [{ week: 'JJJJ-MM-DD', values: { <id>: getal } }], series: [{ id, label }] (één of twee),
    * title, sub (optioneel), pointLabel (kop van de eerste kolom en het uitleesvak, standaard 'Week van'),
    * markers (optioneel): [{ date: 'JJJJ-MM-DD', label }]; alleen die binnen de weken van de grafiek.
+   * gapDays (optioneel, standaard 8): meer dagen tussen twee punten is een gat in de lijn (per maand: 40).
    */
-  function lineChart({ title, sub, points, series, pointLabel, markers }) {
+  function lineChart({ title, sub, points, series, pointLabel, markers, gapDays }) {
     const HEIGHT = 250;
     const label = pointLabel || 'Week van';
     // Momenten binnen de grafiek (tot het eind van de laatste week), op datum en genummerd
@@ -146,7 +147,7 @@
       series.forEach((s, n) => {
         let d = '';
         points.forEach((point, index) => {
-          const gap = index === 0 || times[index] - times[index - 1] > 8 * DAY;
+          const gap = index === 0 || times[index] - times[index - 1] > (gapDays || 8) * DAY;
           d += `${gap ? 'M' : 'L'}${xs[index].toFixed(1)} ${y(point.values[s.id]).toFixed(1)} `;
         });
         root.append(svg('path', { d: d.trim(), class: 'chart__line chart__line--' + (n + 1) }));
