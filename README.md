@@ -971,7 +971,10 @@ tabblad erbij maakt niet uit, een andere kolomnaam wel. Een ander soort export k
   en daar vallen komma's weg (2039 voor 203,9). De discipline in het bestand wint: `Audit & Assurance` hoort bij Audit,
   en een bestand van een andere discipline wordt daar opgeslagen. Op de pagina: tegels (licenties, actief, adoptie,
   prompts, per actieve gebruiker), Wat valt op, intensiteit, gebruik per onderdeel, een tabel per team met de intensiteit
-  als balk, en vanaf twee maandexporten het verloop per maand.
+  als balk, en vanaf twee maandexporten het verloop per maand. Bij Audit staat het cluster bij de teams (Team 2: Goes,
+  Team 3: Barneveld, Team 4: Dordrecht, Team 7: Zwolle, Team internationaal: Audit internationaal, Team Groene Hart:
+  Gouda), in de tabel en bij Wat valt op; dat staat in `TEAM_INFO` in `js/admin-copilot.js`. Geen namen van
+  teamleiders: de code is openbaar.
 - **Het analysebestand** (`Copilot gebruik analyse.xlsx`, tot november 2026): per persoon `Huidige licentie`, `Totaal
   volume`, `Volume laatste 4 weken` en `Actieve weken`; per week `Week`, `Actieve gebruikers Basic`, `Actieve
   gebruikers Premium`, `Basic-prompts` en `Premium-acties`; per kanaal (mag ontbreken) `Basic-kanaal` en `Prompts

@@ -622,8 +622,39 @@
 
   const share = (part, whole) => (whole ? part / whole : null);
 
-  /** Wat valt op bij een maandexport. previous: de vorige maandexport; other: de import ervoor als die van een andere soort is. */
-  function monthlyInsights(latest, previous, other) {
+  /* Het cluster bij de teamnamen uit de maandexport, per discipline (id). Alleen voor Audit; bij
+     andere disciplines tonen we de teamnaam zoals hij in de export staat. Hoofdletters en dubbele
+     spaties tellen niet mee bij het vergelijken. Geen namen van teamleiders: deze code is openbaar.
+     Komt er een team bij of verandert een cluster: pas het hier aan. */
+  const TEAM_INFO = {
+    audit: [
+      { team: 'Team 2', cluster: 'Goes' },
+      { team: 'Team 3', cluster: 'Barneveld' },
+      { team: 'Team 4', cluster: 'Dordrecht' },
+      { team: 'Team 7', cluster: 'Zwolle' },
+      { team: 'Team internationaal', cluster: 'Audit internationaal' },
+      { team: 'Team Groene Hart', cluster: 'Gouda' }
+    ]
+  };
+
+  const teamKey = (name) => text(name).toLowerCase().replace(/\s+/g, ' ');
+
+  /** Het cluster bij een team uit de maandexport ({ team, cluster }), of null. discipline: het id. */
+  function teamInfo(name, discipline) {
+    return (TEAM_INFO[discipline] || []).find((info) => teamKey(info.team) === teamKey(name)) || null;
+  }
+
+  /** De teamnaam in lopende tekst: met het cluster erbij als we dat kennen. */
+  function teamName(team, discipline) {
+    const info = teamInfo(team.name, discipline);
+    return info ? `${team.name} · ${info.cluster}` : team.name;
+  }
+
+  /**
+   * Wat valt op bij een maandexport. previous: de vorige maandexport; other: de import ervoor als die
+   * van een andere soort is; discipline: het id (voor de clusters bij de teams, zie TEAM_INFO).
+   */
+  function monthlyInsights(latest, previous, other, discipline) {
     const items = [];
     const now = measures(latest).total;
     const bands = latest.intensity;
@@ -635,10 +666,10 @@
       const byPrompts = teams.slice().sort((a, b) => a.prompts / a.active - b.prompts / b.active);
       const low = byPrompts[0];
       const high = byPrompts[byPrompts.length - 1];
-      items.push(`Per actieve gebruiker loopt het uiteen van ${NUMBER.format(low.prompts / low.active)} prompts (${low.name}) tot ${NUMBER.format(high.prompts / high.active)} (${high.name}).`);
+      items.push(`Per actieve gebruiker loopt het uiteen van ${NUMBER.format(low.prompts / low.active)} prompts (${teamName(low, discipline)}) tot ${NUMBER.format(high.prompts / high.active)} (${teamName(high, discipline)}).`);
     }
     const behind = latest.teams.filter((team) => team.people && team.active / team.people < 0.9);
-    if (behind.length) items.push(`Onder de 90% actief: ${behind.map((team) => `${team.name} (${PERCENT.format(team.active / team.people)})`).join(', ')}.`);
+    if (behind.length) items.push(`Onder de 90% actief: ${behind.map((team) => `${teamName(team, discipline)} (${PERCENT.format(team.active / team.people)})`).join(', ')}.`);
     // Onderdelen naast Copilot Chat: de twee meest gebruikte en het minst gebruikte
     const apps = latest.apps.filter((app) => !/^copilot chat/i.test(app.name)).sort((a, b) => b.active - a.active);
     if (apps.length >= 3) {
@@ -702,7 +733,13 @@
     }));
   }
 
-  function teamsBlock(snapshot, previous) {
+  /** De kop van een teamrij: de naam, met het cluster eronder als we dat kennen. */
+  function teamCell(team, discipline) {
+    const info = teamInfo(team.name, discipline);
+    return el('th', { attrs: { scope: 'row' } }, [team.name, info ? el('span', { className: 'copilot__note', text: `Cluster ${info.cluster}` }) : null]);
+  }
+
+  function teamsBlock(snapshot, previous, discipline) {
     const before = previous && comparable(snapshot, previous) ? new Map(previous.teams.map((team) => [team.name, team])) : null;
     const columns = ['Team', 'Licenties', 'Actief', '% actief', 'Prompts', 'Prompts p.p.', 'Dagen p.p.', 'Intensiteit'];
     const percent = (team) => {
@@ -719,7 +756,7 @@
         before ? el('caption', { className: 'copilot__caption', text: `Tussen haakjes: het verschil in %-punt met de maandexport t/m ${formatDate(previous.periodEnd)}.` }) : null,
         el('thead', {}, [el('tr', {}, columns.slice(0, hasMix ? 8 : 7).map((column, index) => el('th', { text: column, attrs: { scope: 'col', class: index > 0 && index < 7 ? 'num' : null } })))]),
         el('tbody', {}, snapshot.teams.map((team) => el('tr', {}, [
-          el('th', { attrs: { scope: 'row' }, text: team.name }),
+          teamCell(team, discipline),
           el('td', { className: 'num', text: NUMBER.format(team.people) }),
           el('td', { className: 'num', text: NUMBER.format(team.active) }),
           el('td', { className: 'num', text: percent(team) }),
@@ -1032,10 +1069,10 @@
         kpiRow(now, then, previous, MONTHLY_MEASURES),
         el('section', { className: 'copilot__insights' }, [
           el('h3', { className: 'usage-table__title', text: 'Wat valt op' }),
-          el('ul', {}, monthlyInsights(latest, previous, other).map((value) => el('li', { text: value })))
+          el('ul', {}, monthlyInsights(latest, previous, other, here()).map((value) => el('li', { text: value })))
         ]),
         el('div', { className: 'usage-grid' }, [intensityBlock(latest), appsBlock(latest)]),
-        teamsBlock(latest, previous),
+        teamsBlock(latest, previous, here()),
         months.length > 1 ? el('div', { className: 'copilot__charts' }, [
           lineChart({ title: 'Licenties en actief, per maandexport', series: [{ id: 'active', label: 'Actief' }, { id: 'people', label: 'Licenties' }], pointLabel: 'Periode t/m', gapDays: 40, markers: markers(), points: months.map(point) }),
           lineChart({ title: 'Prompts per actieve gebruiker, per maandexport', series: [{ id: 'perActive', label: 'Prompts p.p.' }], pointLabel: 'Periode t/m', gapDays: 40, markers: markers(), points: months.map(point) })
@@ -1121,5 +1158,5 @@
     return { node };
   }
 
-  ns.adminCopilot = { render, readExport, disciplineOf, summarize, summarizeMonthly, measures, timeline, change, period, aroundMoment, momentInsight, monthlyInsights, isUsage: usable, isMonthly, comparable, FORMATS, LICENCES, INTENSITY };
+  ns.adminCopilot = { render, readExport, disciplineOf, summarize, summarizeMonthly, measures, timeline, change, period, aroundMoment, momentInsight, monthlyInsights, teamInfo, isUsage: usable, isMonthly, comparable, FORMATS, LICENCES, INTENSITY, TEAM_INFO };
 })(window.AIAudit);

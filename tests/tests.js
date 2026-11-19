@@ -1625,6 +1625,16 @@
       const later = Object.assign({}, monthly, { periodEnd: '2026-11-01', active: 32, prompts: 5256 });
       ok(/\+2 actieve gebruikers, adoptie van 91\s?% naar 97\s?%, prompts \+20\s?%/.test(copilot.monthlyInsights(later, monthly, null).join(' ')), 'verschil met de vorige maandexport');
     });
+    await test('maandexport: het cluster bij de teams, alleen bij Audit', () => {
+      equal([copilot.teamInfo('Team Internationaal', 'audit').cluster, copilot.teamInfo(' team  2 ', 'audit').cluster], ['Audit internationaal', 'Goes'], 'hoofdletters en spaties tellen niet mee');
+      equal([copilot.teamInfo('Team 2', 'accountancy'), copilot.teamInfo('Team 5', 'audit')], [null, null], 'andere discipline of onbekend team');
+      const teams = [{ name: 'Team 2', people: 10, active: 8, prompts: 800, daysPerActive: 5, intensity: null }, { name: 'Team groene hart', people: 10, active: 10, prompts: 2000, daysPerActive: 9, intensity: null }];
+      const withTeams = Object.assign({}, monthly, { teams, people: 20, active: 18, prompts: 2800 });
+      const audit = copilot.monthlyInsights(withTeams, null, null, 'audit').join(' | ');
+      ok(/van 100 prompts \(Team 2 · Goes\) tot 200 \(Team groene hart · Gouda\)/.test(audit) && /Onder de 90% actief: Team 2 · Goes \(80\s?%\)/.test(audit), audit);
+      const other = copilot.monthlyInsights(withTeams, null, null, 'accountancy').join(' | ');
+      ok(/\(Team 2\) tot 200 \(Team groene hart\)/.test(other), other);
+    });
     await test('maandexport in Doelkoers: adoptie en licenties benut per import, gebruik per week uit de prompts', () => {
       const G = ns.adminGoals;
       const data = G.dataFor([{ period_start: '2026-09-07', period_end: '2026-10-04', summary: monthly }], [], '2026-10-10');
