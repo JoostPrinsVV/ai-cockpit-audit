@@ -52,6 +52,45 @@
 }
 
 .admin-main { display: grid; gap: var(--space-5); min-width: 0; }
+
+/* Het onderdeel met rechts 'Op deze pagina' (js/admin-toc.js); zonder inhoudsopgave de volle breedte */
+.admin-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); align-items: start; min-width: 0; }
+.admin-body:has(> .admin-toc:not([hidden])) { grid-template-columns: minmax(0, 1fr) 13rem; }
+.admin-toc {
+  position: sticky;
+  top: calc(var(--sticky-top, 0px) + var(--space-4));
+  display: grid;
+  gap: var(--space-2);
+  max-height: calc(100vh - var(--sticky-top, 0px) - var(--space-6));
+  overflow: auto;
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--color-border);
+}
+.admin-toc__title { color: var(--color-text-muted); font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: var(--ls-caps); text-transform: uppercase; }
+.admin-toc__list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.admin-toc__link { position: relative; display: block; padding: 0.35rem 0.6rem; border-radius: var(--radius-sm); color: var(--color-text-body); font-size: var(--fs-sm); line-height: 1.35; text-decoration: none; transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out); }
+.admin-toc__link:hover { background: var(--color-surface-muted); color: var(--color-text); }
+.admin-toc__link:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: 1px; }
+/* Waar je bent: turquoise streep op de lijn links, en de tekst iets sterker */
+.admin-toc__link.is-active { background: var(--accent-teal-tint); color: var(--color-text); font-weight: var(--fw-semibold); }
+.admin-toc__link.is-active::before { content: ''; position: absolute; top: 0.3rem; bottom: 0.3rem; left: calc(var(--space-4) * -1 - 1px); width: 3px; border-radius: 3px; background: var(--vv-teal); }
+
+/* Smaller scherm: de inhoudsopgave als rij bovenaan het onderdeel, die blijft staan als je scrolt */
+@media (max-width: 1280px) {
+  .admin-body:has(> .admin-toc:not([hidden])) { grid-template-columns: minmax(0, 1fr); }
+  .admin-toc { order: -1; z-index: 4; display: flex; align-items: center; gap: var(--space-3); max-height: none; overflow: hidden; margin-inline: calc(var(--space-2) * -1); padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius); background: color-mix(in srgb, var(--color-surface) 94%, transparent); box-shadow: var(--shadow-sm); backdrop-filter: blur(6px); }
+  .admin-toc__title { flex: none; padding-left: var(--space-2); }
+  .admin-toc__list { display: flex; flex-direction: row; gap: var(--space-1); overflow-x: auto; scrollbar-width: none; }
+  .admin-toc__list::-webkit-scrollbar { display: none; }
+  .admin-toc__link { white-space: nowrap; }
+  .admin-toc__link.is-active::before { display: none; }
+}
+@media (max-width: 600px) {
+  .admin-toc__title { display: none; }
+}
+@media print {
+  .admin-toc { display: none; }
+}
 /* Naar een ander onderdeel (js/app.js zet is-switching): alleen de inhoud komt zacht in beeld */
 .admin-shell.is-switching .admin-main { animation: admin-switch var(--duration) var(--ease-out) both; }
 @keyframes admin-switch {

@@ -568,6 +568,39 @@
       equal(done.todo, [], 'alles afgehandeld: niets te doen');
     });
 
+    /* ---- Beheer: inhoudsopgave rechts ---- */
+    describe('Inhoudsopgave in Beheer (js/admin-toc.js)');
+    await test('de zichtbare tussenkopjes, pas vanaf drie, en opnieuw als de pagina verandert', async () => {
+      const root = document.createElement('div');
+      const heading = (text) => {
+        const node = document.createElement('h3');
+        node.className = 'form-section__title';
+        node.textContent = text;
+        return node;
+      };
+      const closed = document.createElement('details');
+      closed.append(document.createElement('summary'), heading('In een dicht blok'));
+      root.append(heading('1. Periode en naam'), heading('Route van een idee'), closed);
+      document.body.append(root);
+      const toc = ns.adminToc.attach(root);
+      try {
+        toc.refresh();
+        equal(Array.from(toc.node.querySelectorAll('.admin-toc__link')).map((a) => a.textContent), ['Periode en naam', 'Route van een idee'], 'zonder nummer, niet uit een dichtgeklapt blok');
+        equal(toc.node.hidden, true, 'twee kopjes: geen inhoudsopgave');
+        root.append(heading('Kickstart'));
+        toc.refresh();
+        equal([toc.node.hidden, toc.node.querySelectorAll('.admin-toc__link').length], [false, 3], 'drie kopjes: wel');
+        const first = toc.node.querySelector('.admin-toc__link');
+        ok(first.getAttribute('href').startsWith('#toc-'), 'een eigen anker per kopje (het adres van de pagina blijft staan)');
+        closed.open = true;
+        toc.refresh();
+        equal(toc.node.querySelectorAll('.admin-toc__link').length, 4, 'klapt het blok open, dan komt het kopje erbij');
+      } finally {
+        toc.destroy();
+        root.remove();
+      }
+    });
+
     /* ---- ui: tekst, zoeken en plaatshouders ---- */
     describe('Tekst en zoeken (js/ui.js)');
     await test('normalize: kleine letters, zonder accenten, één spatie', () => {

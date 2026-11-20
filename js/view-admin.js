@@ -752,9 +752,11 @@
       el('h1', { className: 'admin-head__title', attrs: { tabindex: '-1' }, text: tab === 'inhoud' ? `Inhoud ${disciplineName}` : def.label }),
       el('p', { className: 'admin-head__lead', text: def.lead(disciplineName) })
     ]);
+    // Rechts: 'Op deze pagina', de tussenkopjes van het onderdeel (js/admin-toc.js); alleen bij een lange pagina
+    const toc = ns.adminToc.attach(panel);
     const node = el('div', { className: 'page container admin-shell' }, [
       sidebar(tab, allowedTabs, session),
-      el('div', { className: 'admin-main' }, [head, panel])
+      el('div', { className: 'admin-main' }, [head, el('div', { className: 'admin-body' }, [panel, toc.node])])
     ]);
 
     if (tab === 'start') startTab(panel, allowedTabs);
@@ -790,7 +792,7 @@
       canLeave = result.canLeave;
     }
     // shell: tussen onderdelen van Beheer geen paginaovergang (zie route in js/app.js)
-    return { node, title: 'Beheer', shell: 'admin', canLeave: () => !canLeave || canLeave() };
+    return { node, title: 'Beheer', shell: 'admin', canLeave: () => !canLeave || canLeave(), destroy: toc.destroy };
   }
 
   ns.views = ns.views || {};

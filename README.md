@@ -38,6 +38,7 @@ js/tour.js            Rondleiding bij het eerste bezoek (opnieuw via de voet en 
 js/improve.js         'Stel een verbetering voor' onder een prompt (stap 11); js/admin-improve.js beoordeelt het in Beheer
 js/opencockpit.js     Open Cockpit, het inloopuur (#/open-cockpit): sessies, agendapunten, .ics; Beheer in js/admin-opencockpit.js
 js/admin-dashboard.js Beheer → Start: het dashboard Deze week per discipline (te doen, nieuw binnen, goed om te weten)
+js/admin-toc.js       Beheer: de inhoudsopgave Op deze pagina rechts naast lange onderdelen, met het kopje waar je bent
 css/motion.css        Beweging in CSS: overgangen, uitklappers, panelen, scrolleffecten (uit bij 'minder beweging')
 js/*.js               De applicatie (iedere pagina een view-*.js, Beheer in admin-*.js)
 data/disciplines.js   De disciplines en de gedeelde basis (startstand; daarna Beheer → Disciplines)
@@ -140,6 +141,12 @@ Alles komt uit wat er al in de cockpit staat; afvinken hoeft niet, want wat geda
 Daaronder staan **Alle onderdelen** om snel naartoe te gaan, en in drie zinnen hoe Beheer werkt. Wie alleen een rol
 voor inhoud heeft, ziet alleen wat bij de inhoud hoort (werkversies, de weektip, trainingen). De onderdelen staan in
 `TABS` in `js/view-admin.js`.
+
+**Op deze pagina** (`js/admin-toc.js`): rechts naast een lang onderdeel staan de tussenkopjes van het formulier of
+overzicht, bijvoorbeeld bij Teksten (site, route van een idee, seizoenskompas, Kickstart, beloftes, AI-brevetten,
+Engelse versie). Het kopje waar je bent licht op terwijl je scrolt; klik en je springt erheen. De kopjes komen vanzelf
+uit de pagina (`HEADINGS` in `js/admin-toc.js`; een eigen kopje krijgt `data-toc`). Alleen bij minstens drie zichtbare
+kopjes; op een smaller scherm staat de inhoudsopgave als rij bovenaan het onderdeel.
 
 Bovenaan Start staat voor hoofdbeheerders **Klaar voor livegang?** (`js/admin-launch.js`): wat er nog moet voordat
 collega's alles kunnen gebruiken, met een knop naar de plek waar je het regelt.
