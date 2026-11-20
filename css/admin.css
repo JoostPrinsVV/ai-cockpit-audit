@@ -186,6 +186,7 @@
 .admin-bar__btn:hover:not([aria-disabled='true']) { border-color: var(--on-dark-line-strong); background: var(--on-dark-fill-strong); }
 .admin-bar__btn[aria-disabled='true'] { cursor: default; opacity: 0.4; }
 .admin-bar__group .admin-bar__btn { width: 2.1rem; padding: 0; justify-content: center; }
+.admin-bar__btn[aria-current='page'],
 .admin-bar__btn[aria-pressed='true'] { border-color: var(--color-readout); background: color-mix(in srgb, var(--vv-teal) 20%, transparent); }
 
 /* Opslaan licht op zodra er iets niet is opgeslagen */

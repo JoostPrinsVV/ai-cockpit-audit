@@ -871,6 +871,8 @@
     const p = {};
     p.role = el('span', { className: 'admin-bar__role' });
     p.brand = el('a', { className: 'admin-bar__brand', attrs: { href: '#/beheer', title: 'Naar Beheer' } }, [icon('lock'), p.role]);
+    // Altijd bovenin: naar Beheer (het dashboard Deze week), zonder naar de voet te scrollen
+    p.admin = el('a', { className: 'admin-bar__btn admin-bar__btn--admin', attrs: { href: '#/beheer', title: 'Naar Beheer: wat er deze week te doen is', 'aria-label': 'Beheer' } }, [icon('grid'), el('span', { text: 'Beheer' })]);
     // Bewerken op de pagina zelf (js/editmode.js)
     p.mode = barButton('admin-bar__btn--mode', 'pencil-line', 'Bewerken', { 'aria-pressed': 'false', title: 'Pas de pagina zelf aan: teksten, volgorde, toevoegen en verwijderen' }, () => ns.editmode.toggle());
     p.status = el('span', { className: 'admin-bar__status', attrs: { role: 'status' } });
@@ -890,7 +892,7 @@
     // In de bewerkmodus: het hoofdmenu (namen, volgorde, tonen) en de voet (js/editmode.js)
     p.menu = barButton('admin-bar__btn--menu', 'layers', 'Menu', { title: 'Hoofdmenu aanpassen: namen, volgorde en welke knoppen je ziet' }, () => ns.editmode.openMenu());
     p.tools = [p.mode.button, p.group, p.save.button, p.publish.button, p.log.button, p.view.button];
-    bar.replaceChildren(el('div', { className: 'container admin-bar__inner' }, [p.brand, p.mode.button, p.menu.button, p.status, p.group, p.save.button, p.publish.button, p.log.button, p.view.button, p.itemButton.button, p.itemLink]));
+    bar.replaceChildren(el('div', { className: 'container admin-bar__inner' }, [p.brand, p.admin, p.mode.button, p.menu.button, p.status, p.group, p.save.button, p.publish.button, p.log.button, p.view.button, p.itemButton.button, p.itemLink]));
     return p;
   }
 
@@ -911,6 +913,10 @@
     const own = ns.cockpit.namespace(ns.cockpit.activeId());
     const general = ns.rights.describe(ns.cockpit.GENERAL_NAMESPACE);
     setText(p.role, ns.rights.describe(own) || (general ? general + ' (gedeelde basis)' : ns.rights.isOwner() ? 'Hoofdbeheerder' : 'Beheer'));
+    // In Beheer zelf: de knop staat aan (en zegt dat je er al bent)
+    const inAdmin = /^#\/beheer(\/|$)/.test(window.location.hash);
+    if (inAdmin) p.admin.setAttribute('aria-current', 'page');
+    else p.admin.removeAttribute('aria-current');
 
     const on = available();
     p.tools.forEach((node) => { node.hidden = !on; });

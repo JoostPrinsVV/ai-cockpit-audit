@@ -745,7 +745,42 @@
     ]);
   }
 
-  ns.openCockpit = { NAME, ROUTE, KIND, NEXT, STATUSES, ANNOUNCE_DAYS, settings, upcoming, past, next, moment, teaserText, sessionOf, bySession, ics, longDate, where, pageUrl, teaser, hubCard, updateNav, init };
+  /**
+   * Bij Trainingen (js/view-trainings.js): de laatste drie sessies om terug te kijken (met nieuws, een
+   * samenvatting of een opname), en rustig wanneer de volgende is. De pagina van Open Cockpit blijft de
+   * vaste plek; dit blok wijst ernaar. Niets terug te kijken: geen blok.
+   */
+  function trainingsBlock(at) {
+    const cfg = settings();
+    if (cfg.off) return null;
+    const clock = now(at);
+    const shown = past(cfg, clock.day, clock.time).filter((s) => s.summary || s.news.length || s.recording).slice(0, 3);
+    if (!shown.length) return null;
+    const coming = next(cfg, clock.day, clock.time);
+    const title = (s) => longDate(s.date).replace(/^./, (c) => c.toUpperCase());
+    return el('section', { className: 'section', attrs: { 'aria-labelledby': 'tr-opencockpit' } }, [
+      el('div', { className: 'section__head' }, [
+        (ns.layout ? ns.layout.editable(el('h2', { className: 'section__title', attrs: { id: 'tr-opencockpit' } }), 'trainingen.opencockpit.titel', `${NAME} terugkijken`, { label: 'Kop' }) : el('h2', { className: 'section__title', attrs: { id: 'tr-opencockpit' }, text: `${NAME} terugkijken` })),
+        el('a', { className: 'section__link', attrs: { href: ROUTE } }, [el('span', { text: 'Alle sessies en de agenda' }), icon('arrow-right')])
+      ]),
+      el('p', { className: 'section__lead', text: 'Het inloopuur over Copilot: het nieuws, wat er besproken is en de opname.' + (coming ? ` De volgende sessie is ${longDate(coming.date)}, ${coming.start} uur, ${coming.location ? where(coming) : 'online via Teams'}.` : '') }),
+      el('ul', { className: 'card-grid card-grid--3 oc-recaps', attrs: { role: 'list' } }, shown.map((s) => el('li', {}, [
+        el('article', { className: 'oc-recap' }, [
+          el('div', { className: 'oc-recap__head' }, [
+            dateBadge(s.date),
+            el('div', { className: 'oc-recap__heading' }, [
+              el('h3', { className: 'oc-recap__title' }, [el('a', { className: 'oc-recap__link', attrs: { href: ROUTE }, text: title(s) })]),
+              el('p', { className: 'oc-recap__meta', text: [s.location || 'Online', s.recording ? 'met opname' : ''].filter(Boolean).join(' · ') })
+            ])
+          ]),
+          s.news.length ? el('ul', { className: 'oc-recap__news' }, s.news.slice(0, 3).map((line) => el('li', { text: line }))) : s.summary ? el('p', { className: 'oc-recap__text', text: s.summary }) : null,
+          s.recording ? el('a', { className: 'btn btn--secondary btn--sm oc-recap__play', attrs: { href: s.recording, target: '_blank', rel: 'noopener' } }, [icon('play-circle'), el('span', { text: 'Bekijk de opname' })]) : null
+        ])
+      ])))
+    ]);
+  }
+
+  ns.openCockpit = { NAME, ROUTE, KIND, NEXT, STATUSES, ANNOUNCE_DAYS, settings, upcoming, past, next, moment, teaserText, sessionOf, bySession, ics, longDate, where, pageUrl, teaser, hubCard, trainingsBlock, updateNav, init };
   ns.views = ns.views || {};
   ns.views.openCockpit = { render };
 })(window.AIAudit);

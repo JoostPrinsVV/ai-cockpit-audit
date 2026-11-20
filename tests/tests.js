@@ -441,6 +441,22 @@
         ns.content.openCockpit = before;
       }
     });
+    await test('bij Trainingen: de laatste sessies met iets om terug te kijken, en wanneer de volgende is', () => {
+      const O = ns.openCockpit;
+      const before = ns.content.openCockpit;
+      try {
+        ns.content.openCockpit = ocData();
+        equal(O.trainingsBlock(new Date('2026-11-01T09:00:00')), null, 'nog niets geweest: geen blok');
+        const block = O.trainingsBlock(new Date('2027-01-20T09:00:00'));
+        equal(Array.from(block.querySelectorAll('.oc-recap__title')).map((n) => n.textContent), ['Donderdag 12 november'], 'alleen sessies met nieuws, samenvatting of opname (het jaar alleen buiten dit jaar)');
+        equal(block.querySelector('.oc-recap__meta').textContent, 'Groningen · met opname', 'waar, en of er een opname is');
+        equal(Array.from(block.querySelectorAll('.oc-recap__news li')).map((n) => n.textContent), ['Notebooks', 'Agents in Teams'], 'het nieuws');
+        ok(block.querySelector('.section__lead').textContent.includes('De volgende sessie is donderdag 11 maart'), 'rustig wanneer de volgende is');
+        equal(block.querySelector('.oc-recap__play').getAttribute('href'), 'https://voorbeeld.sharepoint.com/opname', 'meteen naar de opname');
+      } finally {
+        ns.content.openCockpit = before;
+      }
+    });
     await test('agenda-item (.ics): Nederlandse tijd, tekens geëscaped, regels van hoogstens 75 tekens', () => {
       const O = ns.openCockpit;
       const session = O.settings(ocData()).sessions[1];

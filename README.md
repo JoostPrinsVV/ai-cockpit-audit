@@ -204,7 +204,8 @@ Na het uitvoeren van `setup/supabase-audit-bewerken.sql` werkt beheer in drie la
    wordt het overgeslagen. Slaat een bijdrager een voorstel op voor een ingepland item, dan vervalt de planning (die
    versie heeft nog niemand bekeken).
 
-**De bewerkbalk** staat bovenin zodra je bent ingelogd: je rol, **Bewerken**, de status, Ongedaan maken, Opnieuw,
+**De bewerkbalk** staat bovenin zodra je bent ingelogd: je rol, **Beheer** (naar het dashboard Deze week, vanaf
+iedere pagina), **Bewerken**, de status, Ongedaan maken, Opnieuw,
 Opslaan, Publiceren, **Logboek** (wie wat wanneer deed, per dag in te klappen en te doorzoeken op naam, actie, titel
 of datum, met per item de eerdere versies om terug te zetten) en
 **Als collega** (de site zoals collega's hem zien). Iemand anders hetzelfde item open? Dan zie je een melding.
@@ -1063,6 +1064,9 @@ brainstorm.
   `volgende` als er nog niets gepland is). In Beheer → Open Cockpit zet je een punt met één klik *Op de agenda* (dan
   staat het zonder naam op de pagina, als de collega dat goedvond), verplaats je het naar een andere sessie, en schrijf
   je na de sessie de reactie erbij (*Behandeld*). Ze staan niet in de ideeënhub en niet bij Beheer → Inzendingen.
+- **Trainingen:** het blok *Open Cockpit terugkijken* met de laatste drie sessies die iets om terug te kijken hebben
+  (nieuws, samenvatting of opname), een knop naar de opname en rustig wanneer de volgende sessie is. De pagina van
+  Open Cockpit blijft de vaste plek; in de bewerkmodus is het blok te verbergen of te verplaatsen.
 - **Startpagina:** in de twee weken voor een sessie een balk *Open Cockpit over … dagen*; op de dag zelf *vandaag om
   12:30 uur* met de knop *Deelnemen via Teams*, en tijdens de sessie *nu bezig* (met een rood bolletje). Met het kruisje
   verbergt een collega de balk tot de volgende sessie (alleen op dat apparaat). Op de dag zelf brandt ook het lampje van

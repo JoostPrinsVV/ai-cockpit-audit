@@ -165,6 +165,8 @@
           filterBlock,
           grid
         ]) : null },
+        // De laatste sessies van Open Cockpit, het inloopuur (js/opencockpit.js); de pagina zelf blijft de vaste plek
+        { key: 'opencockpit', label: 'Open Cockpit terugkijken', node: ns.openCockpit.trainingsBlock() },
         { key: 'aanvragen', label: 'Training aanvragen', node: el('div', { className: 'section' }, [requestCta()]) }
       ])
     ]);
