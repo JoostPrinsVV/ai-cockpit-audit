@@ -826,14 +826,15 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 .tile__text { color: var(--color-text-muted); font-size: var(--fs-sm); }
 
 /* Radar in de hoek van een tegel, als kleine versie van de kompasroos in de hero: drie ringen,
-   een kruis, streepjes op de buitenrand en een veeg in de kleur van het onderdeel. De knop met het
-   pijltje staat in het midden, zoals het logo op de roos. Aanwijzen: de veeg draait een rondje. */
+   een kruis, streepjes op de buitenrand en een veeg in de kleur van het onderdeel. Het midden ligt
+   vlak bij de hoek, zodat je alleen het kwart ziet dat de tegel in wijst: rustig naast de tekst.
+   Aanwijzen: de veeg draait een rondje. */
 @property --radar-sweep { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 .tile::before {
   --radar-r: 6rem;
   --radar-line: color-mix(in srgb, var(--accent) var(--radar-ring), transparent);
-  top: calc(var(--card-padding) + 1.25rem - var(--radar-r));
-  right: calc(var(--card-padding) + 1.25rem - var(--radar-r));
+  top: calc(0.5rem - var(--radar-r));
+  right: calc(0.5rem - var(--radar-r));
   width: calc(2 * var(--radar-r));
   height: calc(2 * var(--radar-r));
   background:
