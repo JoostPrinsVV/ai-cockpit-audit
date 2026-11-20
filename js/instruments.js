@@ -147,11 +147,36 @@
     const root = svg('svg', { class: 'hero__rose', viewBox: '-280 -280 560 560', 'aria-hidden': 'true', focusable: 'false' });
     root.append(once('rose', drawRoseDecor));
 
-    // De naald: koerslijn en logo, draaien samen naar het aangewezen onderdeel
+    // De naald: lichtbundel, koerslijn en logo, draaien samen naar het aangewezen onderdeel
     const needle = svg('g', { class: 'rose__needle', 'aria-hidden': 'true' });
     needle.append(svg('circle', { r: 250, fill: 'none', stroke: 'none' })); // midden van de roos = draaipunt
+    needle.append(beam());
     needle.append(svg('line', { class: 'rose__course', x1: 0, y1: -60, x2: 0, y2: -214 }));
     needle.append(svg('image', { href: 'assets/branding/logo-dark.svg', x: -46, y: -46, width: 92, height: 92 }));
+
+    // Richten: de naald draait de kortste kant op naar de koers (van 30 naar 330 is 60 graden terug, geen
+    // rondje), de bundel gaat aan en de koersband stuurt mee. tone 'new': een stipje van de radar (rood).
+    // Loslaten doet alleen wie er nu op gericht is: van het ene punt naar het andere springt hij niet eerst terug.
+    let angle = 0;
+    let aimedAt = null;
+    const turn = (heading) => {
+      angle += ((((heading - angle) % 360) + 540) % 360) - 180;
+      needle.style.transform = angle ? `rotate(${angle}deg)` : '';
+    };
+    const aim = (source, heading, tone) => {
+      aimedAt = source;
+      turn(heading);
+      needle.classList.add('is-aimed');
+      needle.classList.toggle('is-new', tone === 'new');
+      steerHero(heading);
+    };
+    const release = (source) => {
+      if (aimedAt !== source) return;
+      aimedAt = null;
+      needle.classList.remove('is-aimed', 'is-new');
+      turn(0);
+      steerHero(0);
+    };
 
     const points = svg('g', { class: 'rose__waypoints' });
     WAYPOINTS.forEach((w) => {
@@ -172,14 +197,11 @@
       const on = () => {
         points.querySelectorAll('.is-active').forEach((node) => node.classList.remove('is-active'));
         link.classList.add('is-active');
-        needle.style.transform = `rotate(${w.heading}deg)`;
-        steerHero(w.heading);
+        aim(link, w.heading);
       };
       const off = () => {
         link.classList.remove('is-active');
-        if (points.querySelector('.is-active')) return;
-        needle.style.transform = '';
-        steerHero(0);
+        release(link);
       };
       link.addEventListener('mouseenter', on);
       link.addEventListener('focus', on);
@@ -188,8 +210,29 @@
       points.append(link);
     });
     root.append(points, needle);
-    if (opts.blips && opts.blips.length) root.insertBefore(radar(opts.blips), points);
+    if (opts.blips && opts.blips.length) root.insertBefore(radar(opts.blips, aim, release), points);
     return root;
+  }
+
+  // Halve breedte van de lichtbundel (graden) en waar hij begint (achter het logo)
+  const BEAM_HALF = 11;
+  const BEAM_FROM = 46;
+
+  /**
+   * De lichtbundel van de naald: een smalle punt vanuit het midden die naar buiten vervaagt. Staat uit;
+   * gaat aan zodra de naald ergens op gericht is (css/audit.css: .rose__needle.is-aimed).
+   */
+  function beam() {
+    const group = svg('g', { class: 'rose__beam' });
+    const gradient = svg('linearGradient', { id: 'rose-beam-light', gradientUnits: 'userSpaceOnUse', x1: 0, y1: -BEAM_FROM, x2: 0, y2: -250 });
+    [[0, 0.42], [0.55, 0.16], [1, 0]].forEach(([offset, opacity]) => {
+      gradient.append(svg('stop', { class: 'rose__beam-stop', offset, 'stop-opacity': opacity }));
+    });
+    const left = point(-BEAM_HALF, 250);
+    const right = point(BEAM_HALF, 250);
+    group.append(svg('defs', {}), svg('path', { class: 'rose__beam-light', d: `M 0 0 L ${left.x.toFixed(1)} ${left.y.toFixed(1)} A 250 250 0 0 1 ${right.x.toFixed(1)} ${right.y.toFixed(1)} Z` }));
+    group.firstChild.append(gradient);
+    return group;
   }
 
   const SWEEP_START = 0.35; // seconden
@@ -197,9 +240,9 @@
 
   /**
    * De radar: één veeg rond bij het openen, en de stipjes lichten op als de veeg ze passeert.
-   * Aanwijzen toont de titel; klikken opent het item.
+   * Aanwijzen toont de titel en richt de naald (met een rode bundel) op het stipje; klikken opent het item.
    */
-  function radar(blips) {
+  function radar(blips, aim, release) {
     const layer = svg('g', { class: 'rose__radar' });
     // De veeg: een taartpunt van 40 graden die achter zijn voorrand aan vervaagt
     const [x1, y1] = [0, -250];
@@ -223,6 +266,10 @@
       const label = svg('text', { class: 'rose__blip-label', x: (at.x + (right ? -14 : 14)).toFixed(1), y: (at.y + 5).toFixed(1), 'text-anchor': right ? 'end' : 'start' });
       label.textContent = blip.label.length > 30 ? blip.label.slice(0, 29).trim() + '…' : blip.label;
       link.append(label);
+      if (aim) {
+        link.addEventListener('mouseenter', () => aim(link, blip.heading, 'new'));
+        link.addEventListener('mouseleave', () => release(link));
+      }
       layer.append(link);
     });
     return layer;

@@ -541,6 +541,15 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 /* De naald (koerslijn en logo) draait naar het aangewezen onderdeel */
 .rose__needle { transform-box: fill-box; transform-origin: center; transition: transform 550ms var(--ease-out); }
 
+/* Lichtbundel van de naald: aan zodra hij ergens op gericht is. Turquoise naar een onderdeel,
+   rood naar een stipje van de radar (zoals de stipjes zelf) */
+.rose__beam { opacity: 0; transition: opacity var(--duration-slow) var(--ease-out); }
+.rose__needle.is-aimed .rose__beam { opacity: 1; }
+.rose__beam-light { fill: url(#rose-beam-light); }
+.rose__beam-stop { stop-color: var(--color-glow); }
+.rose__needle.is-new .rose__beam-stop { stop-color: var(--vv-crimson); }
+.rose__needle.is-new .rose__course { stroke: color-mix(in srgb, var(--vv-crimson) 70%, transparent); }
+
 /* Koerspunten: de zes onderdelen op de roos (de focus zie je aan het punt en het label) */
 .rose__waypoint { pointer-events: auto; cursor: pointer; outline: none; }
 .rose__hit { fill: transparent; } /* het ruime klikvlak (doorzichtig, maar wel aan te wijzen) */
@@ -780,7 +789,7 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
 
 .tile {
   --radar-ring: 30%;
-  --radar-fill: 12%;
+  --radar-fill: 8%;
   isolation: isolate;
   display: grid;
   grid-template-columns: auto 1fr;
@@ -815,6 +824,35 @@ span.is-locked .switcher__name { color: var(--color-text-muted); }
   line-height: 1.5;
 }
 .tile__text { color: var(--color-text-muted); font-size: var(--fs-sm); }
+
+/* Radar in de hoek van een tegel, als kleine versie van de kompasroos in de hero: drie ringen,
+   een kruis, streepjes op de buitenrand en een veeg in de kleur van het onderdeel. De knop met het
+   pijltje staat in het midden, zoals het logo op de roos. Aanwijzen: de veeg draait een rondje. */
+@property --radar-sweep { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.tile::before {
+  --radar-r: 6rem;
+  --radar-line: color-mix(in srgb, var(--accent) var(--radar-ring), transparent);
+  top: calc(var(--card-padding) + 1.25rem - var(--radar-r));
+  right: calc(var(--card-padding) + 1.25rem - var(--radar-r));
+  width: calc(2 * var(--radar-r));
+  height: calc(2 * var(--radar-r));
+  background:
+    /* de veeg: voorrand naar linksonder (de tegel in), vervaagt erachter */
+    conic-gradient(from var(--radar-sweep), transparent 0 180deg, color-mix(in srgb, var(--accent) 0%, transparent) 180deg, color-mix(in srgb, var(--accent) 18%, transparent) 224deg, color-mix(in srgb, var(--accent) 55%, transparent) 224deg 225deg, transparent 225deg),
+    /* kruis */
+    linear-gradient(to right, transparent calc(50% - 0.5px), var(--radar-line) 0 calc(50% + 0.5px), transparent 0),
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--radar-line) 0 calc(50% + 0.5px), transparent 0),
+    /* ringen */
+    radial-gradient(circle closest-side, transparent 0 calc(38% - 1px), var(--radar-line) 0 38%, transparent 0 calc(70% - 1px), var(--radar-line) 0 70%, transparent 0 calc(100% - 1.5px), var(--radar-line) 0 100%, transparent 0),
+    /* vlak binnen de streepjes (dekt de streepjes af, zodat die alleen op de buitenrand staan) */
+    radial-gradient(circle closest-side, color-mix(in srgb, var(--accent) var(--radar-fill), var(--color-surface)) 0 91%, transparent 0),
+    /* streepjes, om de 10 graden */
+    repeating-conic-gradient(color-mix(in srgb, var(--accent) 22%, transparent) 0 0.7deg, transparent 0.7deg 10deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover::before { animation: tile-radar-sweep 1.8s var(--ease-out) 1; }
+}
+@keyframes tile-radar-sweep { to { --radar-sweep: 360deg; } }
 
 .tile__go {
   position: absolute;
