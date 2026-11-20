@@ -424,6 +424,23 @@
       equal(O.past(cfg, '2026-12-10', '14:00').map((s) => s.id), ['2026-12-10', '2026-11-12'], 'en staat die van vandaag bij eerdere sessies');
       equal(O.next(cfg, '2026-12-10').id, '2026-12-10', 'zonder tijd telt de hele dag mee');
     });
+    await test('blok in de ideeënhub: petrolblauw ervoor, rood op de dag, turquoise tijdens de sessie', () => {
+      const O = ns.openCockpit;
+      const before = ns.content.openCockpit;
+      try {
+        ns.content.openCockpit = ocData();
+        const card = (text) => O.hubCard(new Date(text));
+        const state = (node) => [node.className, (node.querySelector('.oc-hub__state') || {}).textContent || '', Boolean(node.querySelector('.oc-hub__join'))];
+        equal(state(card('2026-11-20T09:00:00')), ['side-card oc-hub', '', false], 'meer dan twee weken ervoor: een gewoon blok');
+        equal(state(card('2026-12-04T09:00:00')), ['side-card oc-hub is-soon', 'Over 6 dagen', false], 'in de twee weken ervoor');
+        equal(state(card('2026-12-10T09:00:00')), ['side-card oc-hub is-today', 'Vandaag om 12:30 uur', true], 'op de dag, met de knop naar Teams');
+        const live = card('2026-12-10T12:45:00');
+        equal(state(live), ['side-card oc-hub is-live', 'Nu bezig', true], 'tijdens de sessie');
+        ok(live.textContent.includes('Tot 13:30 uur, Leeuwarden en online via Teams.'), 'tot wanneer, en waar');
+      } finally {
+        ns.content.openCockpit = before;
+      }
+    });
     await test('agenda-item (.ics): Nederlandse tijd, tekens geëscaped, regels van hoogstens 75 tekens', () => {
       const O = ns.openCockpit;
       const session = O.settings(ocData()).sessions[1];

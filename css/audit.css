@@ -3839,18 +3839,18 @@ ul.wr-highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax
 .oc-teaser__close { display: grid; place-items: center; width: 2.5rem; height: 2.5rem; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; color: rgba(255, 255, 255, 0.72); cursor: pointer; }
 .oc-teaser__close:hover { border-color: var(--on-dark-line-strong); color: var(--vv-white); }
 .oc-teaser__close:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: 2px; }
-.oc-teaser.is-live { box-shadow: var(--shadow-card), inset 4px 0 0 var(--vv-crimson); }
+.oc-teaser.is-live { box-shadow: var(--shadow-card), inset 4px 0 0 var(--vv-teal); }
 
-/* Nu bezig: een rood bolletje dat rustig uitdijt (stil bij 'minder beweging', css/motion.css) */
-.oc-live { position: relative; display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--vv-crimson); }
-.oc-live::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--vv-crimson); animation: blip-ping 1.8s ease-out infinite; }
-.oc-next.is-live { border-left-color: var(--vv-crimson); }
-.oc-next.is-live .oc-next__eyebrow { color: var(--accent-crimson-ink); }
+/* Nu bezig: een turquoise bolletje dat rustig uitdijt (stil bij 'minder beweging', css/motion.css) */
+.oc-live { position: relative; display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--vv-teal); }
+.oc-live::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--vv-teal); animation: blip-ping 1.8s ease-out infinite; }
+.oc-next.is-live { border-left-color: var(--vv-teal); }
+.oc-next.is-live .oc-next__eyebrow { color: var(--vv-link); }
 
-/* Op de dag van een sessie: het lampje van de Ideeënhub in het menu brandt rood, tijdens de sessie knipperend */
+/* Op de dag van een sessie: het lampje van de Ideeënhub in het menu brandt rood, tijdens de sessie turquoise en knipperend */
 .nav__link[data-live]::before { background: var(--vv-crimson); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-crimson) 28%, transparent); }
-.nav__link[data-live='live']::before { animation: oc-lamp 1.6s ease-in-out infinite; }
-@keyframes oc-lamp { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--vv-crimson) 12%, transparent); opacity: 0.6; } }
+.nav__link[data-live='live']::before { background: var(--vv-teal); box-shadow: 0 0 0 3px color-mix(in srgb, var(--vv-teal) 28%, transparent); animation: oc-lamp 1.6s ease-in-out infinite; }
+@keyframes oc-lamp { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--vv-teal) 12%, transparent); opacity: 0.6; } }
 
 @media (max-width: 600px) {
   .oc-teaser__actions { width: 100%; margin-left: 0; }
@@ -3858,3 +3858,22 @@ ul.wr-highlights { display: grid; grid-template-columns: repeat(auto-fit, minmax
   .oc-teaser__close { position: absolute; top: 0.4rem; right: 0.4rem; }
   .oc-teaser .wr-teaser__body { padding-right: 2rem; }
 }
+
+/* Open Cockpit in de ideeënhub (js/opencockpit.js): hoe dichter bij de sessie, hoe meer het opvalt, in de
+   merkkleuren: Petrolblauw in de twee weken ervoor, Rood op de dag zelf, Turquoise tijdens de sessie.
+   De tekst blijft Donkerblauw; de kleur zit in de rand, de gloed en het bolletje. */
+.oc-hub.is-soon { --oc-tone: var(--vv-steel); }
+.oc-hub.is-today { --oc-tone: var(--vv-crimson); }
+.oc-hub.is-live { --oc-tone: var(--vv-teal); }
+.oc-hub[class*='is-'] {
+  border-color: color-mix(in srgb, var(--oc-tone) 45%, var(--color-border));
+  border-left: 5px solid var(--oc-tone);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--oc-tone) 14%, transparent), 0 10px 30px color-mix(in srgb, var(--oc-tone) 22%, transparent);
+}
+.oc-hub[class*='is-'] .side-card__title .icon { color: var(--oc-tone); }
+.oc-hub__state { display: inline-flex; justify-self: start; align-items: center; gap: var(--space-2); padding: 0.2rem 0.65rem; border-radius: 999px; background: color-mix(in srgb, var(--oc-tone) 14%, var(--color-surface)); color: var(--color-text); font-size: var(--fs-xs); font-weight: var(--fw-bold); }
+.oc-hub__dot { position: relative; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--oc-tone); }
+.oc-hub.is-live .oc-hub__dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--oc-tone); animation: blip-ping 1.8s ease-out infinite; }
+.oc-hub.is-live { animation: oc-hub-glow 2.4s ease-in-out infinite; }
+@keyframes oc-hub-glow { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--oc-tone) 10%, transparent), 0 10px 34px color-mix(in srgb, var(--oc-tone) 30%, transparent); } }
+.oc-hub__join { justify-self: start; }

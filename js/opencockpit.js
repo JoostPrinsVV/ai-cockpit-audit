@@ -720,17 +720,28 @@
   }
 
   /** In de ideeënhub: een blok naar Open Cockpit (met de volgende sessie, als die gepland is). */
-  function hubCard() {
+  /**
+   * In de ideeënhub: een blok naar Open Cockpit. Hoe dichter bij de sessie, hoe meer het opvalt, in de
+   * merkkleuren (css/audit.css): Petrolblauw in de twee weken ervoor, Rood op de dag zelf, Turquoise
+   * tijdens de sessie (met de knop naar Teams). Verder weg of niets gepland: een gewoon blok.
+   */
+  function hubCard(at) {
     const cfg = settings();
     if (cfg.off) return null;
-    const clock = now();
+    const clock = now(at);
     const session = next(cfg, clock.day, clock.time);
-    return el('section', { className: 'side-card oc-hub', attrs: { 'aria-labelledby': 'oc-hub-title' } }, [
+    const m = moment(cfg, at);
+    const state = m ? m.state : '';
+    const label = state === 'live' ? 'Nu bezig' : state === 'today' ? `Vandaag om ${m.session.start} uur` : state === 'soon' ? (m.days === 1 ? 'Morgen' : `Over ${m.days} dagen`) : '';
+    const join = (state === 'today' || state === 'live') && session.teams;
+    return el('section', { className: 'side-card oc-hub' + (state ? ' is-' + state : ''), attrs: { 'aria-labelledby': 'oc-hub-title' } }, [
+      label ? el('p', { className: 'oc-hub__state' }, [el('span', { className: 'oc-hub__dot', attrs: { 'aria-hidden': 'true' } }), el('span', { text: label })]) : null,
       el('h2', { className: 'side-card__title', attrs: { id: 'oc-hub-title' } }, [icon('calendar'), el('span', { text: `${NAME}: het inloopuur` })]),
       el('p', { className: 'side-card__text', text: session
-        ? `Volgende sessie: ${longDate(session.date)}, ${session.start} uur, ${session.location ? where(session) : 'online via Teams'}.`
+        ? `${state === 'live' ? `Tot ${session.end} uur` : `Volgende sessie: ${longDate(session.date)}, ${session.start} uur`}, ${session.location ? where(session) : 'online via Teams'}.`
         : 'Samen bijpraten over Copilot: nieuws, vragen en ervaringen. Op een vestiging en online.' }),
-      el('a', { className: 'section__link', attrs: { href: ROUTE } }, [el('span', { text: 'Agendapunt aandragen' }), icon('arrow-right')])
+      join ? el('a', { className: 'btn btn--primary btn--sm oc-hub__join', attrs: { href: session.teams, target: '_blank', rel: 'noopener' } }, [icon('external'), el('span', { text: 'Deelnemen via Teams' })]) : null,
+      el('a', { className: 'section__link', attrs: { href: ROUTE } }, [el('span', { text: state === 'live' ? 'Naar de agenda' : 'Agendapunt aandragen' }), icon('arrow-right')])
     ]);
   }
 
