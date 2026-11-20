@@ -73,24 +73,26 @@
   function sidebar(tab, allowed, session) {
     const activeId = ns.cockpit.activeId();
     const current = TABS.find((t) => t.id === tab);
+    // Een onderdeel voor alle disciplines (Gedeelde basis, Overzicht, …): alle bolletjes aan en een ander kopje,
+    // in plaats van een extra regel eronder (die liet het hele menu verspringen)
+    const forAll = Boolean(current && !current.perDiscipline && tab !== 'start');
     const scope = el('div', { className: 'admin-nav__scope' }, [
-      el('p', { className: 'admin-nav__label', attrs: { id: 'admin-scope-label' }, text: 'Je beheert' }),
+      el('p', { className: 'admin-nav__label', attrs: { id: 'admin-scope-label' }, text: forAll ? 'Alle disciplines' : 'Je beheert' }),
       // Een andere discipline: hetzelfde onderdeel in de cockpit van die discipline
-      el('ul', { className: 'admin-nav__disciplines', attrs: { role: 'list', 'aria-labelledby': 'admin-scope-label' } }, ns.cockpit.registry().map((discipline) => el('li', {}, [
+      el('ul', { className: 'admin-nav__disciplines' + (forAll ? ' is-all' : ''), attrs: { role: 'list', 'aria-labelledby': 'admin-scope-label' } }, ns.cockpit.registry().map((discipline) => el('li', {}, [
         el('a', {
           className: 'admin-nav__discipline',
           attrs: {
             href: ns.cockpit.href(discipline.id, '#/beheer/' + tab),
-            'aria-current': discipline.id === activeId ? 'true' : null,
-            title: discipline.status === 'open' ? 'Open voor iedereen' : 'Op slot: alleen beheerders'
+            'aria-current': !forAll && discipline.id === activeId ? 'true' : null,
+            title: (forAll ? 'Dit onderdeel geldt voor alle disciplines. ' : '') + (discipline.status === 'open' ? 'Open voor iedereen' : 'Op slot: alleen beheerders')
           }
         }, [
           el('span', { className: 'admin-nav__dot', attrs: { 'aria-hidden': 'true' } }),
           el('span', { text: discipline.name }),
           discipline.status === 'open' ? null : icon('lock', { label: 'op slot' })
         ])
-      ]))),
-      current && !current.perDiscipline && tab !== 'start' ? el('p', { className: 'admin-nav__note', text: 'Dit onderdeel geldt voor alle disciplines.' }) : null
+      ])))
     ]);
     const groups = GROUPS.map((group) => {
       const items = allowed.filter((t) => t.group === group.id);

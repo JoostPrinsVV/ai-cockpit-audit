@@ -36,9 +36,10 @@
 /* De gekozen discipline: een gevuld rondje, zoals een keuzerondje */
 .admin-nav__dot { flex: none; width: 1rem; height: 1rem; border: 2px solid var(--color-border-strong); border-radius: 50%; }
 .admin-nav__discipline[aria-current='true'] { background: var(--color-surface-muted); }
+.admin-nav__disciplines.is-all .admin-nav__dot,
 .admin-nav__discipline[aria-current='true'] .admin-nav__dot { border-color: var(--color-primary); background: radial-gradient(circle, var(--color-primary) 0 42%, transparent 47%); }
 .admin-nav__discipline .icon { width: 0.9rem; height: 0.9rem; margin-left: auto; color: var(--color-text-muted); }
-.admin-nav__note { margin-top: var(--space-2); padding-inline: var(--space-2); color: var(--color-text-muted); font-size: var(--fs-xs); }
+/* Onderdeel voor alle disciplines: alle bolletjes aan (zie .is-all hierboven), zonder extra regel */
 .admin-nav__item .icon { flex: none; width: 1.05rem; height: 1.05rem; color: var(--color-text-muted); }
 .admin-nav__item[aria-current='page'] { background: var(--color-selected); color: var(--color-on-selected); }
 .admin-nav__item[aria-current='page'] .icon { color: inherit; }
