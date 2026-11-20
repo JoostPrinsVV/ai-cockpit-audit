@@ -1186,6 +1186,24 @@
       equal(T.totals(log, '2026-11-04'), { week: 50, month: 65, year: 125, all: 170, count: 5 });
       equal([T.mondayOf('2026-11-04'), T.mondayOf('2026-11-01'), T.mondayOf('2026-11-02')], ['2026-11-02', '2026-10-26', '2026-11-02']);
     });
+    await test('tijdwinst: teller op de startpagina pas na een Ja, met week, maand en totaal', () => {
+      const store = ns.ui.storage;
+      const before = store.get('tijdwinst', null);
+      try {
+        store.set('tijdwinst', { log: [], asked: { day: '', keys: [] } });
+        const empty = T.homeCounter();
+        equal(empty.node.hidden, true, 'nog nooit Ja: geen rij met 0 min');
+        empty.destroy();
+        const day = ns.content.today ? ns.content.today() : new Date().toISOString().slice(0, 10);
+        store.set('tijdwinst', { log: [{ key: 'prompt:a', minutes: 20, day }, { key: 'prompt:b', minutes: 45, day: '2020-01-06' }], asked: { day: '', keys: [] } });
+        const shown = T.homeCounter();
+        equal(shown.node.hidden, false, 'na een Ja zichtbaar');
+        equal(Array.from(shown.node.querySelectorAll('.tw-home__value')).map((n) => n.textContent), ['20 min', '20 min', '1 u 5 min'], 'deze week, deze maand, totaal');
+        shown.destroy();
+      } finally {
+        store.set('tijdwinst', before || { log: [], asked: { day: '', keys: [] } });
+      }
+    });
     await test('tijdwinst: per prompt één keer per dag vragen, hoogstens vijf vragen per dag', () => {
       const asked = { day: '2026-11-04', keys: ['prompt:a'] };
       equal([T.canAsk('prompt:a', asked, '2026-11-04'), T.canAsk('prompt:b', asked, '2026-11-04'), T.canAsk('prompt:a', asked, '2026-11-05')], [false, true, true]);

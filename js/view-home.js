@@ -239,9 +239,9 @@
     // Seizoenskompas (js/compass.js): wat er nu speelt, met dezelfde regels als 'Recent toegevoegd'
     const compass = ns.compass.section(config, itemRow);
     const radar = ns.radar.fresh();
-    // De Kickstart (js/kickstart.js) en, zodra het er is, de tijdwinst van alle collega's (js/tijdwinst.js)
+    // De Kickstart (js/kickstart.js) en de tijdwinst: van jou (zodra je één keer Ja tikte) en van alle collega's (js/tijdwinst.js)
     const kickstart = ns.kickstart.card({ place: 'home' });
-    const proof = el('div', { className: 'container tw-proof-wrap' }, [ns.tijdwinst.proof()]);
+    const time = ns.tijdwinst.homeCounter();
     // Cockpit Wrapped (js/wrapped.js): zolang het AI-team hem op de startpagina laat staan.
     // 'Recent toegevoegd' direct onder het kompas: wat nieuw is hoort bij wat er nu speelt, niet onderaan.
     // De secties onder de hero: een beheerder zet ze in de bewerkmodus in een andere volgorde of verbergt ze (js/layout.js)
@@ -250,7 +250,7 @@
       { key: 'wrapped', label: 'Cockpit Wrapped', node: ns.wrapped.teaser() },
       // Open Cockpit (js/opencockpit.js): alleen in de twee weken voor een sessie, op de dag zelf met Teams
       { key: 'opencockpit', label: 'Open Cockpit (in de twee weken voor een sessie)', node: ns.openCockpit.teaser() },
-      { key: 'tijdwinst', label: 'Tijdwinst van collega\'s', node: proof },
+      { key: 'tijdwinst', label: 'Tijdwinst (van jou en van collega\'s)', node: time.node },
       { key: 'kickstart', label: 'Kickstart', node: kickstart.node },
       { key: 'kompas', label: 'Seizoenskompas', node: compass },
       { key: 'recent', label: 'Recent toegevoegd', node: recent(radar) },
@@ -270,6 +270,7 @@
       destroy: () => {
         stopSaved();
         kickstart.destroy();
+        time.destroy();
       }
     };
   }

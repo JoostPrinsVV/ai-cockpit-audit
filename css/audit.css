@@ -3548,6 +3548,22 @@ html::-webkit-scrollbar-corner,
 .tw-proof .icon { color: var(--color-success); }
 .tw-proof__note { padding: 0 0.55em; border-radius: var(--radius-pill); background: var(--color-surface-muted); color: var(--color-text-muted); font-size: var(--fs-xs); }
 
+/* Teller op de startpagina: je eigen tijdwinst als strook met drie uitleesvensters (zoals de teller
+   op de tegels), het totaal van collega's eronder */
+.tw-home { display: grid; gap: var(--space-3); margin-top: var(--space-5); }
+.tw-home > .tw-proof { margin: 0; }
+.tw-home__card { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-6); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border); border-left: 4px solid var(--vv-teal); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.tw-home__head { display: flex; align-items: center; gap: var(--space-3); }
+.tw-home__title { font-size: var(--fs-md); }
+.tw-home__note { color: var(--color-text-muted); font-size: var(--fs-xs); }
+.tw-home__figures { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0 auto 0 0; }
+.tw-home__figure { display: flex; align-items: baseline; gap: var(--space-2); }
+.tw-home__label { color: var(--color-text-muted); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.tw-home__value { margin: 0; padding: 0.15em 0.6em 0.1em; border-radius: 0.4rem; background: var(--vv-navy); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5); color: var(--color-readout); font-weight: var(--fw-semibold); font-variant-numeric: tabular-nums; letter-spacing: 0.04em; white-space: nowrap; }
+.tw-home__link { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--color-link); font-size: var(--fs-sm); font-weight: var(--fw-semibold); text-decoration: none; }
+.tw-home__link:hover { text-decoration: underline; }
+.tw-home__link .icon { width: 1em; height: 1em; }
+
 /* Mijn logboek: je tijdwinst en de Kickstart */
 .mine-top { display: grid; gap: var(--space-5); margin-bottom: var(--space-6); }
 @media (min-width: 64rem) {

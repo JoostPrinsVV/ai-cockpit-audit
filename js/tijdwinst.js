@@ -286,6 +286,48 @@
     return node;
   }
 
+  /**
+   * Teller op de startpagina: je eigen tijdwinst (deze week, deze maand, totaal) zodra je één keer Ja
+   * hebt getikt, met daaronder het totaal van collega's zodra dat de moeite waard is. Zonder beide
+   * blijft hij weg (geen rij met '0 min'). Werkt zichzelf bij na een Ja. Geeft { node, destroy }.
+   */
+  function homeCounter() {
+    const node = el('section', { className: 'container tw-home', attrs: { 'aria-label': 'Tijdwinst', hidden: true } });
+    let crew = '';
+    function render() {
+      const total = mine();
+      const parts = [];
+      if (total.count) {
+        const figure = (label, value) => el('div', { className: 'tw-home__figure' }, [
+          el('dt', { className: 'tw-home__label', text: label }),
+          el('dd', { className: 'tw-home__value', text: format(value) })
+        ]);
+        parts.push(el('div', { className: 'tw-home__card' }, [
+          el('div', { className: 'tw-home__head' }, [
+            el('span', { className: 'tw-card__icon', attrs: { 'aria-hidden': 'true' } }, [icon('clock')]),
+            el('div', {}, [
+              el('h2', { className: 'tw-home__title', text: 'Je tijdwinst' }),
+              el('p', { className: 'tw-home__note', text: 'Schatting, op dit apparaat' })
+            ])
+          ]),
+          el('dl', { className: 'tw-home__figures' }, [figure('Deze week', total.week), figure('Deze maand', total.month), figure('Totaal', total.all)]),
+          el('a', { className: 'tw-home__link', attrs: { href: '#/mijn' } }, [el('span', { text: 'Mijn logboek' }), icon('arrow-right')])
+        ]));
+      }
+      if (crew) parts.push(el('p', { className: 'tw-proof' }, [icon('clock'), el('span', { text: crew }), el('span', { className: 'tw-proof__note', text: 'schatting' })]));
+      node.replaceChildren(...parts);
+      node.hidden = !parts.length;
+    }
+    render();
+    colleagues().then((sum) => {
+      crew = proofText(sum);
+      if (crew) render();
+    }).catch(() => {});
+    const handler = () => render();
+    document.addEventListener(EVENT, handler);
+    return { node, destroy: () => document.removeEventListener(EVENT, handler) };
+  }
+
   function onChange(handler) {
     document.addEventListener(EVENT, handler);
     return () => document.removeEventListener(EVENT, handler);
@@ -301,5 +343,5 @@
     });
   }
 
-  ns.tijdwinst = { minutes, format, itemOf, minutesOf, canAsk, noteAsked, mondayOf, totals, mine, answer, maybeAsk, chip, card, colleagues, proofText, proof, onChange, init, MAX_ASKS_PER_DAY, SHOW_FROM };
+  ns.tijdwinst = { minutes, format, itemOf, minutesOf, canAsk, noteAsked, mondayOf, totals, mine, answer, maybeAsk, chip, card, colleagues, proofText, proof, homeCounter, onChange, init, MAX_ASKS_PER_DAY, SHOW_FROM };
 })(window.AIAudit);

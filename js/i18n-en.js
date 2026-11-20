@@ -727,6 +727,8 @@
     "Je tijdwinst": "Your time saved",
     "Deze week": "This week",
     "Deze maand": "This month",
+    "Totaal": "Total",
+    "Schatting, op dit apparaat": "Estimate, on this device",
     "Dit jaar": "This year",
     "Wat de prompts en usecases je volgens jou scheelden, met de schatting van het AI-team.": "What the prompts and use cases saved you, in your view, using the AI team's estimate.",
     "Kopieer een prompt met \"Scheelt ±…\" en tik daarna op Ja als het tijd scheelde. Dan telt het hier op.": "Copy a prompt marked \"Saves ±…\" and then tap Yes if it saved time. It will add up here.",
